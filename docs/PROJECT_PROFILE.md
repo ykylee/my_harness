@@ -10,9 +10,15 @@
 ## 1. 프로젝트 개요
 - 프로젝트명: My Harness
 - 프로젝트 슬러그: my-harness
-- 프로젝트 목적: yklee가 운영하는 개인 코딩 에이전트 하네스. `standard_ai_workflow` (ykylee/standard_ai_workflow)의 `minimax-code` 하네스 오버레이를 기반으로 Mavis/MiniMax Code 환경에서 동작. Mavis 메인 orchestrator + doc/code/validation 워커 분화 패턴을 채택해 컨텍스트 절약과 작업 추적성을 확보한다.
-- 주요 이해관계자: yklee (오너/유지보수), Mavis orchestrator, doc/code/validation 워커
-- 적용 환경: macOS (M-series), Python 3.11+, Mavis 데몬
+- 프로젝트 목적: **yklee의 개인 코딩 에이전트 하네스**. yklee가 수행하는 모든 에이전트 작업이 이 저장소의 운영 규칙과 워크플로우를 따르도록 단일 진입점으로 사용한다. 기반은 `standard_ai_workflow` (ykylee/standard_ai_workflow) 의 `minimax-code` 하네스 오버레이.
+- **적용 도메인** (이 하네스가 커버하는 작업 범위):
+  - **코드 개발 전반** — 새 기능 구현, 리팩토링, 버그 수정, 리뷰, 테스트, PR 작업
+  - **기본 서버 관리** — 프로세스/서비스 상태 점검, 로그 확인, 설정 변경, 배포 헬퍼
+  - **환경 셋업** — 로컬/원격 개발 환경 부트스트랩, 의존성 설치, 셸/도구 설정
+- 워크플로우 표준 준수: `ai-workflow/core/global_workflow_standard.md` 의 한국어 보고 / 컨텍스트 절약 / 이벤트 소싱 / 비참조 원칙 / 상태값(`planned|in_progress|blocked|done`)을 모든 작업에 일관 적용.
+- 에이전트 토폴로지: Mavis 메인 orchestrator + doc/code/validation 워커 분화 (multi-agent). 외부 4-워커(Claude/Codex/Gemini/OpenCode) 워크플로우와 직교 — 외부 워커는 코드 리뷰/구현 보조, 본 하네스는 운영 정책/세션 추적/상태 동기화 담당.
+- 주요 이해관계자: yklee (오너/유지보수), Mavis orchestrator, .MiniMax 워커(doc/code/validation)
+- 적용 환경: macOS (M-series), Python 3.11+, Mavis 데몬, gh CLI (Devhub_example 등 GitHub 작업용), 필요 시 원격 서버 SSH
 
 ## 2. 문서 구조 (Path)
 - 문서 위키 홈: `README.md`
@@ -49,11 +55,19 @@
 - 빠른 테스트 (스모크): `for t in ai-workflow/tests/check_*.py; do python3 "$t" || exit 1; done`
   - 주의: 소스 프레임워크(`workflow-source/` at root) 레이아웃 가정이라 현재 레이아웃에서는 일부 실패할 수 있음. 컨슈머 환경 전용 스모크가 필요하면 별도 추가한다.
 
+## 3.1 도메인별 작업 명령 (Domain-specific)
+- **코드 개발**: `TASK-003` 에서 가이드라인 추가 예정. 현재는 `gh pr`, vitest/jest, Next.js 빌드 등 도구별 표준 명령을 워커 호출 시 컨텍스트로 전달.
+- **서버 관리**: 원격 서버 호스트 목록 / SSH 별칭 / 헬스체크 명령 — yklee 개인 인프라 정보 필요. 초기값은 본 문서 하단 "## 부록" 섹션에 TODO 로 적는다.
+- **환경 셋업**: Homebrew 패키지 목록, asdf/rtx 런타임 버전, dotfiles 저장소 경로 — yklee의 macOS 셋업에 맞춰 점진적으로 채운다.
+
 ## 4. 검증 포인트 (Validation)
 - 워크플로우 변경: `state.json` 재생성 결과 `status: ok`, `MiniMax.md` / `AGENTS.md`(해당 시) / `state.json` 링크 무결성
 - 문서 변경: `ai-workflow/core/global_workflow_standard.md` 규약(메타데이터, 한국어 기본, 컨텍스트 절약) 준수
 - 하네스 진입점 변경: `MiniMax.md` 가 항상 `state.json` → `session_handoff.md` → `work_backlog.md` → `PROJECT_PROFILE.md` 순서로 안내하는지 확인
 - 워커 변경: `.MiniMax/agents/workflow-*.md` 가 `WorkerTask` / `WorkerResponse` 스키마를 따르는지 확인
+- 코드 개발: 변경 PR 의 CI 통과, 관련 테스트 실행, 리뷰 코멘트 응답
+- 서버 관리: 작업 전 상태 스냅샷, 작업 후 상태 비교 로그, 영향 서비스 헬스체크
+- 환경 셋업: idempotent 확인(재실행해도 결과 동일), 설치 직후 smoke test
 - 배포/운영: 워크플로우 업그레이드 시 `ai-workflow/scripts/apply_workflow_upgrade.py` 사용 검토
 
 ## 5. 예외 규칙 (Policy)

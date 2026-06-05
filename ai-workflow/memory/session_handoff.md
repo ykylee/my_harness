@@ -9,32 +9,38 @@
 
 ## Current Focus
 
-- **my_harness 부트스트랩 완료** — `standard_ai_workflow` (ykylee/standard_ai_workflow) 의 `minimax-code` 하네스 오버레이를 이 저장소에 적용.
-- 다음 세션은 본 하네스(`MiniMax.md` + `.MiniMax/agents/`)를 진입점으로 워크플로우 세션을 시작.
+- **my_harness 스코프 확정** — yklee의 개인 코딩 에이전트 하네스로 다음 3개 도메인을 커버:
+  1. **코드 개발 전반** (구현/리팩토링/리뷰/PR)
+  2. **기본 서버 관리** (프로세스/로그/설정/배포 헬퍼)
+  3. **환경 셋업** (로컬/원격 부트스트랩, 의존성, dotfiles)
+- 모든 작업은 `standard_ai_workflow` (ykylee/standard_ai_workflow) 의 코어 표준을 따른다.
+- 다음 세션은 `MiniMax.md` → `state.json` → 본 handoff → `work_backlog.md` → `docs/PROJECT_PROFILE.md` 순으로 세션 복원.
 
 ## Work Status
 
 - TASK-001 my-harness 부트스트랩 (standard_ai_workflow 적용): done
-- TASK-002 [차기] 하네스 워커별 smoke check 추가: planned
+- TASK-002 [차기] 하네스 워커별 smoke check 컨슈머 보정: planned
+- TASK-003 [차기] 도메인별 명령 가이드 작성 (코드/서버/환경): planned
 - N/A: blocked
 
 ## Key Changes
 
-- `bootstrap_workflow_kit.py` 실행으로 minimax-code 하네스 overlay 적용.
-- `MiniMax.md` (Mavis 진입점), `MiniMax_config.example.json`, `.MiniMax/agents/workflow-*.md` (orchestrator/worker/doc/code/validation) 생성.
-- `docs/PROJECT_PROFILE.md` yklee 하네스 컨텍스트로 커스텀 (TODO 플레이스홀더 제거).
-- `ai-workflow/memory/state.json` 재생성 — `commands` / `project` / `session` 필드 보정.
-- `ai-workflow/core/global_workflow_standard.md` 등 코어 문서 7종 복사.
-- `ai-workflow/skills/`, `mcp_servers/`, `workflow_kit/`, `tests/` 등 표준 키트 자산 포함.
+- 2026-06-05 1차 부트스트랩 — `bootstrap_workflow_kit.py` 로 minimax-code 오버레이 적용.
+- 2026-06-05 2차 컨텍스트 보강:
+  - `docs/PROJECT_PROFILE.md` §1 목적에 3개 도메인 명시, §3.1 도메인별 명령 섹션 신설, §4 검증 포인트 도메인별 추가.
+  - `MiniMax.md` 의 "프로젝트 실행 기본값" 섹션을 **코드 개발 / 서버 관리 / 환경 셋업** 3개 블록으로 재구조화.
+  - `README.md` 의 첫 줄을 신규 목적에 맞춰 갱신.
+  - `state.json` 재생성.
 
 ## 다음에 할 일 (Next Actions)
 
-- [ ] `MiniMax.md` 의 TODO 5개 항목(설치/실행/테스트/실행확인 명령) — 실제 하네스 운영 명령으로 채우기
+- [ ] TASK-003: 도메인별 표준 명령을 `MiniMax.md` §"프로젝트 실행 기본값" 과 `docs/PROJECT_PROFILE.md` §3.1 에 채우기. yklee 의 실제 셋업 / 서버 호스트 / dotfiles 경로 정보 필요.
+- [ ] TASK-002: `ai-workflow/tests/check_*.py` 컨슈머 레이아웃 보정 (소스 프레임워크 `workflow-source/` 경로 의존성 제거)
 - [ ] `.MiniMax/config.json` 을 `MiniMax_config.example.json` 으로 초기화 (서버 토큰 등 시크릿은 환경변수 주입)
-- [ ] 첫 실제 작업(예: 개인 PR 리뷰 봇, 코드 인덱서 등) 진행 시 `ai-workflow/memory/backlog/<date>.md` 에 태스크 등록 → `state.json` 동기화
-- [ ] 워커 스모크(`ai-workflow/tests/check_*.py`)를 컨슈머 레이아웃에 맞게 보정 (소스 프레임워크 `workflow-source/` 경로 의존성 제거)
+- [ ] 도메인별 첫 실제 작업 발생 시 일별 백로그(`ai-workflow/memory/backlog/<date>.md`)에 TASK 등록 → `state.json` 재생성
 
 ## Risks & Blockers
 
-- `ai-workflow/tests/check_*.py` 일부가 소스 프레임워크 레이아웃(`workflow-source/` at root) 가정 — 컨슈머에서는 `ModuleNotFoundError: workflow_kit` 또는 경로 오류로 실패. 첫 정식 세션에서 컨슈머용 smoke 으로 재작성 검토.
-- `MiniMax.md` 가 `AGENTS.md` 를 진입점으로 함께 언급하나, 현재 컨슈머에는 `AGENTS.md` 미생성 — 필요 시 별도 생성 또는 `MiniMax.md` 문구 보정.
+- `ai-workflow/tests/check_*.py` 일부가 소스 프레임워크 레이아웃 가정 — 컨슈머에서는 `ModuleNotFoundError: workflow_kit` 또는 경로 오류로 실패 (TASK-002 로 대응).
+- `MiniMax.md` 가 `AGENTS.md` 를 진입점으로 함께 언급하나, 현재 컨슈머에는 `AGENTS.md` 미생성. AGENTS.md 가 실제로 필요한지(외부 4-워커 워크플로우와 직교 가능성) yklee 결정 대기.
+- 도메인별 표준 명령이 미정(TODO). 첫 코드/서버/환경 작업 시 어느 도메인 표준을 따를지 Mavis 가 자체 추론해야 하므로 결정론적이지 않을 수 있음.

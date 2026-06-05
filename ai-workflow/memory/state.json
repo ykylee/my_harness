@@ -22,8 +22,8 @@
     "runtime_checks": null
   },
   "session": {
-    "current_baseline": "**my_harness 부트스트랩 완료** — `standard_ai_workflow` (ykylee/standard_ai_workflow) 의 `minimax-code` 하네스 오버레이를 이 저장소에 적용.",
-    "current_axis": "**my_harness 부트스트랩 완료** — `standard_ai_workflow` (ykylee/standard_ai_workflow) 의 `minimax-code` 하네스 오버레이를 이 저장소에 적용.",
+    "current_baseline": "**my_harness 스코프 확정** — yklee의 개인 코딩 에이전트 하네스로 다음 3개 도메인을 커버:",
+    "current_axis": "**my_harness 스코프 확정** — yklee의 개인 코딩 에이전트 하네스로 다음 3개 도메인을 커버:",
     "current_focus": "TASK-001 my-harness 부트스트랩 (standard_ai_workflow 적용)",
     "in_progress_items": [],
     "blocked_items": [],
@@ -34,7 +34,7 @@
   },
   "backlog": {
     "latest_backlog_path": "ai-workflow/memory/backlog/2026-06-05.md",
-    "task_count": 2,
+    "task_count": 3,
     "in_progress_items": [],
     "blocked_items": [],
     "done_items": [

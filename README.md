@@ -1,13 +1,14 @@
 # my_harness
 
-- yklee의 개인 코딩 에이전트 하네스
-- 기반 프레임워크: [`standard_ai_workflow`](https://github.com/ykylee/standard_ai_workflow) v0.5.0-beta
+- **yklee의 개인 코딩 에이전트 하네스** — 모든 에이전트 작업의 단일 진입점
+- 적용 도메인: **코드 개발 전반** (구현/리팩토링/리뷰/PR) · **기본 서버 관리** (프로세스/로그/설정/배포 헬퍼) · **환경 셋업** (로컬/원격 부트스트랩, 의존성, dotfiles)
+- 기반 프레임워크: [`standard_ai_workflow`](https://github.com/ykylee/standard_ai_workflow) v0.5.0-beta (`ai-workflow/core/global_workflow_standard.md` 준수)
 - 적용 하네스: `minimax-code` (Mavis / MiniMax Code 오버레이)
 - 마지막 워크플로우 적용: 2026-06-05
 
 ## 이 저장소의 역할
 
-이 저장소는 *워크플로우 컨슈머*다. `standard_ai_workflow` 가 만든 kit 번들을 받아 `bootstrap_workflow_kit.py` 로 적용한 결과를 담고 있다. Mavis(MiniMax Code) 메인 orchestrator 가 `MiniMax.md` 를 진입점으로 워크플로우 세션을 시작하면, `.MiniMax/agents/` 의 워커들이 bounded scope 작업을 수행한다.
+이 저장소는 **워크플로우 컨슈머 + 운영 정책 단일 진입점** 이다. `standard_ai_workflow` 가 만든 kit 번들을 받아 `bootstrap_workflow_kit.py` 로 적용한 결과를 담고 있다. yklee 가 수행하는 모든 에이전트 작업 (코드 개발 / 서버 관리 / 환경 셋업) 은 본 하네스의 `MiniMax.md` 와 `docs/PROJECT_PROFILE.md` 규칙을 따른다. Mavis(MiniMax Code) 메인 orchestrator 가 `MiniMax.md` 를 진입점으로 워크플로우 세션을 시작하면, `.MiniMax/agents/` 의 워커들이 bounded scope 작업을 수행한다.
 
 ## 디렉토리 구조
 

@@ -46,13 +46,32 @@
 - 장문의 중간 reasoning, 중복 요약, 불필요한 자기 설명을 피한다.
 - handoff 와 backlog 에는 다음 세션에 필요한 핵심 사실만 남겨 불필요한 컨텍스트 누적을 줄인다.
 
-## 프로젝트 실행 기본값
+## 프로젝트 실행 기본값 (도메인별)
 
-- 설치: `TODO: 설치 명령 입력`
-- 로컬 실행: `TODO: 로컬 실행 명령 입력`
-- 빠른 테스트: `TODO: 빠른 테스트 명령 입력`
-- 격리 테스트: `TODO: 격리 테스트 명령 입력`
-- 실행 확인: `TODO: 실행 확인 명령 입력`
+이 하네스는 **코드 개발 / 서버 관리 / 환경 셋업** 세 도메인의 작업 진입점이다. 각 도메인별 표준 명령은 yklee의 점진적 사용 패턴에 따라 `docs/PROJECT_PROFILE.md` §3.1 와 본 섹션에 채워진다. 초기값은 의도적인 TODO 다.
+
+### 코드 개발
+
+- 설치: `TODO` (대상 프로젝트별 — 일반적으로 `pnpm install` / `npm ci` / `go mod download` 등)
+- 로컬 실행: `TODO`
+- 빠른 테스트: `TODO` (vitest / jest / go test 등)
+- 격리 테스트: `TODO`
+- 실행 확인: `TODO`
+
+### 서버 관리
+
+- 서버 호스트 목록 / SSH 별칭: `TODO` (`~/.ssh/config` 별칭 또는 운영 alias)
+- 헬스체크: `TODO` (curl, ping, systemctl 등 도메인별 헬퍼)
+- 로그 확인: `TODO` (journalctl, lnav, tail 패턴)
+- 설정 변경: `TODO` (dotfiles 저장소 path + 적용 명령)
+- 배포: `TODO`
+
+### 환경 셋업
+
+- Homebrew 패키지 목록: `TODO` (`brew bundle --file=Brewfile` 패턴)
+- 런타임 버전 매니저: `TODO` (asdf / rtx / mise 등)
+- dotfiles / 셸 설정: `TODO` (저장소 path + 동기화 명령)
+- 신규 머신 부트스트랩: `TODO` (위 셋을 묶은 단일 진입점)
 
 ## 문서 작업 기준
 
