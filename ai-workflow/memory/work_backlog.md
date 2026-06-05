@@ -19,3 +19,5 @@
 - [x] TASK-001: my-harness 부트스트랩 (standard_ai_workflow 적용) — done
 - [ ] TASK-002: 하네스 워커 smoke check 컨슈머 보정 — planned
 - [ ] TASK-003: 도메인별 명령 가이드 작성 (코드 / 서버 / 환경) — planned
+- [ ] TASK-004: CLI/TUI 툴 레퍼런스 5종 비교 분석 (OpenCode / Aider / Codex / Goose / Gemini CLI) — planned
+- [ ] TASK-005: my_harness 의 CLI/TUI 툴 전환 (방향 확정 후) — planned

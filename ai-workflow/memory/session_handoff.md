@@ -9,38 +9,38 @@
 
 ## Current Focus
 
-- **my_harness 스코프 확정** — yklee의 개인 코딩 에이전트 하네스로 다음 3개 도메인을 커버:
-  1. **코드 개발 전반** (구현/리팩토링/리뷰/PR)
-  2. **기본 서버 관리** (프로세스/로그/설정/배포 헬퍼)
-  3. **환경 셋업** (로컬/원격 부트스트랩, 의존성, dotfiles)
-- 모든 작업은 `standard_ai_workflow` (ykylee/standard_ai_workflow) 의 코어 표준을 따른다.
-- 다음 세션은 `MiniMax.md` → `state.json` → 본 handoff → `work_backlog.md` → `docs/PROJECT_PROFILE.md` 순으로 세션 복원.
+- **방향 전환 (2026-06-05 22:00)** — yklee 가 `my_harness` 를 단순 워크플로우 컨슈머가 아니라 *직접 개발/배포할 CLI/TUI 코딩 에이전트 하네스* 의 소스 트리로 키우기로 결정.
+  - 타겟 플랫폼: **Windows / Linux / macOS** 동시 지원
+  - 표준 AI 워크플로우 (state.json / handoff / backlog / minimax-code 오버레이) 는 그대로 준수
+  - 3-도메인 (코드 개발 / 서버 관리 / 환경 셋업) 진입점은 미래 CLI 의 기능 스코프
+- **레퍼런스 수집 완료** — 5개 오픈소스 하네스를 `/Users/yklee/repos/harness-refs/` 에 클론 (총 1.1GB):
+  - OpenCode (sst/opencode, Go+TS), Aider (Python), Codex CLI (openai/codex, Rust+TS), Goose (block/goose → aaif.io, Rust), Gemini CLI (TS)
+  - 4/5 가 `AGENTS.md` / `GEMINI.md` / `CLAUDE.md` 진입점 보유 — 우리 표준 워크플로우가 산업 표준과 정합
+- 다음 세션은 TASK-004 (레퍼런스 비교 분석) 부터 진행.
 
 ## Work Status
 
 - TASK-001 my-harness 부트스트랩 (standard_ai_workflow 적용): done
-- TASK-002 [차기] 하네스 워커별 smoke check 컨슈머 보정: planned
+- TASK-002 [차기] 하네스 워커 smoke check 컨슈머 보정: planned
 - TASK-003 [차기] 도메인별 명령 가이드 작성 (코드/서버/환경): planned
+- TASK-004 [즉시] CLI/TUI 툴 레퍼런스 5종 비교 분석: planned
+- TASK-005 [방향 확정 후] my_harness 의 CLI/TUI 툴 전환: planned
 - N/A: blocked
 
 ## Key Changes
 
-- 2026-06-05 1차 부트스트랩 — `bootstrap_workflow_kit.py` 로 minimax-code 오버레이 적용.
-- 2026-06-05 2차 컨텍스트 보강:
-  - `docs/PROJECT_PROFILE.md` §1 목적에 3개 도메인 명시, §3.1 도메인별 명령 섹션 신설, §4 검증 포인트 도메인별 추가.
-  - `MiniMax.md` 의 "프로젝트 실행 기본값" 섹션을 **코드 개발 / 서버 관리 / 환경 셋업** 3개 블록으로 재구조화.
-  - `README.md` 의 첫 줄을 신규 목적에 맞춰 갱신.
-  - `state.json` 재생성.
+- 2026-06-05 1차 (21:xx) — `bootstrap_workflow_kit.py` 로 minimax-code 오버레이 적용. 1bfae06 커밋.
+- 2026-06-05 2차 (21:xx) — 스코프를 3-도메인으로 확장. `MiniMax.md` 와 `PROJECT_PROFILE.md` 보강. 0266610 커밋.
+- 2026-06-05 3차 (22:xx) — **방향 전환**: 5개 오픈소스 하네스 레퍼런스 클론. TASK-004/005 추가.
 
 ## 다음에 할 일 (Next Actions)
 
-- [ ] TASK-003: 도메인별 표준 명령을 `MiniMax.md` §"프로젝트 실행 기본값" 과 `docs/PROJECT_PROFILE.md` §3.1 에 채우기. yklee 의 실제 셋업 / 서버 호스트 / dotfiles 경로 정보 필요.
-- [ ] TASK-002: `ai-workflow/tests/check_*.py` 컨슈머 레이아웃 보정 (소스 프레임워크 `workflow-source/` 경로 의존성 제거)
-- [ ] `.MiniMax/config.json` 을 `MiniMax_config.example.json` 으로 초기화 (서버 토큰 등 시크릿은 환경변수 주입)
-- [ ] 도메인별 첫 실제 작업 발생 시 일별 백로그(`ai-workflow/memory/backlog/<date>.md`)에 TASK 등록 → `state.json` 재생성
+- [ ] **TASK-004 즉시 착수** — 5개 레퍼런스를 8축(언어/TUI/cross-platform/토폴로지/컨텍스트/세션/확장/워크플로우 호환)으로 비교 분석. 결과는 `docs/REFERENCES.md` 에 1차 정리.
+- [ ] TASK-002/003 은 우선순위 medium 으로 후순위 (방향 전환으로 인함). 단, TASK-005 진행 중 새 CLI 의 워크플로우 레이어 설계 시 TASK-002/003 의 결론 재활용 가능.
+- [ ] TASK-004 종료 후 yklee 와 디자인 리뷰 — 언어 / TUI 라이브러리 / 패키징 / 이름 결정 → TASK-005 세부 분해.
 
 ## Risks & Blockers
 
-- `ai-workflow/tests/check_*.py` 일부가 소스 프레임워크 레이아웃 가정 — 컨슈머에서는 `ModuleNotFoundError: workflow_kit` 또는 경로 오류로 실패 (TASK-002 로 대응).
-- `MiniMax.md` 가 `AGENTS.md` 를 진입점으로 함께 언급하나, 현재 컨슈머에는 `AGENTS.md` 미생성. AGENTS.md 가 실제로 필요한지(외부 4-워커 워크플로우와 직교 가능성) yklee 결정 대기.
-- 도메인별 표준 명령이 미정(TODO). 첫 코드/서버/환경 작업 시 어느 도메인 표준을 따를지 Mavis 가 자체 추론해야 하므로 결정론적이지 않을 수 있음.
+- 5개 레퍼런스 중 **Goose** 가 Agentic AI Foundation 으로 이전 중. URL `block/goose` 는 동작하나 곧 aaif.io 가 canonical 이 될 가능성 — 분석엔 영향 없음, 추적.
+- `my_harness` 의 현재 standard_ai_workflow 기반 구조와 미래 CLI/TUI 구조가 공존해야 함. 빌드 시스템 / 의존성 / 진입점 충돌 가능. TASK-005.1 (스택 결정) 시 우선 정리.
+- 디스크 사용: harness-refs 1.1GB. 시간 지나도 분석용이라 유지가 기본. 불필요시 `trash` 로 회수.

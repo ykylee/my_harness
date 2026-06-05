@@ -22,8 +22,8 @@
     "runtime_checks": null
   },
   "session": {
-    "current_baseline": "**my_harness 스코프 확정** — yklee의 개인 코딩 에이전트 하네스로 다음 3개 도메인을 커버:",
-    "current_axis": "**my_harness 스코프 확정** — yklee의 개인 코딩 에이전트 하네스로 다음 3개 도메인을 커버:",
+    "current_baseline": "**방향 전환 (2026-06-05 22:00)** — yklee 가 `my_harness` 를 단순 워크플로우 컨슈머가 아니라 *직접 개발/배포할 CLI/TUI 코딩 에이전트 하네스* 의 소스 트리로 키우기로 결정.",
+    "current_axis": "**방향 전환 (2026-06-05 22:00)** — yklee 가 `my_harness` 를 단순 워크플로우 컨슈머가 아니라 *직접 개발/배포할 CLI/TUI 코딩 에이전트 하네스* 의 소스 트리로 키우기로 결정.",
     "current_focus": "TASK-001 my-harness 부트스트랩 (standard_ai_workflow 적용)",
     "in_progress_items": [],
     "blocked_items": [],
@@ -34,7 +34,7 @@
   },
   "backlog": {
     "latest_backlog_path": "ai-workflow/memory/backlog/2026-06-05.md",
-    "task_count": 3,
+    "task_count": 5,
     "in_progress_items": [],
     "blocked_items": [],
     "done_items": [
