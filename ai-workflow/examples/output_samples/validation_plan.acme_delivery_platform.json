@@ -1,0 +1,73 @@
+{
+  "status": "ok",
+  "tool_version": "v0.5.0-beta",
+  "detected_change_types": [
+    "code",
+    "docs",
+    "ops"
+  ],
+  "recommended_validation_levels": [
+    "standard",
+    "release_sensitive"
+  ],
+  "recommended_commands": [
+    {
+      "command": "pytest -q",
+      "reason": "기본 빠른 테스트"
+    },
+    {
+      "command": "make lint",
+      "reason": "기본 빠른 테스트"
+    },
+    {
+      "command": "docker compose --profile test run --rm api-test",
+      "reason": "격리 검증 또는 추가 회귀 확인"
+    }
+  ],
+  "commands_requiring_confirmation": [
+    {
+      "command": "curl http://localhost:8080/health",
+      "reason": "배포/운영 변경과 연계된 실행 확인"
+    },
+    {
+      "command": "npm run e2e:smoke",
+      "reason": "배포/운영 변경과 연계된 실행 확인"
+    }
+  ],
+  "documentation_checks": [
+    "헬스체크 확인 결과와 롤백 절차 검토 여부를 남긴다.",
+    "운영팀 공지 또는 승인 필요 여부를 확인한다.",
+    "허브 문서, 메타데이터, 관련 링크 무결성을 함께 점검한다.",
+    "API 변경은 단위 테스트와 lint를 필수로 수행하고, 스키마 변경 시 마이그레이션 검토를 포함한다.",
+    "운영 허브 링크, 메타데이터, 관련 runbook 링크 무결성을 함께 확인한다.",
+    "헬스체크 확인, 롤백 절차 검토, 운영팀 공지 여부를 함께 점검한다."
+  ],
+  "evidence_expectations": [
+    "문서 변경은 관련 허브 또는 상태 문서 동기화 여부를 기록한다."
+  ],
+  "deferred_validation_items": [
+    {
+      "item": "검증 결과와 미실행 사유를 handoff 에 남길지 확인",
+      "suggested_record_path": "/Users/yklee/repos/standard_ai_workflow/examples/acme_delivery_platform/session_handoff.md"
+    },
+    {
+      "item": "오늘 세션에서 생략한 검증 항목을 backlog 에 후속 작업으로 남길지 확인",
+      "suggested_record_path": "/Users/yklee/repos/standard_ai_workflow/examples/acme_delivery_platform/backlog/2026-04-18.md"
+    }
+  ],
+  "warnings": [
+    "staging 검증은 사내 VPN 연결 상태에서만 수행 가능하다."
+  ],
+  "confidence_notes": [
+    "프로젝트 프로파일의 기본 명령을 우선 사용해 검증 계획을 구성했다."
+  ],
+  "source_context": {
+    "project_profile_path": "/Users/yklee/repos/standard_ai_workflow/examples/acme_delivery_platform/PROJECT_PROFILE.md",
+    "project_name": "Acme Delivery Platform",
+    "changed_files": [
+      "app/jobs/delivery_sync.py",
+      "docs/operations/runbooks/delivery-sync.md"
+    ],
+    "change_summary": "delivery sync 재시도 로직과 운영 runbook 동시 수정"
+  }
+}

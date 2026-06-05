@@ -1,0 +1,9 @@
+{
+  "status": "ok",
+  "tool_version": "v0.5.0-beta",
+  "latest_backlog_path": "/Users/yklee/repos/standard_ai_workflow/examples/acme_delivery_platform/backlog/2026-04-18.md",
+  "candidates": [
+    "/Users/yklee/repos/standard_ai_workflow/examples/acme_delivery_platform/backlog/2026-04-18.md"
+  ],
+  "warnings": []
+}

@@ -1,0 +1,41 @@
+{
+  "status": "error",
+  "tool_version": "v0.5.0-beta",
+  "error": "필수 입력 문서를 읽을 수 없다.",
+  "error_code": "workflow_step_failed",
+  "warnings": [
+    "session-start 기준선을 복원할 수 없어 후속 판단을 중단한다."
+  ],
+  "source_context": {
+    "example_project": "acme_delivery_platform",
+    "project_profile_path": "/private/tmp/missing-profile.md",
+    "session_handoff_path": "/Users/yklee/repos/standard_ai_workflow/examples/acme_delivery_platform/session_handoff.md",
+    "work_backlog_index_path": "/Users/yklee/repos/standard_ai_workflow/examples/acme_delivery_platform/work_backlog.md",
+    "backlog_dir_path": "/Users/yklee/repos/standard_ai_workflow/examples/acme_delivery_platform/backlog",
+    "latest_backlog_path": null,
+    "task_id": "TASK-021",
+    "task_name": "배송 상태 동기화 실패 대응 절차 문서 정리",
+    "task_brief": "runbook 및 handoff 반영 상태를 점검했다.",
+    "task_status": "in_progress",
+    "changed_files": [
+      "app/jobs/delivery_sync.py",
+      "docs/operations/runbooks/delivery-sync.md"
+    ],
+    "merge_result_summary": "runbook 링크와 상태 문서가 함께 수정된 브랜치 병합 후 재정리",
+    "failed_step": "session_start",
+    "failed_command": [
+      "/Library/Developer/CommandLineTools/usr/bin/python3",
+      "/Users/yklee/repos/standard_ai_workflow/skills/session-start/scripts/run_session_start.py",
+      "--session-handoff-path",
+      "/Users/yklee/repos/standard_ai_workflow/examples/acme_delivery_platform/session_handoff.md",
+      "--work-backlog-index-path",
+      "/Users/yklee/repos/standard_ai_workflow/examples/acme_delivery_platform/work_backlog.md",
+      "--project-profile-path",
+      "/tmp/missing-profile.md",
+      "--latest-backlog-path",
+      "/Users/yklee/repos/standard_ai_workflow/examples/acme_delivery_platform/backlog/2026-04-18.md"
+    ],
+    "upstream_error_code": "missing_required_document",
+    "upstream_status": "error"
+  }
+}

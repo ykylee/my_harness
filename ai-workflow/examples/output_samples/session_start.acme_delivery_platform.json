@@ -1,0 +1,37 @@
+{
+  "status": "ok",
+  "tool_version": "v0.5.0-beta",
+  "summary": [
+    "현재 기준선: 배송 상태 동기화 배치의 재시도 정책 초안이 반영되었고, 운영 문서 허브 링크는 최신 상태다.",
+    "주 작업 축: 장애 대응 이후 백로그 정리 흐름과 운영 문서 동기화 기준을 표준화하는 작업",
+    "진행 중 작업 1건 확인",
+    "주요 제약: VPN 미연결 상태에서는 staging API 및 운영 콘솔 접근 불가"
+  ],
+  "in_progress_items": [
+    "TASK-021 배송 상태 동기화 실패 대응 절차 문서 정리"
+  ],
+  "blocked_items": [
+    "TASK-019 staging 운영 계정 접근 권한 재승인 대기"
+  ],
+  "latest_backlog_path": "/Users/yklee/repos/standard_ai_workflow/examples/acme_delivery_platform/backlog/2026-04-18.md",
+  "next_documents": [
+    "/Users/yklee/repos/standard_ai_workflow/examples/acme_delivery_platform/session_handoff.md",
+    "/Users/yklee/repos/standard_ai_workflow/examples/acme_delivery_platform/backlog/2026-04-18.md",
+    "/Users/yklee/repos/standard_ai_workflow/examples/acme_delivery_platform/PROJECT_PROFILE.md",
+    "/Users/yklee/repos/standard_ai_workflow/examples/acme_delivery_platform/work_backlog.md"
+  ],
+  "recommended_next_action": "handoff 와 최신 backlog 의 상태 불일치 여부를 먼저 확인한다.",
+  "warnings": [
+    "blocked 항목이 handoff 와 backlog 사이에서 다를 수 있으므로 수동 재확인이 필요하다."
+  ],
+  "validation_notes": [],
+  "environment_constraints": [
+    "VPN 미연결 상태에서는 staging API 및 운영 콘솔 접근 불가",
+    "staging 검증은 사내 VPN 연결 상태에서만 수행 가능하다."
+  ],
+  "source_documents": {
+    "session_handoff_path": "/Users/yklee/repos/standard_ai_workflow/examples/acme_delivery_platform/session_handoff.md",
+    "work_backlog_index_path": "/Users/yklee/repos/standard_ai_workflow/examples/acme_delivery_platform/work_backlog.md",
+    "project_profile_path": "/Users/yklee/repos/standard_ai_workflow/examples/acme_delivery_platform/PROJECT_PROFILE.md"
+  }
+}

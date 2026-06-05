@@ -1,0 +1,17 @@
+{
+  "status": "error",
+  "tool_version": "v0.5.0-beta",
+  "error": "path does not exist: /private/tmp/missing-profile.md",
+  "error_code": "missing_required_document",
+  "warnings": [],
+  "source_context": {
+    "project_profile_path": "/private/tmp/missing-profile.md",
+    "session_handoff_path": "/Users/yklee/repos/standard_ai_workflow/examples/acme_delivery_platform/session_handoff.md",
+    "work_backlog_index_path": "/Users/yklee/repos/standard_ai_workflow/examples/acme_delivery_platform/work_backlog.md",
+    "backlog_dir_path": "/Users/yklee/repos/standard_ai_workflow/examples/acme_delivery_platform/backlog",
+    "repository_assessment_path": null,
+    "latest_backlog_path": null,
+    "changed_files": [],
+    "change_summary": "기존 프로젝트 도입 초안과 추정 명령/문서 구조를 실제 저장소 기준으로 정렬한다."
+  }
+}

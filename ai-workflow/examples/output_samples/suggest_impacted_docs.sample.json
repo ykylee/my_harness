@@ -1,0 +1,15 @@
+{
+  "status": "ok",
+  "tool_version": "v0.5.0-beta",
+  "impacted_documents": [
+    "/Users/yklee/repos/standard_ai_workflow/examples/acme_delivery_platform/session_handoff.md",
+    "/Users/yklee/repos/standard_ai_workflow/examples/acme_delivery_platform/backlog/2026-04-18.md",
+    "/Users/yklee/repos/standard_ai_workflow/examples/acme_delivery_platform/work_backlog.md",
+    "harnesses/codex/apply_guide.md"
+  ],
+  "reasoning_notes": [
+    "`scripts/bootstrap_workflow_kit.py` 는 `code` 유형 변경으로 해석했다.",
+    "`harnesses/codex/apply_guide.md` 는 `doc` 유형 변경으로 해석했다."
+  ],
+  "warnings": []
+}

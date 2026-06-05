@@ -1,0 +1,50 @@
+{
+  "$schema": "https://MiniMax.dev/schema/config.json",
+  "project_name": "Standard AI Workflow Project",
+  "language": "ko-KR",
+  "agents": {
+    "workflow-orchestrator": {
+      "file": ".MiniMax/agents/workflow-orchestrator.md",
+      "role": "orchestrator"
+    },
+    "workflow-worker": {
+      "file": ".MiniMax/agents/workflow-worker.md",
+      "role": "worker"
+    },
+    "workflow-doc-worker": {
+      "file": ".MiniMax/agents/workflow-doc-worker.md",
+      "role": "doc-worker"
+    },
+    "workflow-code-worker": {
+      "file": ".MiniMax/agents/workflow-code-worker.md",
+      "role": "code-worker"
+    },
+    "workflow-validation-worker": {
+      "file": ".MiniMax/agents/workflow-validation-worker.md",
+      "role": "validation-worker"
+    }
+  },
+  "mcp_servers": {
+    "standard-ai-workflow-readonly": {
+      "command": "python3",
+      "args": ["-m", "workflow_kit.server.read_only_jsonrpc", "--stdio-lines"],
+      "env": {
+        "PYTHONPATH": "./workflow-source"
+      },
+      "transport_ready": false,
+      "description": "Read-only MCP draft fixture for the standard workflow kit. See workflow-source/schemas/read_only_transport_descriptors.json."
+    }
+  },
+  "workflow": {
+    "memory_dir": "ai-workflow/memory",
+    "session_handoff_path": "ai-workflow/memory/session_handoff.md",
+    "work_backlog_index_path": "ai-workflow/memory/work_backlog.md",
+    "project_profile_path": "docs/PROJECT_PROFILE.md",
+    "state_json_path": "ai-workflow/memory/state.json"
+  },
+  "session_protocol": {
+    "language": "ko-KR",
+    "auto_refresh_state": true,
+    "require_handoff_before_done": true
+  }
+}

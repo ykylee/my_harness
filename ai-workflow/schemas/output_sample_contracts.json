@@ -1,0 +1,1752 @@
+{
+  "common_required_keys": [
+    "status",
+    "tool_version",
+    "warnings"
+  ],
+  "error_field_shapes": {
+    "backlog_update": {
+      "error": {
+        "allow_null": false,
+        "kind": "string"
+      },
+      "error_code": {
+        "allow_null": false,
+        "kind": "string"
+      },
+      "source_context": {
+        "allow_null": false,
+        "item_kind": "string",
+        "kind": "object"
+      },
+      "status": {
+        "allow_null": false,
+        "kind": "string"
+      },
+      "tool_version": {
+        "allow_null": false,
+        "kind": "string"
+      },
+      "warnings": {
+        "allow_null": false,
+        "item_kind": "string",
+        "kind": "list"
+      }
+    },
+    "check_doc_links": {
+      "error": {
+        "allow_null": false,
+        "kind": "string"
+      },
+      "error_code": {
+        "allow_null": false,
+        "kind": "string"
+      },
+      "source_context": {
+        "allow_null": false,
+        "item_kind": "string",
+        "kind": "object"
+      },
+      "status": {
+        "allow_null": false,
+        "kind": "string"
+      },
+      "tool_version": {
+        "allow_null": false,
+        "kind": "string"
+      },
+      "warnings": {
+        "allow_null": false,
+        "item_kind": "string",
+        "kind": "list"
+      }
+    },
+    "check_doc_metadata": {
+      "error": {
+        "allow_null": false,
+        "kind": "string"
+      },
+      "error_code": {
+        "allow_null": false,
+        "kind": "string"
+      },
+      "source_context": {
+        "allow_null": false,
+        "item_kind": "string",
+        "kind": "object"
+      },
+      "status": {
+        "allow_null": false,
+        "kind": "string"
+      },
+      "tool_version": {
+        "allow_null": false,
+        "kind": "string"
+      },
+      "warnings": {
+        "allow_null": false,
+        "item_kind": "string",
+        "kind": "list"
+      }
+    },
+    "check_quickstart_stale_links": {
+      "error": {
+        "allow_null": false,
+        "kind": "string"
+      },
+      "error_code": {
+        "allow_null": false,
+        "kind": "string"
+      },
+      "source_context": {
+        "allow_null": false,
+        "item_kind": "string",
+        "kind": "object"
+      },
+      "status": {
+        "allow_null": false,
+        "kind": "string"
+      },
+      "tool_version": {
+        "allow_null": false,
+        "kind": "string"
+      },
+      "warnings": {
+        "allow_null": false,
+        "item_kind": "string",
+        "kind": "list"
+      }
+    },
+    "code_index_update": {
+      "error": {
+        "allow_null": false,
+        "kind": "string"
+      },
+      "error_code": {
+        "allow_null": false,
+        "kind": "string"
+      },
+      "source_context": {
+        "allow_null": false,
+        "item_kind": "string",
+        "kind": "object"
+      },
+      "status": {
+        "allow_null": false,
+        "kind": "string"
+      },
+      "tool_version": {
+        "allow_null": false,
+        "kind": "string"
+      },
+      "warnings": {
+        "allow_null": false,
+        "item_kind": "string",
+        "kind": "list"
+      }
+    },
+    "create_backlog_entry": {
+      "error": {
+        "allow_null": false,
+        "kind": "string"
+      },
+      "error_code": {
+        "allow_null": false,
+        "kind": "string"
+      },
+      "source_context": {
+        "allow_null": false,
+        "item_kind": "string",
+        "kind": "object"
+      },
+      "status": {
+        "allow_null": false,
+        "kind": "string"
+      },
+      "tool_version": {
+        "allow_null": false,
+        "kind": "string"
+      },
+      "warnings": {
+        "allow_null": false,
+        "item_kind": "string",
+        "kind": "list"
+      }
+    },
+    "create_environment_record_stub": {
+      "error": {
+        "allow_null": false,
+        "kind": "string"
+      },
+      "error_code": {
+        "allow_null": false,
+        "kind": "string"
+      },
+      "source_context": {
+        "allow_null": false,
+        "item_kind": "string",
+        "kind": "object"
+      },
+      "status": {
+        "allow_null": false,
+        "kind": "string"
+      },
+      "tool_version": {
+        "allow_null": false,
+        "kind": "string"
+      },
+      "warnings": {
+        "allow_null": false,
+        "item_kind": "string",
+        "kind": "list"
+      }
+    },
+    "create_session_handoff_draft": {
+      "error": {
+        "allow_null": false,
+        "kind": "string"
+      },
+      "error_code": {
+        "allow_null": false,
+        "kind": "string"
+      },
+      "source_context": {
+        "allow_null": false,
+        "item_kind": "string",
+        "kind": "object"
+      },
+      "status": {
+        "allow_null": false,
+        "kind": "string"
+      },
+      "tool_version": {
+        "allow_null": false,
+        "kind": "string"
+      },
+      "warnings": {
+        "allow_null": false,
+        "item_kind": "string",
+        "kind": "list"
+      }
+    },
+    "demo_workflow": {
+      "error": {
+        "allow_null": false,
+        "kind": "string"
+      },
+      "error_code": {
+        "allow_null": false,
+        "kind": "string"
+      },
+      "source_context": {
+        "allow_null": false,
+        "item_kind": "string",
+        "kind": "object"
+      },
+      "status": {
+        "allow_null": false,
+        "kind": "string"
+      },
+      "tool_version": {
+        "allow_null": false,
+        "kind": "string"
+      },
+      "warnings": {
+        "allow_null": false,
+        "item_kind": "string",
+        "kind": "list"
+      }
+    },
+    "doc_sync": {
+      "error": {
+        "allow_null": false,
+        "kind": "string"
+      },
+      "error_code": {
+        "allow_null": false,
+        "kind": "string"
+      },
+      "source_context": {
+        "allow_null": false,
+        "item_kind": "string",
+        "kind": "object"
+      },
+      "status": {
+        "allow_null": false,
+        "kind": "string"
+      },
+      "tool_version": {
+        "allow_null": false,
+        "kind": "string"
+      },
+      "warnings": {
+        "allow_null": false,
+        "item_kind": "string",
+        "kind": "list"
+      }
+    },
+    "existing_project_onboarding": {
+      "error": {
+        "allow_null": false,
+        "kind": "string"
+      },
+      "error_code": {
+        "allow_null": false,
+        "kind": "string"
+      },
+      "source_context": {
+        "allow_null": false,
+        "item_kind": "string",
+        "kind": "object"
+      },
+      "status": {
+        "allow_null": false,
+        "kind": "string"
+      },
+      "tool_version": {
+        "allow_null": false,
+        "kind": "string"
+      },
+      "warnings": {
+        "allow_null": false,
+        "item_kind": "string",
+        "kind": "list"
+      }
+    },
+    "git_conflict_resolver": {
+      "error": {
+        "allow_null": false,
+        "kind": "string"
+      },
+      "error_code": {
+        "allow_null": false,
+        "kind": "string"
+      },
+      "source_context": {
+        "allow_null": false,
+        "item_kind": "string",
+        "kind": "object"
+      },
+      "status": {
+        "allow_null": false,
+        "kind": "string"
+      },
+      "tool_version": {
+        "allow_null": false,
+        "kind": "string"
+      },
+      "warnings": {
+        "allow_null": false,
+        "item_kind": "string",
+        "kind": "list"
+      }
+    },
+    "latest_backlog": {
+      "error": {
+        "allow_null": false,
+        "kind": "string"
+      },
+      "error_code": {
+        "allow_null": false,
+        "kind": "string"
+      },
+      "source_context": {
+        "allow_null": false,
+        "item_kind": "string",
+        "kind": "object"
+      },
+      "status": {
+        "allow_null": false,
+        "kind": "string"
+      },
+      "tool_version": {
+        "allow_null": false,
+        "kind": "string"
+      },
+      "warnings": {
+        "allow_null": false,
+        "item_kind": "string",
+        "kind": "list"
+      }
+    },
+    "merge_doc_reconcile": {
+      "error": {
+        "allow_null": false,
+        "kind": "string"
+      },
+      "error_code": {
+        "allow_null": false,
+        "kind": "string"
+      },
+      "source_context": {
+        "allow_null": false,
+        "item_kind": "string",
+        "kind": "object"
+      },
+      "status": {
+        "allow_null": false,
+        "kind": "string"
+      },
+      "tool_version": {
+        "allow_null": false,
+        "kind": "string"
+      },
+      "warnings": {
+        "allow_null": false,
+        "item_kind": "string",
+        "kind": "list"
+      }
+    },
+    "read_only_entrypoint": {
+      "error": {
+        "allow_null": false,
+        "kind": "string"
+      },
+      "error_code": {
+        "allow_null": false,
+        "kind": "string"
+      },
+      "source_context": {
+        "allow_null": false,
+        "item_kind": "string",
+        "kind": "object"
+      },
+      "status": {
+        "allow_null": false,
+        "kind": "string"
+      },
+      "tool_version": {
+        "allow_null": false,
+        "kind": "string"
+      },
+      "warnings": {
+        "allow_null": false,
+        "item_kind": "string",
+        "kind": "list"
+      }
+    },
+    "session_start": {
+      "error": {
+        "allow_null": false,
+        "kind": "string"
+      },
+      "error_code": {
+        "allow_null": false,
+        "kind": "string"
+      },
+      "source_context": {
+        "allow_null": false,
+        "item_kind": "string",
+        "kind": "object"
+      },
+      "status": {
+        "allow_null": false,
+        "kind": "string"
+      },
+      "tool_version": {
+        "allow_null": false,
+        "kind": "string"
+      },
+      "warnings": {
+        "allow_null": false,
+        "item_kind": "string",
+        "kind": "list"
+      }
+    },
+    "smart_context_reader": {
+      "error": {
+        "allow_null": false,
+        "kind": "string"
+      },
+      "error_code": {
+        "allow_null": false,
+        "kind": "string"
+      },
+      "source_context": {
+        "allow_null": false,
+        "item_kind": "string",
+        "kind": "object"
+      },
+      "status": {
+        "allow_null": false,
+        "kind": "string"
+      },
+      "tool_version": {
+        "allow_null": false,
+        "kind": "string"
+      },
+      "warnings": {
+        "allow_null": false,
+        "item_kind": "string",
+        "kind": "list"
+      }
+    },
+    "suggest_impacted_docs": {
+      "error": {
+        "allow_null": false,
+        "kind": "string"
+      },
+      "error_code": {
+        "allow_null": false,
+        "kind": "string"
+      },
+      "source_context": {
+        "allow_null": false,
+        "item_kind": "string",
+        "kind": "object"
+      },
+      "status": {
+        "allow_null": false,
+        "kind": "string"
+      },
+      "tool_version": {
+        "allow_null": false,
+        "kind": "string"
+      },
+      "warnings": {
+        "allow_null": false,
+        "item_kind": "string",
+        "kind": "list"
+      }
+    },
+    "validation_plan": {
+      "error": {
+        "allow_null": false,
+        "kind": "string"
+      },
+      "error_code": {
+        "allow_null": false,
+        "kind": "string"
+      },
+      "source_context": {
+        "allow_null": false,
+        "item_kind": "string",
+        "kind": "object"
+      },
+      "status": {
+        "allow_null": false,
+        "kind": "string"
+      },
+      "tool_version": {
+        "allow_null": false,
+        "kind": "string"
+      },
+      "warnings": {
+        "allow_null": false,
+        "item_kind": "string",
+        "kind": "list"
+      }
+    },
+    "worker_response": {
+      "error": {
+        "allow_null": false,
+        "kind": "string"
+      },
+      "error_code": {
+        "allow_null": false,
+        "kind": "string"
+      },
+      "source_context": {
+        "allow_null": false,
+        "item_kind": "string",
+        "kind": "object"
+      },
+      "status": {
+        "allow_null": false,
+        "kind": "string"
+      },
+      "tool_version": {
+        "allow_null": false,
+        "kind": "string"
+      },
+      "warnings": {
+        "allow_null": false,
+        "item_kind": "string",
+        "kind": "list"
+      }
+    },
+    "worker_task": {
+      "error": {
+        "allow_null": false,
+        "kind": "string"
+      },
+      "error_code": {
+        "allow_null": false,
+        "kind": "string"
+      },
+      "source_context": {
+        "allow_null": false,
+        "item_kind": "string",
+        "kind": "object"
+      },
+      "status": {
+        "allow_null": false,
+        "kind": "string"
+      },
+      "tool_version": {
+        "allow_null": false,
+        "kind": "string"
+      },
+      "warnings": {
+        "allow_null": false,
+        "item_kind": "string",
+        "kind": "list"
+      }
+    },
+    "workflow_linter": {
+      "error": {
+        "allow_null": false,
+        "kind": "string"
+      },
+      "error_code": {
+        "allow_null": false,
+        "kind": "string"
+      },
+      "source_context": {
+        "allow_null": false,
+        "item_kind": "string",
+        "kind": "object"
+      },
+      "status": {
+        "allow_null": false,
+        "kind": "string"
+      },
+      "tool_version": {
+        "allow_null": false,
+        "kind": "string"
+      },
+      "warnings": {
+        "allow_null": false,
+        "item_kind": "string",
+        "kind": "list"
+      }
+    }
+  },
+  "error_required_keys": {
+    "backlog_update": [
+      "error",
+      "error_code",
+      "source_context"
+    ],
+    "check_doc_links": [
+      "error",
+      "error_code",
+      "source_context"
+    ],
+    "check_doc_metadata": [
+      "error",
+      "error_code",
+      "source_context"
+    ],
+    "check_quickstart_stale_links": [
+      "error",
+      "error_code",
+      "source_context"
+    ],
+    "code_index_update": [
+      "error",
+      "error_code",
+      "source_context"
+    ],
+    "create_backlog_entry": [
+      "error",
+      "error_code",
+      "source_context"
+    ],
+    "create_environment_record_stub": [
+      "error",
+      "error_code",
+      "source_context"
+    ],
+    "create_session_handoff_draft": [
+      "error",
+      "error_code",
+      "source_context"
+    ],
+    "demo_workflow": [
+      "error",
+      "error_code",
+      "source_context"
+    ],
+    "doc_sync": [
+      "error",
+      "error_code",
+      "source_context"
+    ],
+    "existing_project_onboarding": [
+      "error",
+      "error_code",
+      "source_context"
+    ],
+    "git_conflict_resolver": [
+      "error",
+      "error_code",
+      "source_context"
+    ],
+    "latest_backlog": [
+      "error",
+      "error_code",
+      "source_context"
+    ],
+    "merge_doc_reconcile": [
+      "error",
+      "error_code",
+      "source_context"
+    ],
+    "read_only_entrypoint": [
+      "error",
+      "error_code",
+      "source_context"
+    ],
+    "session_start": [
+      "error",
+      "error_code",
+      "source_context"
+    ],
+    "smart_context_reader": [
+      "error",
+      "error_code",
+      "source_context"
+    ],
+    "suggest_impacted_docs": [
+      "error",
+      "error_code",
+      "source_context"
+    ],
+    "validation_plan": [
+      "error",
+      "error_code",
+      "source_context"
+    ],
+    "worker_response": [
+      "error",
+      "error_code",
+      "source_context"
+    ],
+    "worker_task": [
+      "error",
+      "error_code",
+      "source_context"
+    ],
+    "workflow_linter": [
+      "error",
+      "error_code",
+      "source_context"
+    ]
+  },
+  "field_shapes": {
+    "backlog_update": {
+      "apply_status": {
+        "allow_null": true,
+        "kind": "string"
+      },
+      "created_paths": {
+        "allow_null": false,
+        "item_kind": "string",
+        "kind": "list"
+      },
+      "draft_entry": {
+        "allow_null": false,
+        "item_kind": "string",
+        "kind": "list"
+      },
+      "fields_requiring_confirmation": {
+        "allow_null": false,
+        "item_kind": "string",
+        "kind": "list"
+      },
+      "handoff_update_note": {
+        "allow_null": true,
+        "kind": "string"
+      },
+      "index_update_note": {
+        "allow_null": true,
+        "kind": "string"
+      },
+      "operation_type": {
+        "allow_null": false,
+        "kind": "string"
+      },
+      "source_context": {
+        "allow_null": false,
+        "kind": "BacklogUpdateSourceContext"
+      },
+      "state_cache_missing_paths": {
+        "allow_null": false,
+        "item_kind": "string",
+        "kind": "list"
+      },
+      "state_cache_refresh_command": {
+        "allow_null": true,
+        "kind": "string"
+      },
+      "state_cache_status": {
+        "allow_null": true,
+        "kind": "string"
+      },
+      "state_cache_update_note": {
+        "allow_null": true,
+        "kind": "string"
+      },
+      "status": {
+        "allow_null": false,
+        "kind": "string"
+      },
+      "status_recommendation": {
+        "allow_null": false,
+        "kind": "StatusRecommendation"
+      },
+      "target_backlog_path": {
+        "allow_null": false,
+        "kind": "string"
+      },
+      "task_found": {
+        "allow_null": false,
+        "kind": "boolean"
+      },
+      "task_id": {
+        "allow_null": false,
+        "kind": "string"
+      },
+      "tool_version": {
+        "allow_null": false,
+        "kind": "string"
+      },
+      "updated_paths": {
+        "allow_null": false,
+        "item_kind": "string",
+        "kind": "list"
+      },
+      "validation_note": {
+        "allow_null": true,
+        "kind": "string"
+      },
+      "warnings": {
+        "allow_null": false,
+        "item_kind": "string",
+        "kind": "list"
+      },
+      "written_paths": {
+        "allow_null": false,
+        "item_kind": "string",
+        "kind": "list"
+      }
+    },
+    "check_doc_links": {
+      "broken_links": {
+        "allow_null": false,
+        "item_kind": "BrokenLinks",
+        "kind": "list"
+      },
+      "checked_files": {
+        "allow_null": false,
+        "item_kind": "string",
+        "kind": "list"
+      },
+      "status": {
+        "allow_null": false,
+        "kind": "string"
+      },
+      "tool_version": {
+        "allow_null": false,
+        "kind": "string"
+      },
+      "warnings": {
+        "allow_null": false,
+        "item_kind": "string",
+        "kind": "list"
+      }
+    },
+    "check_doc_metadata": {
+      "checked_files": {
+        "allow_null": false,
+        "item_kind": "string",
+        "kind": "list"
+      },
+      "missing_metadata": {
+        "allow_null": false,
+        "item_kind": "MissingMetadata",
+        "kind": "list"
+      },
+      "status": {
+        "allow_null": false,
+        "kind": "string"
+      },
+      "tool_version": {
+        "allow_null": false,
+        "kind": "string"
+      },
+      "warnings": {
+        "allow_null": false,
+        "item_kind": "string",
+        "kind": "list"
+      }
+    },
+    "check_quickstart_stale_links": {
+      "broken_links": {
+        "allow_null": false,
+        "item_kind": "BrokenLinks",
+        "kind": "list"
+      },
+      "checked_files": {
+        "allow_null": false,
+        "item_kind": "string",
+        "kind": "list"
+      },
+      "missing_expected_links": {
+        "allow_null": false,
+        "item_kind": "StaleLinkWarning",
+        "kind": "list"
+      },
+      "reasoning_notes": {
+        "allow_null": false,
+        "item_kind": "string",
+        "kind": "list"
+      },
+      "stale_link_warnings": {
+        "allow_null": false,
+        "item_kind": "string",
+        "kind": "list"
+      },
+      "status": {
+        "allow_null": false,
+        "kind": "string"
+      },
+      "tool_version": {
+        "allow_null": false,
+        "kind": "string"
+      },
+      "warnings": {
+        "allow_null": false,
+        "item_kind": "string",
+        "kind": "list"
+      }
+    },
+    "code_index_update": {
+      "apply_status": {
+        "allow_null": true,
+        "kind": "string"
+      },
+      "confidence_notes": {
+        "allow_null": false,
+        "item_kind": "string",
+        "kind": "list"
+      },
+      "document_structure_signals": {
+        "allow_null": false,
+        "item_kind": "string",
+        "kind": "list"
+      },
+      "index_update_candidates": {
+        "allow_null": false,
+        "item_kind": "string",
+        "kind": "list"
+      },
+      "missing_index_candidates": {
+        "allow_null": false,
+        "item_kind": "string",
+        "kind": "list"
+      },
+      "priority_index_candidates": {
+        "allow_null": false,
+        "item_kind": "string",
+        "kind": "list"
+      },
+      "reasoning_notes": {
+        "allow_null": false,
+        "item_kind": "string",
+        "kind": "list"
+      },
+      "source_context": {
+        "allow_null": false,
+        "kind": "IndexUpdateSourceContext"
+      },
+      "stale_index_warnings": {
+        "allow_null": false,
+        "item_kind": "string",
+        "kind": "list"
+      },
+      "status": {
+        "allow_null": false,
+        "kind": "string"
+      },
+      "suggested_index_actions": {
+        "allow_null": false,
+        "item_kind": "string",
+        "kind": "list"
+      },
+      "tool_version": {
+        "allow_null": false,
+        "kind": "string"
+      },
+      "warnings": {
+        "allow_null": false,
+        "item_kind": "string",
+        "kind": "list"
+      },
+      "written_paths": {
+        "allow_null": false,
+        "item_kind": "string",
+        "kind": "list"
+      }
+    },
+    "create_backlog_entry": {
+      "draft_entry": {
+        "allow_null": false,
+        "item_kind": "string",
+        "kind": "list"
+      },
+      "status": {
+        "allow_null": false,
+        "kind": "string"
+      },
+      "tool_version": {
+        "allow_null": false,
+        "kind": "string"
+      },
+      "warnings": {
+        "allow_null": false,
+        "item_kind": "string",
+        "kind": "list"
+      }
+    },
+    "create_environment_record_stub": {
+      "draft_record": {
+        "allow_null": false,
+        "item_kind": "string",
+        "kind": "list"
+      },
+      "source_context": {
+        "allow_null": false,
+        "item_kind": "string",
+        "kind": "object"
+      },
+      "status": {
+        "allow_null": false,
+        "kind": "string"
+      },
+      "tool_version": {
+        "allow_null": false,
+        "kind": "string"
+      },
+      "warnings": {
+        "allow_null": false,
+        "item_kind": "string",
+        "kind": "list"
+      }
+    },
+    "create_session_handoff_draft": {
+      "draft_handoff": {
+        "allow_null": false,
+        "item_kind": "string",
+        "kind": "list"
+      },
+      "source_context": {
+        "allow_null": false,
+        "item_kind": "string",
+        "kind": "object"
+      },
+      "status": {
+        "allow_null": false,
+        "kind": "string"
+      },
+      "tool_version": {
+        "allow_null": false,
+        "kind": "string"
+      },
+      "warnings": {
+        "allow_null": false,
+        "item_kind": "string",
+        "kind": "list"
+      }
+    },
+    "demo_workflow": {
+      "orchestration_plan": {
+        "allow_null": false,
+        "kind": "OrchestrationPlan"
+      },
+      "source_context": {
+        "allow_null": false,
+        "item_kind": "string",
+        "kind": "object"
+      },
+      "status": {
+        "allow_null": false,
+        "kind": "string"
+      },
+      "tool_version": {
+        "allow_null": false,
+        "kind": "string"
+      },
+      "warnings": {
+        "allow_null": false,
+        "item_kind": "string",
+        "kind": "list"
+      },
+      "workflow_summary": {
+        "allow_null": false,
+        "item_kind": "string",
+        "kind": "object"
+      }
+    },
+    "doc_sync": {
+      "apply_status": {
+        "allow_null": true,
+        "kind": "string"
+      },
+      "confidence_notes": {
+        "allow_null": false,
+        "item_kind": "string",
+        "kind": "list"
+      },
+      "follow_up_actions": {
+        "allow_null": false,
+        "item_kind": "string",
+        "kind": "list"
+      },
+      "hub_update_candidates": {
+        "allow_null": false,
+        "item_kind": "string",
+        "kind": "list"
+      },
+      "impacted_documents": {
+        "allow_null": false,
+        "item_kind": "string",
+        "kind": "list"
+      },
+      "reasoning_notes": {
+        "allow_null": false,
+        "item_kind": "string",
+        "kind": "list"
+      },
+      "recommended_review_order": {
+        "allow_null": false,
+        "item_kind": "string",
+        "kind": "list"
+      },
+      "source_context": {
+        "allow_null": false,
+        "kind": "DocSyncSourceContext"
+      },
+      "stale_warnings": {
+        "allow_null": false,
+        "item_kind": "string",
+        "kind": "list"
+      },
+      "status": {
+        "allow_null": false,
+        "kind": "string"
+      },
+      "status_doc_candidates": {
+        "allow_null": false,
+        "item_kind": "string",
+        "kind": "list"
+      },
+      "tool_version": {
+        "allow_null": false,
+        "kind": "string"
+      },
+      "validation_doc_candidates": {
+        "allow_null": false,
+        "item_kind": "string",
+        "kind": "list"
+      },
+      "warnings": {
+        "allow_null": false,
+        "item_kind": "string",
+        "kind": "list"
+      },
+      "written_paths": {
+        "allow_null": false,
+        "item_kind": "string",
+        "kind": "list"
+      }
+    },
+    "existing_project_onboarding": {
+      "onboarding_summary": {
+        "allow_null": false,
+        "kind": "OnboardingSummary"
+      },
+      "orchestration_plan": {
+        "allow_null": false,
+        "kind": "OrchestrationPlan"
+      },
+      "source_context": {
+        "allow_null": false,
+        "item_kind": "string",
+        "kind": "object"
+      },
+      "status": {
+        "allow_null": false,
+        "kind": "string"
+      },
+      "tool_version": {
+        "allow_null": false,
+        "kind": "string"
+      },
+      "warnings": {
+        "allow_null": false,
+        "item_kind": "string",
+        "kind": "list"
+      }
+    },
+    "git_conflict_resolver": {
+      "conflict_count": {
+        "allow_null": false,
+        "kind": "integer"
+      },
+      "conflicts": {
+        "allow_null": false,
+        "item_kind": "ConflictPoint",
+        "kind": "list"
+      },
+      "resolution_summary": {
+        "allow_null": false,
+        "kind": "string"
+      },
+      "resolved_count": {
+        "allow_null": false,
+        "kind": "integer"
+      },
+      "source_context": {
+        "allow_null": false,
+        "item_kind": "string",
+        "kind": "object"
+      },
+      "status": {
+        "allow_null": false,
+        "kind": "string"
+      },
+      "tool_version": {
+        "allow_null": false,
+        "kind": "string"
+      },
+      "unresolved_conflicts": {
+        "allow_null": false,
+        "item_kind": "dict",
+        "kind": "list"
+      },
+      "warnings": {
+        "allow_null": false,
+        "item_kind": "string",
+        "kind": "list"
+      }
+    },
+    "latest_backlog": {
+      "candidates": {
+        "allow_null": false,
+        "item_kind": "string",
+        "kind": "list"
+      },
+      "latest_backlog_path": {
+        "allow_null": true,
+        "kind": "string"
+      },
+      "status": {
+        "allow_null": false,
+        "kind": "string"
+      },
+      "tool_version": {
+        "allow_null": false,
+        "kind": "string"
+      },
+      "warnings": {
+        "allow_null": false,
+        "item_kind": "string",
+        "kind": "list"
+      }
+    },
+    "merge_doc_reconcile": {
+      "apply_status": {
+        "allow_null": true,
+        "kind": "string"
+      },
+      "backlog_update_note": {
+        "allow_null": true,
+        "kind": "string"
+      },
+      "draft_reconcile_notes": {
+        "allow_null": false,
+        "item_kind": "string",
+        "kind": "list"
+      },
+      "handoff_update_note": {
+        "allow_null": true,
+        "kind": "string"
+      },
+      "hub_update_note": {
+        "allow_null": true,
+        "kind": "string"
+      },
+      "recommended_review_order": {
+        "allow_null": false,
+        "item_kind": "string",
+        "kind": "list"
+      },
+      "reconcile_targets": {
+        "allow_null": false,
+        "item_kind": "string",
+        "kind": "list"
+      },
+      "reconfirmation_points": {
+        "allow_null": false,
+        "item_kind": "string",
+        "kind": "list"
+      },
+      "source_context": {
+        "allow_null": false,
+        "kind": "ReconcileSourceContext"
+      },
+      "state_cache_missing_paths": {
+        "allow_null": false,
+        "item_kind": "string",
+        "kind": "list"
+      },
+      "state_cache_refresh_command": {
+        "allow_null": true,
+        "kind": "string"
+      },
+      "state_cache_status": {
+        "allow_null": true,
+        "kind": "string"
+      },
+      "state_cache_update_note": {
+        "allow_null": true,
+        "kind": "string"
+      },
+      "state_conflicts": {
+        "allow_null": false,
+        "item_kind": "string",
+        "kind": "list"
+      },
+      "status": {
+        "allow_null": false,
+        "kind": "string"
+      },
+      "tool_version": {
+        "allow_null": false,
+        "kind": "string"
+      },
+      "validation_follow_up": {
+        "allow_null": true,
+        "kind": "string"
+      },
+      "warnings": {
+        "allow_null": false,
+        "item_kind": "string",
+        "kind": "list"
+      },
+      "written_paths": {
+        "allow_null": false,
+        "item_kind": "string",
+        "kind": "list"
+      }
+    },
+    "read_only_entrypoint": {
+      "error": {
+        "allow_null": false,
+        "kind": "string"
+      },
+      "error_code": {
+        "allow_null": false,
+        "kind": "string"
+      },
+      "source_context": {
+        "allow_null": false,
+        "item_kind": "string",
+        "kind": "object"
+      },
+      "status": {
+        "allow_null": false,
+        "kind": "string"
+      },
+      "tool_version": {
+        "allow_null": false,
+        "kind": "string"
+      },
+      "warnings": {
+        "allow_null": false,
+        "item_kind": "string",
+        "kind": "list"
+      }
+    },
+    "session_start": {
+      "blocked_items": {
+        "allow_null": false,
+        "item_kind": "string",
+        "kind": "list"
+      },
+      "environment_constraints": {
+        "allow_null": false,
+        "item_kind": "string",
+        "kind": "list"
+      },
+      "in_progress_items": {
+        "allow_null": false,
+        "item_kind": "string",
+        "kind": "list"
+      },
+      "latest_backlog_path": {
+        "allow_null": true,
+        "kind": "string"
+      },
+      "next_documents": {
+        "allow_null": false,
+        "item_kind": "string",
+        "kind": "list"
+      },
+      "recommended_next_action": {
+        "allow_null": false,
+        "kind": "string"
+      },
+      "source_documents": {
+        "allow_null": false,
+        "kind": "SessionStartSourceDocs"
+      },
+      "status": {
+        "allow_null": false,
+        "kind": "string"
+      },
+      "summary": {
+        "allow_null": false,
+        "item_kind": "string",
+        "kind": "list"
+      },
+      "tool_version": {
+        "allow_null": false,
+        "kind": "string"
+      },
+      "validation_notes": {
+        "allow_null": false,
+        "item_kind": "string",
+        "kind": "list"
+      },
+      "warnings": {
+        "allow_null": false,
+        "item_kind": "string",
+        "kind": "list"
+      }
+    },
+    "smart_context_reader": {
+      "extracted_content": {
+        "allow_null": false,
+        "item_kind": "string",
+        "kind": "list"
+      },
+      "not_found_symbols": {
+        "allow_null": false,
+        "item_kind": "string",
+        "kind": "list"
+      },
+      "status": {
+        "allow_null": false,
+        "kind": "string"
+      },
+      "tool_version": {
+        "allow_null": false,
+        "kind": "string"
+      },
+      "warnings": {
+        "allow_null": false,
+        "item_kind": "string",
+        "kind": "list"
+      }
+    },
+    "suggest_impacted_docs": {
+      "impacted_documents": {
+        "allow_null": false,
+        "item_kind": "string",
+        "kind": "list"
+      },
+      "reasoning_notes": {
+        "allow_null": false,
+        "item_kind": "string",
+        "kind": "list"
+      },
+      "status": {
+        "allow_null": false,
+        "kind": "string"
+      },
+      "tool_version": {
+        "allow_null": false,
+        "kind": "string"
+      },
+      "warnings": {
+        "allow_null": false,
+        "item_kind": "string",
+        "kind": "list"
+      }
+    },
+    "validation_plan": {
+      "commands_requiring_confirmation": {
+        "allow_null": false,
+        "item_kind": "ValidationCommand",
+        "kind": "list"
+      },
+      "confidence_notes": {
+        "allow_null": false,
+        "item_kind": "string",
+        "kind": "list"
+      },
+      "deferred_validation_items": {
+        "allow_null": false,
+        "item_kind": "DeferredValidationItem",
+        "kind": "list"
+      },
+      "detected_change_types": {
+        "allow_null": false,
+        "item_kind": "string",
+        "kind": "list"
+      },
+      "documentation_checks": {
+        "allow_null": false,
+        "item_kind": "string",
+        "kind": "list"
+      },
+      "evidence_expectations": {
+        "allow_null": false,
+        "item_kind": "string",
+        "kind": "list"
+      },
+      "recommended_commands": {
+        "allow_null": false,
+        "item_kind": "ValidationCommand",
+        "kind": "list"
+      },
+      "recommended_validation_levels": {
+        "allow_null": false,
+        "item_kind": "string",
+        "kind": "list"
+      },
+      "scaffold_path": {
+        "allow_null": true,
+        "kind": "string"
+      },
+      "scaffold_status": {
+        "allow_null": true,
+        "kind": "string"
+      },
+      "source_context": {
+        "allow_null": false,
+        "kind": "ValidationPlanSourceContext"
+      },
+      "status": {
+        "allow_null": false,
+        "kind": "string"
+      },
+      "tool_version": {
+        "allow_null": false,
+        "kind": "string"
+      },
+      "warnings": {
+        "allow_null": false,
+        "item_kind": "string",
+        "kind": "list"
+      },
+      "written_paths": {
+        "allow_null": false,
+        "item_kind": "string",
+        "kind": "list"
+      }
+    },
+    "worker_response": {
+      "produced_artifacts": {
+        "allow_null": false,
+        "item_kind": "string",
+        "kind": "list"
+      },
+      "raw_worker_output": {
+        "allow_null": true,
+        "kind": "string"
+      },
+      "risks_identified": {
+        "allow_null": false,
+        "item_kind": "string",
+        "kind": "list"
+      },
+      "status": {
+        "allow_null": false,
+        "kind": "string"
+      },
+      "suggested_follow_up": {
+        "allow_null": false,
+        "item_kind": "string",
+        "kind": "list"
+      },
+      "summary": {
+        "allow_null": false,
+        "kind": "string"
+      },
+      "tool_version": {
+        "allow_null": false,
+        "kind": "string"
+      },
+      "warnings": {
+        "allow_null": false,
+        "item_kind": "string",
+        "kind": "list"
+      }
+    },
+    "worker_task": {
+      "constraints": {
+        "allow_null": false,
+        "item_kind": "string",
+        "kind": "list"
+      },
+      "context_summary": {
+        "allow_null": true,
+        "kind": "string"
+      },
+      "input_files": {
+        "allow_null": false,
+        "item_kind": "string",
+        "kind": "list"
+      },
+      "output_files": {
+        "allow_null": false,
+        "item_kind": "string",
+        "kind": "list"
+      },
+      "task_description": {
+        "allow_null": false,
+        "kind": "string"
+      },
+      "worker_id": {
+        "allow_null": false,
+        "kind": "string"
+      }
+    },
+    "workflow_linter": {
+      "issues": {
+        "allow_null": false,
+        "item_kind": "LinterIssue",
+        "kind": "list"
+      },
+      "source_context": {
+        "allow_null": false,
+        "item_kind": "string",
+        "kind": "object"
+      },
+      "status": {
+        "allow_null": false,
+        "kind": "string"
+      },
+      "summary": {
+        "allow_null": false,
+        "kind": "LinterSummary"
+      },
+      "tool_version": {
+        "allow_null": false,
+        "kind": "string"
+      },
+      "warnings": {
+        "allow_null": false,
+        "item_kind": "string",
+        "kind": "list"
+      }
+    }
+  },
+  "success_required_keys": {
+    "backlog_update": [
+      "apply_status",
+      "created_paths",
+      "draft_entry",
+      "operation_type",
+      "source_context",
+      "state_cache_status",
+      "status_recommendation",
+      "target_backlog_path",
+      "task_found",
+      "task_id",
+      "updated_paths",
+      "written_paths"
+    ],
+    "check_doc_links": [
+      "broken_links",
+      "checked_files"
+    ],
+    "check_doc_metadata": [
+      "checked_files",
+      "missing_metadata"
+    ],
+    "check_quickstart_stale_links": [
+      "broken_links",
+      "checked_files",
+      "missing_expected_links",
+      "reasoning_notes",
+      "stale_link_warnings"
+    ],
+    "code_index_update": [
+      "index_update_candidates",
+      "source_context"
+    ],
+    "create_backlog_entry": [
+      "draft_entry"
+    ],
+    "create_environment_record_stub": [
+      "draft_record",
+      "source_context"
+    ],
+    "create_session_handoff_draft": [
+      "draft_handoff",
+      "source_context"
+    ],
+    "demo_workflow": [
+      "orchestration_plan",
+      "source_context",
+      "workflow_summary"
+    ],
+    "doc_sync": [
+      "impacted_documents",
+      "recommended_review_order",
+      "source_context"
+    ],
+    "existing_project_onboarding": [
+      "onboarding_summary",
+      "orchestration_plan",
+      "source_context"
+    ],
+    "git_conflict_resolver": [
+      "conflict_count",
+      "resolution_summary",
+      "resolved_count"
+    ],
+    "latest_backlog": [
+      "candidates",
+      "latest_backlog_path"
+    ],
+    "merge_doc_reconcile": [
+      "reconcile_targets",
+      "source_context",
+      "state_conflicts"
+    ],
+    "read_only_entrypoint": [],
+    "session_start": [
+      "recommended_next_action",
+      "source_documents",
+      "summary"
+    ],
+    "smart_context_reader": [
+      "extracted_content",
+      "not_found_symbols"
+    ],
+    "suggest_impacted_docs": [
+      "impacted_documents",
+      "reasoning_notes"
+    ],
+    "validation_plan": [
+      "documentation_checks",
+      "recommended_validation_levels",
+      "source_context"
+    ],
+    "worker_response": [],
+    "worker_task": [],
+    "workflow_linter": [
+      "issues",
+      "source_context",
+      "summary",
+      "warnings"
+    ]
+  },
+  "tool_version_source": "workflow_kit.__version__"
+}

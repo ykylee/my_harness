@@ -1,0 +1,163 @@
+{
+  "status": "ok",
+  "tool_version": "v0.5.0-beta",
+  "warnings": [
+    "blocked 항목이 handoff 와 backlog 사이에서 다를 수 있으므로 수동 재확인이 필요하다.",
+    "staging 검증은 사내 VPN 연결 상태에서만 수행 가능하다."
+  ],
+  "onboarding_mode": "existing_project_followup",
+  "orchestration_plan": {
+    "recommended_pattern": "main_orchestrator_with_specialized_workers",
+    "model_split": {
+      "orchestrator": "main",
+      "doc_worker": "small",
+      "validation_worker": "small"
+    },
+    "worker_assignments": [
+      {
+        "worker": "doc-worker",
+        "model": "small",
+        "responsibilities": [
+          "repository assessment 와 workflow 문서 비교",
+          "handoff 와 latest backlog 기준선 차이 확인",
+          "허브 문서와 index 후보 요약"
+        ],
+        "backing_steps": [
+          "session_start",
+          "code_index_update"
+        ]
+      },
+      {
+        "worker": "validation-worker",
+        "model": "small",
+        "responsibilities": [
+          "초기 검증 수준과 미실행 항목 정리",
+          "추정 명령 검토",
+          "증빙 기록 위치 제안"
+        ],
+        "backing_steps": [
+          "validation_plan"
+        ]
+      }
+    ],
+    "integration_notes": [
+      "메인 오케스트레이터는 assessment, session-start, validation, index 결과를 합쳐 첫 후속 작업 순서를 결정한다.",
+      "기존 프로젝트 온보딩 초기에는 bounded 탐색과 문서 정렬을 small worker 에 맡기고, 최종 판단은 main 에 남기는 편이 안전하다."
+    ]
+  },
+  "repository_assessment": {
+    "path": "/Users/yklee/repos/example-repo/ai-workflow/memory/repository_assessment.md",
+    "summary": {
+      "project_name": "Existing Repo",
+      "analysis_mode": "existing",
+      "primary_stack": "node",
+      "stack_labels": "node, docs",
+      "install_command": "npm install",
+      "run_command": "npm run dev",
+      "quick_test_command": "npm test",
+      "isolated_test_command": "npm run test:unit",
+      "smoke_check_command": "npm run test:smoke",
+      "top_level_entries": "README.md, docs/, src/, tests/, package.json",
+      "source_dirs": "src/",
+      "docs_dirs": "docs/",
+      "test_dirs": "tests/",
+      "sample_paths": [
+        "src/",
+        "docs/",
+        "tests/",
+        "package.json"
+      ]
+    }
+  },
+  "latest_backlog": {
+    "status": "ok",
+    "tool_version": "v0.4.1-beta",
+    "latest_backlog_path": "/Users/yklee/repos/example-repo/ai-workflow/memory/backlog/2026-04-22.md",
+    "candidates": [
+      "/Users/yklee/repos/example-repo/ai-workflow/memory/backlog/2026-04-22.md"
+    ],
+    "warnings": []
+  },
+  "session_start": {
+    "status": "ok",
+    "tool_version": "v0.4.1-beta",
+    "summary": [
+      "현재 기준선: 기존 프로젝트 분석 초안이 생성되었고, 첫 세션에서 profile 값 확정이 필요하다.",
+      "주 작업 축: repository assessment 추정값을 실제 저장소 규칙과 맞추고 handoff/backlog 기준선을 정리하는 작업"
+    ],
+    "in_progress_items": [
+      "TASK-001 기존 프로젝트 워크플로우 도입 초안 정리"
+    ],
+    "blocked_items": [
+      "운영 배포 승인 규칙은 아직 profile 에 확정되지 않았다."
+    ],
+    "warnings": [
+      "blocked 항목이 handoff 와 backlog 사이에서 다를 수 있으므로 수동 재확인이 필요하다."
+    ]
+  },
+  "validation_plan": {
+    "status": "ok",
+    "tool_version": "v0.4.1-beta",
+    "recommended_validation_levels": [
+      "standard"
+    ],
+    "recommended_commands": [
+      {
+        "command": "npm test",
+        "reason": "기본 빠른 테스트"
+      },
+      {
+        "command": "npm run test:unit",
+        "reason": "격리 검증 또는 추가 회귀 확인"
+      }
+    ],
+    "documentation_checks": [
+      "허브 문서, 메타데이터, 관련 링크 무결성을 함께 점검한다.",
+      "운영 허브 링크, 메타데이터, 관련 runbook 링크 무결성을 함께 확인한다."
+    ],
+    "warnings": [
+      "staging 검증은 사내 VPN 연결 상태에서만 수행 가능하다."
+    ]
+  },
+  "code_index_update": {
+    "status": "ok",
+    "tool_version": "v0.4.1-beta",
+    "index_update_candidates": [
+      "/Users/yklee/repos/example-repo/README.md",
+      "/Users/yklee/repos/example-repo/docs/README.md",
+      "/Users/yklee/repos/example-repo/ai-workflow/memory/work_backlog.md",
+      "/Users/yklee/repos/example-repo/ai-workflow/memory/session_handoff.md"
+    ],
+    "warnings": []
+  },
+  "onboarding_summary": {
+    "review_assessment_first": true,
+    "primary_stack": "node",
+    "inferred_commands": {
+      "install": "npm install",
+      "run": "npm run dev",
+      "quick_test": "npm test",
+      "isolated_test": "npm run test:unit",
+      "smoke_check": "npm run test:smoke"
+    },
+    "recommended_next_steps": [
+      "repository assessment 의 추정 명령과 문서 경로를 실제 저장소 기준으로 먼저 확정한다.",
+      "session-start 결과를 기준으로 handoff 와 최신 backlog 의 현재 상태를 맞춘다.",
+      "validation-plan 에서 제안한 검증 수준과 미실행 항목 기록 위치를 검토한다.",
+      "code-index-update 가 추천한 README/허브/index 후보를 우선순위 순서대로 재확인한다."
+    ]
+  },
+  "source_context": {
+    "project_profile_path": "/Users/yklee/repos/example-repo/ai-workflow/memory/PROJECT_PROFILE.md",
+    "session_handoff_path": "/Users/yklee/repos/example-repo/ai-workflow/memory/session_handoff.md",
+    "work_backlog_index_path": "/Users/yklee/repos/example-repo/ai-workflow/memory/work_backlog.md",
+    "backlog_dir_path": "/Users/yklee/repos/example-repo/ai-workflow/memory/backlog",
+    "repository_assessment_path": "/Users/yklee/repos/example-repo/ai-workflow/memory/repository_assessment.md",
+    "latest_backlog_path": "/Users/yklee/repos/example-repo/ai-workflow/memory/backlog/2026-04-22.md",
+    "changed_files": [
+      "src/server.js",
+      "docs/README.md"
+    ],
+    "change_summary": "기존 프로젝트 도입 초안과 추정 명령/문서 구조를 실제 저장소 기준으로 정렬한다."
+  }
+}

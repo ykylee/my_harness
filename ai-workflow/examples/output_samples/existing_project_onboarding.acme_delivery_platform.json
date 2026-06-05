@@ -1,0 +1,145 @@
+{
+  "status": "ok",
+  "tool_version": "v0.5.0-beta",
+  "warnings": [
+    "blocked 항목이 handoff 와 backlog 사이에서 다를 수 있으므로 수동 재확인이 필요하다.",
+    "staging 검증은 사내 VPN 연결 상태에서만 수행 가능하다.",
+    "변경 경로 기준으로 추정한 색인 문서 일부가 현재 저장소에서 확인되지 않는다."
+  ],
+  "onboarding_mode": "existing_project_followup",
+  "orchestration_plan": {
+    "recommended_pattern": "main_orchestrator_with_specialized_workers",
+    "model_split": {
+      "orchestrator": "main",
+      "doc_worker": "small",
+      "validation_worker": "small"
+    },
+    "worker_assignments": [
+      {
+        "worker": "doc-worker",
+        "model": "small",
+        "responsibilities": [
+          "repository assessment 와 workflow 문서 비교",
+          "handoff 와 latest backlog 기준선 차이 확인",
+          "허브 문서와 index 후보 요약"
+        ],
+        "backing_steps": [
+          "session_start",
+          "code_index_update"
+        ]
+      },
+      {
+        "worker": "validation-worker",
+        "model": "small",
+        "responsibilities": [
+          "초기 검증 수준과 미실행 항목 정리",
+          "추정 명령 검토",
+          "증빙 기록 위치 제안"
+        ],
+        "backing_steps": [
+          "validation_plan"
+        ]
+      }
+    ],
+    "integration_notes": [
+      "메인 오케스트레이터는 assessment, session-start, validation, index 결과를 합쳐 첫 후속 작업 순서를 결정한다.",
+      "기존 프로젝트 온보딩 초기에는 bounded 탐색과 문서 정렬을 small worker 에 맡기고, 최종 판단은 main 에 남기는 편이 안전하다."
+    ]
+  },
+  "repository_assessment": {
+    "path": null,
+    "summary": null
+  },
+  "latest_backlog": {
+    "status": "ok",
+    "tool_version": "v0.4.1-beta",
+    "latest_backlog_path": "/Users/yklee/repos/standard_ai_workflow/examples/acme_delivery_platform/backlog/2026-04-18.md",
+    "candidates": [
+      "/Users/yklee/repos/standard_ai_workflow/examples/acme_delivery_platform/backlog/2026-04-18.md"
+    ],
+    "warnings": []
+  },
+  "session_start": {
+    "status": "ok",
+    "tool_version": "v0.4.1-beta",
+    "summary": [
+      "현재 기준선: 배송 상태 동기화 배치의 재시도 정책 초안이 반영되었고, 운영 문서 허브 링크는 최신 상태다.",
+      "주 작업 축: 장애 대응 이후 백로그 정리 흐름과 운영 문서 동기화 기준을 표준화하는 작업"
+    ],
+    "in_progress_items": [
+      "TASK-021 배송 상태 동기화 실패 대응 절차 문서 정리"
+    ],
+    "blocked_items": [
+      "TASK-019 staging 운영 계정 접근 권한 재승인 대기"
+    ],
+    "warnings": [
+      "blocked 항목이 handoff 와 backlog 사이에서 다를 수 있으므로 수동 재확인이 필요하다."
+    ]
+  },
+  "validation_plan": {
+    "status": "ok",
+    "tool_version": "v0.4.1-beta",
+    "recommended_validation_levels": [
+      "documentation"
+    ],
+    "recommended_commands": [
+      {
+        "command": "pytest -q",
+        "reason": "문서 전용 변경이지만 기본 회귀 확인"
+      },
+      {
+        "command": "make lint",
+        "reason": "문서 전용 변경이지만 기본 회귀 확인"
+      }
+    ],
+    "documentation_checks": [
+      "허브 문서, 메타데이터, 관련 링크 무결성을 함께 점검한다.",
+      "운영 허브 링크, 메타데이터, 관련 runbook 링크 무결성을 함께 확인한다."
+    ],
+    "warnings": [
+      "staging 검증은 사내 VPN 연결 상태에서만 수행 가능하다."
+    ]
+  },
+  "code_index_update": {
+    "status": "ok",
+    "tool_version": "v0.4.1-beta",
+    "index_update_candidates": [
+      "/Users/yklee/repos/standard_ai_workflow/README.md",
+      "/Users/yklee/repos/standard_ai_workflow/examples/acme_delivery_platform/docs/README.md",
+      "/Users/yklee/repos/standard_ai_workflow/examples/acme_delivery_platform/docs/operations",
+      "/Users/yklee/repos/standard_ai_workflow/examples/acme_delivery_platform/docs/operations/README.md",
+      "/Users/yklee/repos/standard_ai_workflow/examples/acme_delivery_platform/work_backlog.md",
+      "/Users/yklee/repos/standard_ai_workflow/examples/acme_delivery_platform/session_handoff.md"
+    ],
+    "warnings": [
+      "변경 경로 기준으로 추정한 색인 문서 일부가 현재 저장소에서 확인되지 않는다."
+    ]
+  },
+  "onboarding_summary": {
+    "review_assessment_first": false,
+    "primary_stack": null,
+    "inferred_commands": {
+      "install": null,
+      "run": null,
+      "quick_test": null,
+      "isolated_test": null,
+      "smoke_check": null
+    },
+    "recommended_next_steps": [
+      "repository assessment 의 추정 명령과 문서 경로를 실제 저장소 기준으로 먼저 확정한다.",
+      "session-start 결과를 기준으로 handoff 와 최신 backlog 의 현재 상태를 맞춘다.",
+      "validation-plan 에서 제안한 검증 수준과 미실행 항목 기록 위치를 검토한다.",
+      "code-index-update 가 추천한 README/허브/index 후보를 우선순위 순서대로 재확인한다."
+    ]
+  },
+  "source_context": {
+    "project_profile_path": "/Users/yklee/repos/standard_ai_workflow/examples/acme_delivery_platform/PROJECT_PROFILE.md",
+    "session_handoff_path": "/Users/yklee/repos/standard_ai_workflow/examples/acme_delivery_platform/session_handoff.md",
+    "work_backlog_index_path": "/Users/yklee/repos/standard_ai_workflow/examples/acme_delivery_platform/work_backlog.md",
+    "backlog_dir_path": "/Users/yklee/repos/standard_ai_workflow/examples/acme_delivery_platform/backlog",
+    "repository_assessment_path": null,
+    "latest_backlog_path": "/Users/yklee/repos/standard_ai_workflow/examples/acme_delivery_platform/backlog/2026-04-18.md",
+    "changed_files": [],
+    "change_summary": "기존 프로젝트 도입 초안과 추정 명령/문서 구조를 실제 저장소 기준으로 정렬한다."
+  }
+}

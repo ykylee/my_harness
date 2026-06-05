@@ -1,0 +1,55 @@
+{
+  "schema_version": "1",
+  "generated_at": "2026-06-05",
+  "source_of_truth": {
+    "project_profile_path": "docs/PROJECT_PROFILE.md",
+    "session_handoff_path": "ai-workflow/memory/session_handoff.md",
+    "work_backlog_index_path": "ai-workflow/memory/work_backlog.md",
+    "latest_backlog_path": "ai-workflow/memory/backlog/2026-06-05.md",
+    "repository_assessment_path": null
+  },
+  "project": {
+    "project_name": "My Harness",
+    "document_home": "README.md",
+    "operations_path": null,
+    "backlog_path": "ai-workflow/memory/backlog/",
+    "handoff_path": null,
+    "environment_path": "ai-workflow/memory/environments/"
+  },
+  "commands": {
+    "quick_tests": null,
+    "isolated_tests": null,
+    "runtime_checks": null
+  },
+  "session": {
+    "current_baseline": "**my_harness 부트스트랩 완료** — `standard_ai_workflow` (ykylee/standard_ai_workflow) 의 `minimax-code` 하네스 오버레이를 이 저장소에 적용.",
+    "current_axis": "**my_harness 부트스트랩 완료** — `standard_ai_workflow` (ykylee/standard_ai_workflow) 의 `minimax-code` 하네스 오버레이를 이 저장소에 적용.",
+    "current_focus": "TASK-001 my-harness 부트스트랩 (standard_ai_workflow 적용)",
+    "in_progress_items": [],
+    "blocked_items": [],
+    "recent_done_items": [
+      "TASK-001 my-harness 부트스트랩 (standard_ai_workflow 적용)"
+    ],
+    "environment_constraints": []
+  },
+  "backlog": {
+    "latest_backlog_path": "ai-workflow/memory/backlog/2026-06-05.md",
+    "task_count": 2,
+    "in_progress_items": [],
+    "blocked_items": [],
+    "done_items": [
+      "TASK-001 my-harness 부트스트랩 (standard_ai_workflow 적용)"
+    ]
+  },
+  "next_documents": [
+    "docs/PROJECT_PROFILE.md",
+    "ai-workflow/memory/session_handoff.md",
+    "ai-workflow/memory/work_backlog.md",
+    "ai-workflow/memory/backlog/2026-06-05.md",
+    "ai-workflow/memory/state.json"
+  ],
+  "repository_assessment": {
+    "path": null,
+    "present": false
+  }
+}

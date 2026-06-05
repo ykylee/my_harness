@@ -1,0 +1,238 @@
+{
+  "status": "ok",
+  "tool_version": "v0.5.0-beta",
+  "warnings": [
+    "blocked 항목이 handoff 와 backlog 사이에서 다를 수 있으므로 수동 재확인이 필요하다.",
+    "app/jobs/delivery_sync.py 변경이 운영 문서에 반영됐는지 아직 확인되지 않았다.",
+    "staging 검증은 사내 VPN 연결 상태에서만 수행 가능하다.",
+    "코드/설정 변경이 문서 허브 설명과 최신 구조에 반영됐는지 확인이 필요하다.",
+    "변경 경로 기준으로 추정한 색인 문서 일부가 현재 저장소에서 확인되지 않는다."
+  ],
+  "example_project": "acme_delivery_platform",
+  "project_profile_path": "/Users/yklee/repos/standard_ai_workflow/examples/acme_delivery_platform/PROJECT_PROFILE.md",
+  "orchestration_plan": {
+    "recommended_pattern": "main_orchestrator_with_specialized_workers",
+    "model_split": {
+      "orchestrator": "main",
+      "doc_worker": "small",
+      "code_worker": "small",
+      "validation_worker": "small"
+    },
+    "worker_assignments": [
+      {
+        "worker": "doc-worker",
+        "model": "small",
+        "responsibilities": [
+          "session_handoff 와 latest backlog 비교",
+          "영향 문서와 허브 문서 후보 요약",
+          "문서 초안 또는 상태 불일치 메모 정리"
+        ],
+        "backing_steps": [
+          "session_start",
+          "doc_sync",
+          "merge_doc_reconcile"
+        ]
+      },
+      {
+        "worker": "code-worker",
+        "model": "small",
+        "responsibilities": [
+          "범위가 명확한 코드/설정 수정",
+          "관련 파일 최소 범위 확인",
+          "수정 리스크와 follow-up 요약"
+        ],
+        "backing_steps": [
+          "backlog_update"
+        ]
+      },
+      {
+        "worker": "validation-worker",
+        "model": "small",
+        "responsibilities": [
+          "검증 명령 실행 또는 실행 후보 점검",
+          "로그와 증빙 수집",
+          "미실행 사유와 기록 위치 정리"
+        ],
+        "backing_steps": [
+          "validation_plan",
+          "code_index_update"
+        ]
+      }
+    ],
+    "integration_notes": [
+      "메인 오케스트레이터는 worker 결과를 통합해 backlog/handoff 반영 방향을 최종 결정한다.",
+      "복잡한 설계 변경이나 높은 회귀 위험이 있으면 특정 worker 만 일시적으로 main 모델로 승격할 수 있다."
+    ]
+  },
+  "latest_backlog": {
+    "status": "ok",
+    "tool_version": "v0.4.1-beta",
+    "latest_backlog_path": "/Users/yklee/repos/standard_ai_workflow/examples/acme_delivery_platform/backlog/2026-04-18.md",
+    "candidates": [
+      "/Users/yklee/repos/standard_ai_workflow/examples/acme_delivery_platform/backlog/2026-04-18.md"
+    ],
+    "warnings": []
+  },
+  "session_start": {
+    "status": "ok",
+    "tool_version": "v0.4.1-beta",
+    "summary": [
+      "현재 기준선: 배송 상태 동기화 배치의 재시도 정책 초안이 반영되었고, 운영 문서 허브 링크는 최신 상태다.",
+      "주 작업 축: 장애 대응 이후 백로그 정리 흐름과 운영 문서 동기화 기준을 표준화하는 작업",
+      "진행 중 작업 1건 확인",
+      "주요 제약: VPN 미연결 상태에서는 staging API 및 운영 콘솔 접근 불가"
+    ],
+    "in_progress_items": [
+      "TASK-021 배송 상태 동기화 실패 대응 절차 문서 정리"
+    ],
+    "blocked_items": [
+      "TASK-019 staging 운영 계정 접근 권한 재승인 대기"
+    ],
+    "latest_backlog_path": "/Users/yklee/repos/standard_ai_workflow/examples/acme_delivery_platform/backlog/2026-04-18.md",
+    "recommended_next_action": "handoff 와 최신 backlog 의 상태 불일치 여부를 먼저 확인한다.",
+    "warnings": [
+      "blocked 항목이 handoff 와 backlog 사이에서 다를 수 있으므로 수동 재확인이 필요하다."
+    ]
+  },
+  "backlog_update": {
+    "status": "ok",
+    "tool_version": "v0.4.1-beta",
+    "operation_type": "update_entry",
+    "target_backlog_path": "/Users/yklee/repos/standard_ai_workflow/examples/acme_delivery_platform/backlog/2026-04-18.md",
+    "task_id": "TASK-021",
+    "task_found": true,
+    "fields_requiring_confirmation": [
+      "담당",
+      "호스트명",
+      "호스트 IP",
+      "영향 문서",
+      "완료 기준",
+      "작업 결과",
+      "다음 세션 시작 포인트",
+      "남은 리스크",
+      "후속 작업"
+    ],
+    "warnings": []
+  },
+  "doc_sync": {
+    "status": "ok",
+    "tool_version": "v0.4.1-beta",
+    "impacted_documents": [
+      "docs/operations/runbooks/delivery-sync.md",
+      "/Users/yklee/repos/standard_ai_workflow/examples/acme_delivery_platform/session_handoff.md",
+      "/Users/yklee/repos/standard_ai_workflow/examples/acme_delivery_platform/backlog/2026-04-18.md"
+    ],
+    "hub_update_candidates": [
+      "/Users/yklee/repos/standard_ai_workflow/examples/acme_delivery_platform/work_backlog.md"
+    ],
+    "warnings": [
+      "app/jobs/delivery_sync.py 변경이 운영 문서에 반영됐는지 아직 확인되지 않았다."
+    ]
+  },
+  "validation_plan": {
+    "status": "ok",
+    "tool_version": "v0.4.1-beta",
+    "detected_change_types": [
+      "code",
+      "docs",
+      "ops"
+    ],
+    "recommended_validation_levels": [
+      "standard",
+      "release_sensitive"
+    ],
+    "recommended_commands": [
+      {
+        "command": "pytest -q",
+        "reason": "기본 빠른 테스트"
+      },
+      {
+        "command": "make lint",
+        "reason": "기본 빠른 테스트"
+      }
+    ],
+    "warnings": [
+      "staging 검증은 사내 VPN 연결 상태에서만 수행 가능하다."
+    ]
+  },
+  "code_index_update": {
+    "status": "ok",
+    "tool_version": "v0.4.1-beta",
+    "priority_index_candidates": [
+      "/Users/yklee/repos/standard_ai_workflow/examples/acme_delivery_platform/docs/operations/README.md",
+      "/Users/yklee/repos/standard_ai_workflow/examples/acme_delivery_platform/docs/README.md",
+      "/Users/yklee/repos/standard_ai_workflow/README.md"
+    ],
+    "warnings": [
+      "코드/설정 변경이 문서 허브 설명과 최신 구조에 반영됐는지 확인이 필요하다.",
+      "변경 경로 기준으로 추정한 색인 문서 일부가 현재 저장소에서 확인되지 않는다."
+    ]
+  },
+  "suggest_impacted_docs": {
+    "status": "ok",
+    "tool_version": "v0.4.1-beta",
+    "impacted_documents": [
+      "/Users/yklee/repos/standard_ai_workflow/examples/acme_delivery_platform/session_handoff.md",
+      "/Users/yklee/repos/standard_ai_workflow/examples/acme_delivery_platform/backlog/2026-04-18.md",
+      "/Users/yklee/repos/standard_ai_workflow/examples/acme_delivery_platform/work_backlog.md",
+      "docs/operations/runbooks/delivery-sync.md"
+    ],
+    "warnings": []
+  },
+  "merge_doc_reconcile": {
+    "status": "ok",
+    "tool_version": "v0.4.1-beta",
+    "reconcile_targets": [
+      "/Users/yklee/repos/standard_ai_workflow/examples/acme_delivery_platform/session_handoff.md",
+      "/Users/yklee/repos/standard_ai_workflow/examples/acme_delivery_platform/backlog/2026-04-18.md",
+      "/Users/yklee/repos/standard_ai_workflow/examples/acme_delivery_platform/work_backlog.md"
+    ],
+    "state_conflicts": [
+      "blocked 항목이 다르다. handoff: TASK-019 staging 운영 계정 접근 권한 재승인 대기 / backlog: 없음"
+    ],
+    "warnings": []
+  },
+  "workflow_summary": {
+    "current_baseline": [
+      "현재 기준선: 배송 상태 동기화 배치의 재시도 정책 초안이 반영되었고, 운영 문서 허브 링크는 최신 상태다.",
+      "주 작업 축: 장애 대응 이후 백로그 정리 흐름과 운영 문서 동기화 기준을 표준화하는 작업"
+    ],
+    "target_backlog_path": "/Users/yklee/repos/standard_ai_workflow/examples/acme_delivery_platform/backlog/2026-04-18.md",
+    "primary_impacted_documents": [
+      "docs/operations/runbooks/delivery-sync.md",
+      "/Users/yklee/repos/standard_ai_workflow/examples/acme_delivery_platform/session_handoff.md",
+      "/Users/yklee/repos/standard_ai_workflow/examples/acme_delivery_platform/backlog/2026-04-18.md"
+    ],
+    "recommended_validation_levels": [
+      "standard",
+      "release_sensitive"
+    ],
+    "priority_index_candidates": [
+      "/Users/yklee/repos/standard_ai_workflow/examples/acme_delivery_platform/docs/operations/README.md",
+      "/Users/yklee/repos/standard_ai_workflow/examples/acme_delivery_platform/docs/README.md",
+      "/Users/yklee/repos/standard_ai_workflow/README.md"
+    ],
+    "reconcile_targets": [
+      "/Users/yklee/repos/standard_ai_workflow/examples/acme_delivery_platform/session_handoff.md",
+      "/Users/yklee/repos/standard_ai_workflow/examples/acme_delivery_platform/backlog/2026-04-18.md",
+      "/Users/yklee/repos/standard_ai_workflow/examples/acme_delivery_platform/work_backlog.md"
+    ]
+  },
+  "source_context": {
+    "example_project": "acme_delivery_platform",
+    "project_profile_path": "/Users/yklee/repos/standard_ai_workflow/examples/acme_delivery_platform/PROJECT_PROFILE.md",
+    "session_handoff_path": "/Users/yklee/repos/standard_ai_workflow/examples/acme_delivery_platform/session_handoff.md",
+    "work_backlog_index_path": "/Users/yklee/repos/standard_ai_workflow/examples/acme_delivery_platform/work_backlog.md",
+    "backlog_dir_path": "/Users/yklee/repos/standard_ai_workflow/examples/acme_delivery_platform/backlog",
+    "latest_backlog_path": null,
+    "task_id": "TASK-021",
+    "task_name": "배송 상태 동기화 실패 대응 절차 문서 정리",
+    "task_brief": "runbook 및 handoff 반영 상태를 점검했다.",
+    "task_status": "in_progress",
+    "changed_files": [
+      "app/jobs/delivery_sync.py",
+      "docs/operations/runbooks/delivery-sync.md"
+    ],
+    "merge_result_summary": "runbook 링크와 상태 문서가 함께 수정된 브랜치 병합 후 재정리"
+  }
+}

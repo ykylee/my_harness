@@ -1,0 +1,41 @@
+{
+  "status": "ok",
+  "tool_version": "v0.5.0-beta",
+  "reconcile_targets": [
+    "/Users/yklee/repos/standard_ai_workflow/examples/acme_delivery_platform/session_handoff.md",
+    "/Users/yklee/repos/standard_ai_workflow/examples/acme_delivery_platform/backlog/2026-04-18.md",
+    "/Users/yklee/repos/standard_ai_workflow/examples/acme_delivery_platform/work_backlog.md"
+  ],
+  "state_conflicts": [
+    "blocked 항목이 다르다. handoff: TASK-019 staging 운영 계정 접근 권한 재승인 대기 / backlog: 없음"
+  ],
+  "reconfirmation_points": [
+    "app/jobs/delivery_sync.py 변경이 handoff/backlog 설명과 일치하는지 확인한다.",
+    "docs/operations/runbooks/delivery-sync.md 링크와 허브 반영 여부를 다시 확인한다.",
+    "handoff 와 backlog 의 충돌 항목을 우선 정리한다."
+  ],
+  "draft_reconcile_notes": [
+    "프로젝트 병합 규칙: `session_handoff.md` 와 최신 날짜 백로그가 충돌하면 병합 후 handoff를 우선 재작성한다.",
+    "병합 후 handoff 와 최신 backlog 의 상태값을 실제 저장소 기준으로 다시 맞춘다.",
+    "허브 및 인덱스 문서가 최신 문서 경로와 설명을 반영하는지 확인한다.",
+    "병합에 포함된 변경 파일과 문서 설명이 어긋나지 않는지 다시 본다."
+  ],
+  "recommended_review_order": [
+    "/Users/yklee/repos/standard_ai_workflow/examples/acme_delivery_platform/backlog/2026-04-18.md",
+    "/Users/yklee/repos/standard_ai_workflow/examples/acme_delivery_platform/session_handoff.md",
+    "/Users/yklee/repos/standard_ai_workflow/examples/acme_delivery_platform/work_backlog.md"
+  ],
+  "warnings": [],
+  "handoff_update_note": "handoff 의 현재 주 작업 축과 상태 요약을 병합 후 기준으로 재작성할지 확인한다.",
+  "backlog_update_note": "최신 backlog 와 backlog index 의 정합성을 함께 확인한다.",
+  "hub_update_note": null,
+  "validation_follow_up": "병합 후 별도 검증 결과가 없으면 상태 재확정 전에 확인이 필요하다.",
+  "source_context": {
+    "project_profile_path": "/Users/yklee/repos/standard_ai_workflow/examples/acme_delivery_platform/PROJECT_PROFILE.md",
+    "merge_result_summary": "runbook 링크와 상태 문서가 함께 수정된 브랜치 병합 후 재정리",
+    "changed_files": [
+      "app/jobs/delivery_sync.py",
+      "docs/operations/runbooks/delivery-sync.md"
+    ]
+  }
+}

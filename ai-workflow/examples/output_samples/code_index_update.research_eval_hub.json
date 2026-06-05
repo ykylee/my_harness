@@ -1,0 +1,55 @@
+{
+  "status": "ok",
+  "tool_version": "v0.5.0-beta",
+  "index_update_candidates": [
+    "/Users/yklee/repos/standard_ai_workflow/README.md",
+    "/Users/yklee/repos/standard_ai_workflow/examples/research_eval_hub/docs/README.md",
+    "/Users/yklee/repos/standard_ai_workflow/examples/research_eval_hub/docs/evals",
+    "/Users/yklee/repos/standard_ai_workflow/examples/research_eval_hub/docs/evals/README.md",
+    "/Users/yklee/repos/standard_ai_workflow/examples/research_eval_hub/work_backlog.md",
+    "/Users/yklee/repos/standard_ai_workflow/examples/research_eval_hub/session_handoff.md"
+  ],
+  "priority_index_candidates": [
+    "/Users/yklee/repos/standard_ai_workflow/examples/research_eval_hub/docs/evals/README.md",
+    "/Users/yklee/repos/standard_ai_workflow/examples/research_eval_hub/docs/README.md",
+    "/Users/yklee/repos/standard_ai_workflow/README.md"
+  ],
+  "stale_index_warnings": [
+    "코드/설정 변경이 문서 허브 설명과 최신 구조에 반영됐는지 확인이 필요하다.",
+    "변경 경로 기준으로 추정한 색인 문서 일부가 현재 저장소에서 확인되지 않는다."
+  ],
+  "warnings": [
+    "코드/설정 변경이 문서 허브 설명과 최신 구조에 반영됐는지 확인이 필요하다.",
+    "변경 경로 기준으로 추정한 색인 문서 일부가 현재 저장소에서 확인되지 않는다."
+  ],
+  "reasoning_notes": [
+    "`evals/pipelines/report_builder.py` 는 `code` 신호로 분류됐다.",
+    "`docs/evals/reports/release-report-v2.md` 는 `doc, hub_child_doc, nested_doc` 신호로 분류됐다."
+  ],
+  "suggested_index_actions": [
+    "하위 문서 변경이 허브 링크나 설명에 반영됐는지 확인한다.",
+    "변경 요약에 허브성 문서 신호가 있어 상위 index 문서를 우선 검토한다.",
+    "문서 구조 변경 가능성이 있어 루트 README 와 문서 홈을 함께 점검한다."
+  ],
+  "document_structure_signals": [
+    "docs/evals/reports/release-report-v2.md 변경은 상위 허브 문서 stale 가능성을 만든다."
+  ],
+  "missing_index_candidates": [
+    "/Users/yklee/repos/standard_ai_workflow/examples/research_eval_hub/docs/README.md",
+    "/Users/yklee/repos/standard_ai_workflow/examples/research_eval_hub/docs/evals",
+    "/Users/yklee/repos/standard_ai_workflow/examples/research_eval_hub/docs/evals/README.md",
+    "docs/evals/README.md"
+  ],
+  "confidence_notes": [
+    "현재 출력은 변경 경로와 프로젝트 프로파일만 사용한 보수적 추천이다."
+  ],
+  "source_context": {
+    "project_profile_path": "/Users/yklee/repos/standard_ai_workflow/examples/research_eval_hub/PROJECT_PROFILE.md",
+    "project_name": "Research Eval Hub",
+    "changed_files": [
+      "evals/pipelines/report_builder.py",
+      "docs/evals/reports/release-report-v2.md"
+    ],
+    "change_summary": "evaluation report builder 로직과 release report 동시 수정"
+  }
+}

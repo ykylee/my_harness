@@ -1,0 +1,3246 @@
+{
+  "errors": {
+    "backlog_update": {
+      "description": "Standard payload for failed tool executions.",
+      "properties": {
+        "error": {
+          "description": "Human-readable error message",
+          "title": "Error",
+          "type": "string"
+        },
+        "error_code": {
+          "description": "Stable machine-readable error code",
+          "title": "Error Code",
+          "type": "string"
+        },
+        "source_context": {
+          "additionalProperties": true,
+          "description": "Arbitrary context data to help diagnose the error",
+          "title": "Source Context",
+          "type": "object"
+        },
+        "status": {
+          "enum": [
+            "ok",
+            "warning",
+            "error"
+          ],
+          "title": "Status",
+          "type": "string"
+        },
+        "tool_version": {
+          "description": "Version of the tool that generated this output",
+          "title": "Tool Version",
+          "type": "string"
+        },
+        "warnings": {
+          "description": "List of non-fatal warnings encountered",
+          "items": {
+            "type": "string"
+          },
+          "title": "Warnings",
+          "type": "array"
+        }
+      },
+      "required": [
+        "tool_version",
+        "error",
+        "error_code",
+        "source_context"
+      ],
+      "title": "ErrorOutput",
+      "type": "object"
+    },
+    "check_doc_links": {
+      "description": "Standard payload for failed tool executions.",
+      "properties": {
+        "error": {
+          "description": "Human-readable error message",
+          "title": "Error",
+          "type": "string"
+        },
+        "error_code": {
+          "description": "Stable machine-readable error code",
+          "title": "Error Code",
+          "type": "string"
+        },
+        "source_context": {
+          "additionalProperties": true,
+          "description": "Arbitrary context data to help diagnose the error",
+          "title": "Source Context",
+          "type": "object"
+        },
+        "status": {
+          "enum": [
+            "ok",
+            "warning",
+            "error"
+          ],
+          "title": "Status",
+          "type": "string"
+        },
+        "tool_version": {
+          "description": "Version of the tool that generated this output",
+          "title": "Tool Version",
+          "type": "string"
+        },
+        "warnings": {
+          "description": "List of non-fatal warnings encountered",
+          "items": {
+            "type": "string"
+          },
+          "title": "Warnings",
+          "type": "array"
+        }
+      },
+      "required": [
+        "tool_version",
+        "error",
+        "error_code",
+        "source_context"
+      ],
+      "title": "ErrorOutput",
+      "type": "object"
+    },
+    "check_doc_metadata": {
+      "description": "Standard payload for failed tool executions.",
+      "properties": {
+        "error": {
+          "description": "Human-readable error message",
+          "title": "Error",
+          "type": "string"
+        },
+        "error_code": {
+          "description": "Stable machine-readable error code",
+          "title": "Error Code",
+          "type": "string"
+        },
+        "source_context": {
+          "additionalProperties": true,
+          "description": "Arbitrary context data to help diagnose the error",
+          "title": "Source Context",
+          "type": "object"
+        },
+        "status": {
+          "enum": [
+            "ok",
+            "warning",
+            "error"
+          ],
+          "title": "Status",
+          "type": "string"
+        },
+        "tool_version": {
+          "description": "Version of the tool that generated this output",
+          "title": "Tool Version",
+          "type": "string"
+        },
+        "warnings": {
+          "description": "List of non-fatal warnings encountered",
+          "items": {
+            "type": "string"
+          },
+          "title": "Warnings",
+          "type": "array"
+        }
+      },
+      "required": [
+        "tool_version",
+        "error",
+        "error_code",
+        "source_context"
+      ],
+      "title": "ErrorOutput",
+      "type": "object"
+    },
+    "check_quickstart_stale_links": {
+      "description": "Standard payload for failed tool executions.",
+      "properties": {
+        "error": {
+          "description": "Human-readable error message",
+          "title": "Error",
+          "type": "string"
+        },
+        "error_code": {
+          "description": "Stable machine-readable error code",
+          "title": "Error Code",
+          "type": "string"
+        },
+        "source_context": {
+          "additionalProperties": true,
+          "description": "Arbitrary context data to help diagnose the error",
+          "title": "Source Context",
+          "type": "object"
+        },
+        "status": {
+          "enum": [
+            "ok",
+            "warning",
+            "error"
+          ],
+          "title": "Status",
+          "type": "string"
+        },
+        "tool_version": {
+          "description": "Version of the tool that generated this output",
+          "title": "Tool Version",
+          "type": "string"
+        },
+        "warnings": {
+          "description": "List of non-fatal warnings encountered",
+          "items": {
+            "type": "string"
+          },
+          "title": "Warnings",
+          "type": "array"
+        }
+      },
+      "required": [
+        "tool_version",
+        "error",
+        "error_code",
+        "source_context"
+      ],
+      "title": "ErrorOutput",
+      "type": "object"
+    },
+    "code_index_update": {
+      "description": "Standard payload for failed tool executions.",
+      "properties": {
+        "error": {
+          "description": "Human-readable error message",
+          "title": "Error",
+          "type": "string"
+        },
+        "error_code": {
+          "description": "Stable machine-readable error code",
+          "title": "Error Code",
+          "type": "string"
+        },
+        "source_context": {
+          "additionalProperties": true,
+          "description": "Arbitrary context data to help diagnose the error",
+          "title": "Source Context",
+          "type": "object"
+        },
+        "status": {
+          "enum": [
+            "ok",
+            "warning",
+            "error"
+          ],
+          "title": "Status",
+          "type": "string"
+        },
+        "tool_version": {
+          "description": "Version of the tool that generated this output",
+          "title": "Tool Version",
+          "type": "string"
+        },
+        "warnings": {
+          "description": "List of non-fatal warnings encountered",
+          "items": {
+            "type": "string"
+          },
+          "title": "Warnings",
+          "type": "array"
+        }
+      },
+      "required": [
+        "tool_version",
+        "error",
+        "error_code",
+        "source_context"
+      ],
+      "title": "ErrorOutput",
+      "type": "object"
+    },
+    "create_backlog_entry": {
+      "description": "Standard payload for failed tool executions.",
+      "properties": {
+        "error": {
+          "description": "Human-readable error message",
+          "title": "Error",
+          "type": "string"
+        },
+        "error_code": {
+          "description": "Stable machine-readable error code",
+          "title": "Error Code",
+          "type": "string"
+        },
+        "source_context": {
+          "additionalProperties": true,
+          "description": "Arbitrary context data to help diagnose the error",
+          "title": "Source Context",
+          "type": "object"
+        },
+        "status": {
+          "enum": [
+            "ok",
+            "warning",
+            "error"
+          ],
+          "title": "Status",
+          "type": "string"
+        },
+        "tool_version": {
+          "description": "Version of the tool that generated this output",
+          "title": "Tool Version",
+          "type": "string"
+        },
+        "warnings": {
+          "description": "List of non-fatal warnings encountered",
+          "items": {
+            "type": "string"
+          },
+          "title": "Warnings",
+          "type": "array"
+        }
+      },
+      "required": [
+        "tool_version",
+        "error",
+        "error_code",
+        "source_context"
+      ],
+      "title": "ErrorOutput",
+      "type": "object"
+    },
+    "create_environment_record_stub": {
+      "description": "Standard payload for failed tool executions.",
+      "properties": {
+        "error": {
+          "description": "Human-readable error message",
+          "title": "Error",
+          "type": "string"
+        },
+        "error_code": {
+          "description": "Stable machine-readable error code",
+          "title": "Error Code",
+          "type": "string"
+        },
+        "source_context": {
+          "additionalProperties": true,
+          "description": "Arbitrary context data to help diagnose the error",
+          "title": "Source Context",
+          "type": "object"
+        },
+        "status": {
+          "enum": [
+            "ok",
+            "warning",
+            "error"
+          ],
+          "title": "Status",
+          "type": "string"
+        },
+        "tool_version": {
+          "description": "Version of the tool that generated this output",
+          "title": "Tool Version",
+          "type": "string"
+        },
+        "warnings": {
+          "description": "List of non-fatal warnings encountered",
+          "items": {
+            "type": "string"
+          },
+          "title": "Warnings",
+          "type": "array"
+        }
+      },
+      "required": [
+        "tool_version",
+        "error",
+        "error_code",
+        "source_context"
+      ],
+      "title": "ErrorOutput",
+      "type": "object"
+    },
+    "create_session_handoff_draft": {
+      "description": "Standard payload for failed tool executions.",
+      "properties": {
+        "error": {
+          "description": "Human-readable error message",
+          "title": "Error",
+          "type": "string"
+        },
+        "error_code": {
+          "description": "Stable machine-readable error code",
+          "title": "Error Code",
+          "type": "string"
+        },
+        "source_context": {
+          "additionalProperties": true,
+          "description": "Arbitrary context data to help diagnose the error",
+          "title": "Source Context",
+          "type": "object"
+        },
+        "status": {
+          "enum": [
+            "ok",
+            "warning",
+            "error"
+          ],
+          "title": "Status",
+          "type": "string"
+        },
+        "tool_version": {
+          "description": "Version of the tool that generated this output",
+          "title": "Tool Version",
+          "type": "string"
+        },
+        "warnings": {
+          "description": "List of non-fatal warnings encountered",
+          "items": {
+            "type": "string"
+          },
+          "title": "Warnings",
+          "type": "array"
+        }
+      },
+      "required": [
+        "tool_version",
+        "error",
+        "error_code",
+        "source_context"
+      ],
+      "title": "ErrorOutput",
+      "type": "object"
+    },
+    "demo_workflow": {
+      "description": "Standard payload for failed tool executions.",
+      "properties": {
+        "error": {
+          "description": "Human-readable error message",
+          "title": "Error",
+          "type": "string"
+        },
+        "error_code": {
+          "description": "Stable machine-readable error code",
+          "title": "Error Code",
+          "type": "string"
+        },
+        "source_context": {
+          "additionalProperties": true,
+          "description": "Arbitrary context data to help diagnose the error",
+          "title": "Source Context",
+          "type": "object"
+        },
+        "status": {
+          "enum": [
+            "ok",
+            "warning",
+            "error"
+          ],
+          "title": "Status",
+          "type": "string"
+        },
+        "tool_version": {
+          "description": "Version of the tool that generated this output",
+          "title": "Tool Version",
+          "type": "string"
+        },
+        "warnings": {
+          "description": "List of non-fatal warnings encountered",
+          "items": {
+            "type": "string"
+          },
+          "title": "Warnings",
+          "type": "array"
+        }
+      },
+      "required": [
+        "tool_version",
+        "error",
+        "error_code",
+        "source_context"
+      ],
+      "title": "ErrorOutput",
+      "type": "object"
+    },
+    "doc_sync": {
+      "description": "Standard payload for failed tool executions.",
+      "properties": {
+        "error": {
+          "description": "Human-readable error message",
+          "title": "Error",
+          "type": "string"
+        },
+        "error_code": {
+          "description": "Stable machine-readable error code",
+          "title": "Error Code",
+          "type": "string"
+        },
+        "source_context": {
+          "additionalProperties": true,
+          "description": "Arbitrary context data to help diagnose the error",
+          "title": "Source Context",
+          "type": "object"
+        },
+        "status": {
+          "enum": [
+            "ok",
+            "warning",
+            "error"
+          ],
+          "title": "Status",
+          "type": "string"
+        },
+        "tool_version": {
+          "description": "Version of the tool that generated this output",
+          "title": "Tool Version",
+          "type": "string"
+        },
+        "warnings": {
+          "description": "List of non-fatal warnings encountered",
+          "items": {
+            "type": "string"
+          },
+          "title": "Warnings",
+          "type": "array"
+        }
+      },
+      "required": [
+        "tool_version",
+        "error",
+        "error_code",
+        "source_context"
+      ],
+      "title": "ErrorOutput",
+      "type": "object"
+    },
+    "existing_project_onboarding": {
+      "description": "Standard payload for failed tool executions.",
+      "properties": {
+        "error": {
+          "description": "Human-readable error message",
+          "title": "Error",
+          "type": "string"
+        },
+        "error_code": {
+          "description": "Stable machine-readable error code",
+          "title": "Error Code",
+          "type": "string"
+        },
+        "source_context": {
+          "additionalProperties": true,
+          "description": "Arbitrary context data to help diagnose the error",
+          "title": "Source Context",
+          "type": "object"
+        },
+        "status": {
+          "enum": [
+            "ok",
+            "warning",
+            "error"
+          ],
+          "title": "Status",
+          "type": "string"
+        },
+        "tool_version": {
+          "description": "Version of the tool that generated this output",
+          "title": "Tool Version",
+          "type": "string"
+        },
+        "warnings": {
+          "description": "List of non-fatal warnings encountered",
+          "items": {
+            "type": "string"
+          },
+          "title": "Warnings",
+          "type": "array"
+        }
+      },
+      "required": [
+        "tool_version",
+        "error",
+        "error_code",
+        "source_context"
+      ],
+      "title": "ErrorOutput",
+      "type": "object"
+    },
+    "git_conflict_resolver": {
+      "description": "Standard payload for failed tool executions.",
+      "properties": {
+        "error": {
+          "description": "Human-readable error message",
+          "title": "Error",
+          "type": "string"
+        },
+        "error_code": {
+          "description": "Stable machine-readable error code",
+          "title": "Error Code",
+          "type": "string"
+        },
+        "source_context": {
+          "additionalProperties": true,
+          "description": "Arbitrary context data to help diagnose the error",
+          "title": "Source Context",
+          "type": "object"
+        },
+        "status": {
+          "enum": [
+            "ok",
+            "warning",
+            "error"
+          ],
+          "title": "Status",
+          "type": "string"
+        },
+        "tool_version": {
+          "description": "Version of the tool that generated this output",
+          "title": "Tool Version",
+          "type": "string"
+        },
+        "warnings": {
+          "description": "List of non-fatal warnings encountered",
+          "items": {
+            "type": "string"
+          },
+          "title": "Warnings",
+          "type": "array"
+        }
+      },
+      "required": [
+        "tool_version",
+        "error",
+        "error_code",
+        "source_context"
+      ],
+      "title": "ErrorOutput",
+      "type": "object"
+    },
+    "latest_backlog": {
+      "description": "Standard payload for failed tool executions.",
+      "properties": {
+        "error": {
+          "description": "Human-readable error message",
+          "title": "Error",
+          "type": "string"
+        },
+        "error_code": {
+          "description": "Stable machine-readable error code",
+          "title": "Error Code",
+          "type": "string"
+        },
+        "source_context": {
+          "additionalProperties": true,
+          "description": "Arbitrary context data to help diagnose the error",
+          "title": "Source Context",
+          "type": "object"
+        },
+        "status": {
+          "enum": [
+            "ok",
+            "warning",
+            "error"
+          ],
+          "title": "Status",
+          "type": "string"
+        },
+        "tool_version": {
+          "description": "Version of the tool that generated this output",
+          "title": "Tool Version",
+          "type": "string"
+        },
+        "warnings": {
+          "description": "List of non-fatal warnings encountered",
+          "items": {
+            "type": "string"
+          },
+          "title": "Warnings",
+          "type": "array"
+        }
+      },
+      "required": [
+        "tool_version",
+        "error",
+        "error_code",
+        "source_context"
+      ],
+      "title": "ErrorOutput",
+      "type": "object"
+    },
+    "merge_doc_reconcile": {
+      "description": "Standard payload for failed tool executions.",
+      "properties": {
+        "error": {
+          "description": "Human-readable error message",
+          "title": "Error",
+          "type": "string"
+        },
+        "error_code": {
+          "description": "Stable machine-readable error code",
+          "title": "Error Code",
+          "type": "string"
+        },
+        "source_context": {
+          "additionalProperties": true,
+          "description": "Arbitrary context data to help diagnose the error",
+          "title": "Source Context",
+          "type": "object"
+        },
+        "status": {
+          "enum": [
+            "ok",
+            "warning",
+            "error"
+          ],
+          "title": "Status",
+          "type": "string"
+        },
+        "tool_version": {
+          "description": "Version of the tool that generated this output",
+          "title": "Tool Version",
+          "type": "string"
+        },
+        "warnings": {
+          "description": "List of non-fatal warnings encountered",
+          "items": {
+            "type": "string"
+          },
+          "title": "Warnings",
+          "type": "array"
+        }
+      },
+      "required": [
+        "tool_version",
+        "error",
+        "error_code",
+        "source_context"
+      ],
+      "title": "ErrorOutput",
+      "type": "object"
+    },
+    "session_start": {
+      "description": "Standard payload for failed tool executions.",
+      "properties": {
+        "error": {
+          "description": "Human-readable error message",
+          "title": "Error",
+          "type": "string"
+        },
+        "error_code": {
+          "description": "Stable machine-readable error code",
+          "title": "Error Code",
+          "type": "string"
+        },
+        "source_context": {
+          "additionalProperties": true,
+          "description": "Arbitrary context data to help diagnose the error",
+          "title": "Source Context",
+          "type": "object"
+        },
+        "status": {
+          "enum": [
+            "ok",
+            "warning",
+            "error"
+          ],
+          "title": "Status",
+          "type": "string"
+        },
+        "tool_version": {
+          "description": "Version of the tool that generated this output",
+          "title": "Tool Version",
+          "type": "string"
+        },
+        "warnings": {
+          "description": "List of non-fatal warnings encountered",
+          "items": {
+            "type": "string"
+          },
+          "title": "Warnings",
+          "type": "array"
+        }
+      },
+      "required": [
+        "tool_version",
+        "error",
+        "error_code",
+        "source_context"
+      ],
+      "title": "ErrorOutput",
+      "type": "object"
+    },
+    "smart_context_reader": {
+      "description": "Standard payload for failed tool executions.",
+      "properties": {
+        "error": {
+          "description": "Human-readable error message",
+          "title": "Error",
+          "type": "string"
+        },
+        "error_code": {
+          "description": "Stable machine-readable error code",
+          "title": "Error Code",
+          "type": "string"
+        },
+        "source_context": {
+          "additionalProperties": true,
+          "description": "Arbitrary context data to help diagnose the error",
+          "title": "Source Context",
+          "type": "object"
+        },
+        "status": {
+          "enum": [
+            "ok",
+            "warning",
+            "error"
+          ],
+          "title": "Status",
+          "type": "string"
+        },
+        "tool_version": {
+          "description": "Version of the tool that generated this output",
+          "title": "Tool Version",
+          "type": "string"
+        },
+        "warnings": {
+          "description": "List of non-fatal warnings encountered",
+          "items": {
+            "type": "string"
+          },
+          "title": "Warnings",
+          "type": "array"
+        }
+      },
+      "required": [
+        "tool_version",
+        "error",
+        "error_code",
+        "source_context"
+      ],
+      "title": "ErrorOutput",
+      "type": "object"
+    },
+    "suggest_impacted_docs": {
+      "description": "Standard payload for failed tool executions.",
+      "properties": {
+        "error": {
+          "description": "Human-readable error message",
+          "title": "Error",
+          "type": "string"
+        },
+        "error_code": {
+          "description": "Stable machine-readable error code",
+          "title": "Error Code",
+          "type": "string"
+        },
+        "source_context": {
+          "additionalProperties": true,
+          "description": "Arbitrary context data to help diagnose the error",
+          "title": "Source Context",
+          "type": "object"
+        },
+        "status": {
+          "enum": [
+            "ok",
+            "warning",
+            "error"
+          ],
+          "title": "Status",
+          "type": "string"
+        },
+        "tool_version": {
+          "description": "Version of the tool that generated this output",
+          "title": "Tool Version",
+          "type": "string"
+        },
+        "warnings": {
+          "description": "List of non-fatal warnings encountered",
+          "items": {
+            "type": "string"
+          },
+          "title": "Warnings",
+          "type": "array"
+        }
+      },
+      "required": [
+        "tool_version",
+        "error",
+        "error_code",
+        "source_context"
+      ],
+      "title": "ErrorOutput",
+      "type": "object"
+    },
+    "validation_plan": {
+      "description": "Standard payload for failed tool executions.",
+      "properties": {
+        "error": {
+          "description": "Human-readable error message",
+          "title": "Error",
+          "type": "string"
+        },
+        "error_code": {
+          "description": "Stable machine-readable error code",
+          "title": "Error Code",
+          "type": "string"
+        },
+        "source_context": {
+          "additionalProperties": true,
+          "description": "Arbitrary context data to help diagnose the error",
+          "title": "Source Context",
+          "type": "object"
+        },
+        "status": {
+          "enum": [
+            "ok",
+            "warning",
+            "error"
+          ],
+          "title": "Status",
+          "type": "string"
+        },
+        "tool_version": {
+          "description": "Version of the tool that generated this output",
+          "title": "Tool Version",
+          "type": "string"
+        },
+        "warnings": {
+          "description": "List of non-fatal warnings encountered",
+          "items": {
+            "type": "string"
+          },
+          "title": "Warnings",
+          "type": "array"
+        }
+      },
+      "required": [
+        "tool_version",
+        "error",
+        "error_code",
+        "source_context"
+      ],
+      "title": "ErrorOutput",
+      "type": "object"
+    },
+    "worker_response": {
+      "description": "Standard payload for failed tool executions.",
+      "properties": {
+        "error": {
+          "description": "Human-readable error message",
+          "title": "Error",
+          "type": "string"
+        },
+        "error_code": {
+          "description": "Stable machine-readable error code",
+          "title": "Error Code",
+          "type": "string"
+        },
+        "source_context": {
+          "additionalProperties": true,
+          "description": "Arbitrary context data to help diagnose the error",
+          "title": "Source Context",
+          "type": "object"
+        },
+        "status": {
+          "enum": [
+            "ok",
+            "warning",
+            "error"
+          ],
+          "title": "Status",
+          "type": "string"
+        },
+        "tool_version": {
+          "description": "Version of the tool that generated this output",
+          "title": "Tool Version",
+          "type": "string"
+        },
+        "warnings": {
+          "description": "List of non-fatal warnings encountered",
+          "items": {
+            "type": "string"
+          },
+          "title": "Warnings",
+          "type": "array"
+        }
+      },
+      "required": [
+        "tool_version",
+        "error",
+        "error_code",
+        "source_context"
+      ],
+      "title": "ErrorOutput",
+      "type": "object"
+    },
+    "worker_task": {
+      "description": "Standard payload for failed tool executions.",
+      "properties": {
+        "error": {
+          "description": "Human-readable error message",
+          "title": "Error",
+          "type": "string"
+        },
+        "error_code": {
+          "description": "Stable machine-readable error code",
+          "title": "Error Code",
+          "type": "string"
+        },
+        "source_context": {
+          "additionalProperties": true,
+          "description": "Arbitrary context data to help diagnose the error",
+          "title": "Source Context",
+          "type": "object"
+        },
+        "status": {
+          "enum": [
+            "ok",
+            "warning",
+            "error"
+          ],
+          "title": "Status",
+          "type": "string"
+        },
+        "tool_version": {
+          "description": "Version of the tool that generated this output",
+          "title": "Tool Version",
+          "type": "string"
+        },
+        "warnings": {
+          "description": "List of non-fatal warnings encountered",
+          "items": {
+            "type": "string"
+          },
+          "title": "Warnings",
+          "type": "array"
+        }
+      },
+      "required": [
+        "tool_version",
+        "error",
+        "error_code",
+        "source_context"
+      ],
+      "title": "ErrorOutput",
+      "type": "object"
+    },
+    "workflow_linter": {
+      "description": "Standard payload for failed tool executions.",
+      "properties": {
+        "error": {
+          "description": "Human-readable error message",
+          "title": "Error",
+          "type": "string"
+        },
+        "error_code": {
+          "description": "Stable machine-readable error code",
+          "title": "Error Code",
+          "type": "string"
+        },
+        "source_context": {
+          "additionalProperties": true,
+          "description": "Arbitrary context data to help diagnose the error",
+          "title": "Source Context",
+          "type": "object"
+        },
+        "status": {
+          "enum": [
+            "ok",
+            "warning",
+            "error"
+          ],
+          "title": "Status",
+          "type": "string"
+        },
+        "tool_version": {
+          "description": "Version of the tool that generated this output",
+          "title": "Tool Version",
+          "type": "string"
+        },
+        "warnings": {
+          "description": "List of non-fatal warnings encountered",
+          "items": {
+            "type": "string"
+          },
+          "title": "Warnings",
+          "type": "array"
+        }
+      },
+      "required": [
+        "tool_version",
+        "error",
+        "error_code",
+        "source_context"
+      ],
+      "title": "ErrorOutput",
+      "type": "object"
+    }
+  },
+  "outputs": {
+    "backlog_update": {
+      "description": "Output contract for the backlog-update skill.",
+      "properties": {
+        "apply_status": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Apply Status"
+        },
+        "created_paths": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Created Paths",
+          "type": "array"
+        },
+        "draft_entry": {
+          "description": "Generated markdown lines for the backlog entry",
+          "items": {
+            "type": "string"
+          },
+          "title": "Draft Entry",
+          "type": "array"
+        },
+        "fields_requiring_confirmation": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Fields Requiring Confirmation",
+          "type": "array"
+        },
+        "handoff_update_note": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Handoff Update Note"
+        },
+        "index_update_note": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Index Update Note"
+        },
+        "operation_type": {
+          "description": "Classified operation type (create_entry, update_entry, ...)",
+          "title": "Operation Type",
+          "type": "string"
+        },
+        "source_context": {
+          "properties": {
+            "daily_backlog_exists": {
+              "title": "Daily Backlog Exists",
+              "type": "boolean"
+            },
+            "existing_task_count": {
+              "title": "Existing Task Count",
+              "type": "integer"
+            },
+            "project_profile_path": {
+              "title": "Project Profile Path",
+              "type": "string"
+            }
+          },
+          "required": [
+            "daily_backlog_exists",
+            "existing_task_count",
+            "project_profile_path"
+          ],
+          "title": "BacklogUpdateSourceContext",
+          "type": "object"
+        },
+        "state_cache_missing_paths": {
+          "items": {
+            "type": "string"
+          },
+          "title": "State Cache Missing Paths",
+          "type": "array"
+        },
+        "state_cache_refresh_command": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "State Cache Refresh Command"
+        },
+        "state_cache_status": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "State Cache Status"
+        },
+        "state_cache_update_note": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "State Cache Update Note"
+        },
+        "status": {
+          "enum": [
+            "ok",
+            "warning",
+            "error"
+          ],
+          "title": "Status",
+          "type": "string"
+        },
+        "status_recommendation": {
+          "properties": {
+            "reason": {
+              "description": "Reason for the recommendation",
+              "title": "Reason",
+              "type": "string"
+            },
+            "value": {
+              "description": "Recommended status value",
+              "title": "Value",
+              "type": "string"
+            }
+          },
+          "required": [
+            "value",
+            "reason"
+          ],
+          "title": "StatusRecommendation",
+          "type": "object"
+        },
+        "target_backlog_path": {
+          "description": "Path to the updated backlog file",
+          "title": "Target Backlog Path",
+          "type": "string"
+        },
+        "task_found": {
+          "default": false,
+          "description": "Whether the requested task_id was found in the daily backlog",
+          "title": "Task Found",
+          "type": "boolean"
+        },
+        "task_id": {
+          "description": "ID of the task that was updated",
+          "title": "Task Id",
+          "type": "string"
+        },
+        "tool_version": {
+          "description": "Version of the tool that generated this output",
+          "title": "Tool Version",
+          "type": "string"
+        },
+        "updated_paths": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Updated Paths",
+          "type": "array"
+        },
+        "validation_note": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Validation Note"
+        },
+        "warnings": {
+          "description": "List of non-fatal warnings encountered",
+          "items": {
+            "type": "string"
+          },
+          "title": "Warnings",
+          "type": "array"
+        },
+        "written_paths": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Written Paths",
+          "type": "array"
+        }
+      },
+      "required": [
+        "tool_version",
+        "operation_type",
+        "target_backlog_path",
+        "task_id",
+        "draft_entry",
+        "status_recommendation",
+        "source_context"
+      ],
+      "title": "BacklogUpdateOutput",
+      "type": "object"
+    },
+    "check_doc_links": {
+      "properties": {
+        "broken_links": {
+          "items": {
+            "properties": {
+              "broken_links": {
+                "items": {
+                  "type": "string"
+                },
+                "title": "Broken Links",
+                "type": "array"
+              },
+              "path": {
+                "title": "Path",
+                "type": "string"
+              }
+            },
+            "required": [
+              "path",
+              "broken_links"
+            ],
+            "title": "BrokenLinks",
+            "type": "object"
+          },
+          "title": "Broken Links",
+          "type": "array"
+        },
+        "checked_files": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Checked Files",
+          "type": "array"
+        },
+        "status": {
+          "enum": [
+            "ok",
+            "warning",
+            "error"
+          ],
+          "title": "Status",
+          "type": "string"
+        },
+        "tool_version": {
+          "description": "Version of the tool that generated this output",
+          "title": "Tool Version",
+          "type": "string"
+        },
+        "warnings": {
+          "description": "List of non-fatal warnings encountered",
+          "items": {
+            "type": "string"
+          },
+          "title": "Warnings",
+          "type": "array"
+        }
+      },
+      "required": [
+        "tool_version"
+      ],
+      "title": "CheckDocLinksOutput",
+      "type": "object"
+    },
+    "check_doc_metadata": {
+      "properties": {
+        "checked_files": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Checked Files",
+          "type": "array"
+        },
+        "missing_metadata": {
+          "items": {
+            "properties": {
+              "missing_fields": {
+                "items": {
+                  "type": "string"
+                },
+                "title": "Missing Fields",
+                "type": "array"
+              },
+              "path": {
+                "title": "Path",
+                "type": "string"
+              }
+            },
+            "required": [
+              "path",
+              "missing_fields"
+            ],
+            "title": "MissingMetadata",
+            "type": "object"
+          },
+          "title": "Missing Metadata",
+          "type": "array"
+        },
+        "status": {
+          "enum": [
+            "ok",
+            "warning",
+            "error"
+          ],
+          "title": "Status",
+          "type": "string"
+        },
+        "tool_version": {
+          "description": "Version of the tool that generated this output",
+          "title": "Tool Version",
+          "type": "string"
+        },
+        "warnings": {
+          "description": "List of non-fatal warnings encountered",
+          "items": {
+            "type": "string"
+          },
+          "title": "Warnings",
+          "type": "array"
+        }
+      },
+      "required": [
+        "tool_version"
+      ],
+      "title": "CheckDocMetadataOutput",
+      "type": "object"
+    },
+    "check_quickstart_stale_links": {
+      "properties": {
+        "broken_links": {
+          "items": {
+            "properties": {
+              "broken_links": {
+                "items": {
+                  "type": "string"
+                },
+                "title": "Broken Links",
+                "type": "array"
+              },
+              "path": {
+                "title": "Path",
+                "type": "string"
+              }
+            },
+            "required": [
+              "path",
+              "broken_links"
+            ],
+            "title": "BrokenLinks",
+            "type": "object"
+          },
+          "title": "Broken Links",
+          "type": "array"
+        },
+        "checked_files": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Checked Files",
+          "type": "array"
+        },
+        "missing_expected_links": {
+          "items": {
+            "properties": {
+              "missing_targets": {
+                "items": {
+                  "type": "string"
+                },
+                "title": "Missing Targets",
+                "type": "array"
+              },
+              "path": {
+                "title": "Path",
+                "type": "string"
+              }
+            },
+            "required": [
+              "path",
+              "missing_targets"
+            ],
+            "title": "StaleLinkWarning",
+            "type": "object"
+          },
+          "title": "Missing Expected Links",
+          "type": "array"
+        },
+        "reasoning_notes": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Reasoning Notes",
+          "type": "array"
+        },
+        "stale_link_warnings": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Stale Link Warnings",
+          "type": "array"
+        },
+        "status": {
+          "enum": [
+            "ok",
+            "warning",
+            "error"
+          ],
+          "title": "Status",
+          "type": "string"
+        },
+        "tool_version": {
+          "description": "Version of the tool that generated this output",
+          "title": "Tool Version",
+          "type": "string"
+        },
+        "warnings": {
+          "description": "List of non-fatal warnings encountered",
+          "items": {
+            "type": "string"
+          },
+          "title": "Warnings",
+          "type": "array"
+        }
+      },
+      "required": [
+        "tool_version"
+      ],
+      "title": "CheckQuickstartStaleLinksOutput",
+      "type": "object"
+    },
+    "code_index_update": {
+      "description": "Output contract for the code-index-update skill.",
+      "properties": {
+        "apply_status": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Apply Status"
+        },
+        "confidence_notes": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Confidence Notes",
+          "type": "array"
+        },
+        "document_structure_signals": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Document Structure Signals",
+          "type": "array"
+        },
+        "index_update_candidates": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Index Update Candidates",
+          "type": "array"
+        },
+        "missing_index_candidates": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Missing Index Candidates",
+          "type": "array"
+        },
+        "priority_index_candidates": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Priority Index Candidates",
+          "type": "array"
+        },
+        "reasoning_notes": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Reasoning Notes",
+          "type": "array"
+        },
+        "source_context": {
+          "properties": {
+            "change_summary": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Change Summary"
+            },
+            "changed_files": {
+              "items": {
+                "type": "string"
+              },
+              "title": "Changed Files",
+              "type": "array"
+            },
+            "project_name": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Project Name"
+            },
+            "project_profile_path": {
+              "title": "Project Profile Path",
+              "type": "string"
+            }
+          },
+          "required": [
+            "project_profile_path"
+          ],
+          "title": "IndexUpdateSourceContext",
+          "type": "object"
+        },
+        "stale_index_warnings": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Stale Index Warnings",
+          "type": "array"
+        },
+        "status": {
+          "enum": [
+            "ok",
+            "warning",
+            "error"
+          ],
+          "title": "Status",
+          "type": "string"
+        },
+        "suggested_index_actions": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Suggested Index Actions",
+          "type": "array"
+        },
+        "tool_version": {
+          "description": "Version of the tool that generated this output",
+          "title": "Tool Version",
+          "type": "string"
+        },
+        "warnings": {
+          "description": "List of non-fatal warnings encountered",
+          "items": {
+            "type": "string"
+          },
+          "title": "Warnings",
+          "type": "array"
+        },
+        "written_paths": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Written Paths",
+          "type": "array"
+        }
+      },
+      "required": [
+        "tool_version",
+        "source_context"
+      ],
+      "title": "IndexUpdateOutput",
+      "type": "object"
+    },
+    "create_backlog_entry": {
+      "description": "Output contract for the create-backlog-entry skill.",
+      "properties": {
+        "draft_entry": {
+          "description": "Generated markdown lines for the backlog entry",
+          "items": {
+            "type": "string"
+          },
+          "title": "Draft Entry",
+          "type": "array"
+        },
+        "status": {
+          "enum": [
+            "ok",
+            "warning",
+            "error"
+          ],
+          "title": "Status",
+          "type": "string"
+        },
+        "tool_version": {
+          "description": "Version of the tool that generated this output",
+          "title": "Tool Version",
+          "type": "string"
+        },
+        "warnings": {
+          "description": "List of non-fatal warnings encountered",
+          "items": {
+            "type": "string"
+          },
+          "title": "Warnings",
+          "type": "array"
+        }
+      },
+      "required": [
+        "tool_version",
+        "draft_entry"
+      ],
+      "title": "CreateBacklogEntryOutput",
+      "type": "object"
+    },
+    "create_environment_record_stub": {
+      "properties": {
+        "draft_record": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Draft Record",
+          "type": "array"
+        },
+        "source_context": {
+          "additionalProperties": true,
+          "title": "Source Context",
+          "type": "object"
+        },
+        "status": {
+          "enum": [
+            "ok",
+            "warning",
+            "error"
+          ],
+          "title": "Status",
+          "type": "string"
+        },
+        "tool_version": {
+          "description": "Version of the tool that generated this output",
+          "title": "Tool Version",
+          "type": "string"
+        },
+        "warnings": {
+          "description": "List of non-fatal warnings encountered",
+          "items": {
+            "type": "string"
+          },
+          "title": "Warnings",
+          "type": "array"
+        }
+      },
+      "required": [
+        "tool_version",
+        "source_context"
+      ],
+      "title": "CreateEnvironmentRecordStubOutput",
+      "type": "object"
+    },
+    "create_session_handoff_draft": {
+      "properties": {
+        "draft_handoff": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Draft Handoff",
+          "type": "array"
+        },
+        "source_context": {
+          "additionalProperties": true,
+          "title": "Source Context",
+          "type": "object"
+        },
+        "status": {
+          "enum": [
+            "ok",
+            "warning",
+            "error"
+          ],
+          "title": "Status",
+          "type": "string"
+        },
+        "tool_version": {
+          "description": "Version of the tool that generated this output",
+          "title": "Tool Version",
+          "type": "string"
+        },
+        "warnings": {
+          "description": "List of non-fatal warnings encountered",
+          "items": {
+            "type": "string"
+          },
+          "title": "Warnings",
+          "type": "array"
+        }
+      },
+      "required": [
+        "tool_version",
+        "source_context"
+      ],
+      "title": "CreateSessionHandoffDraftOutput",
+      "type": "object"
+    },
+    "demo_workflow": {
+      "description": "Output contract for the demo-workflow skill.",
+      "properties": {
+        "orchestration_plan": {
+          "properties": {
+            "integration_notes": {
+              "items": {
+                "type": "string"
+              },
+              "title": "Integration Notes",
+              "type": "array"
+            },
+            "model_split": {
+              "additionalProperties": {
+                "type": "string"
+              },
+              "title": "Model Split",
+              "type": "object"
+            },
+            "recommended_pattern": {
+              "title": "Recommended Pattern",
+              "type": "string"
+            },
+            "worker_assignments": {
+              "items": {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              "title": "Worker Assignments",
+              "type": "array"
+            }
+          },
+          "required": [
+            "recommended_pattern",
+            "model_split"
+          ],
+          "title": "OrchestrationPlan",
+          "type": "object"
+        },
+        "source_context": {
+          "additionalProperties": true,
+          "title": "Source Context",
+          "type": "object"
+        },
+        "status": {
+          "enum": [
+            "ok",
+            "warning",
+            "error"
+          ],
+          "title": "Status",
+          "type": "string"
+        },
+        "tool_version": {
+          "description": "Version of the tool that generated this output",
+          "title": "Tool Version",
+          "type": "string"
+        },
+        "warnings": {
+          "description": "List of non-fatal warnings encountered",
+          "items": {
+            "type": "string"
+          },
+          "title": "Warnings",
+          "type": "array"
+        },
+        "workflow_summary": {
+          "additionalProperties": true,
+          "title": "Workflow Summary",
+          "type": "object"
+        }
+      },
+      "required": [
+        "tool_version",
+        "orchestration_plan",
+        "workflow_summary",
+        "source_context"
+      ],
+      "title": "DemoWorkflowOutput",
+      "type": "object"
+    },
+    "doc_sync": {
+      "description": "Output contract for the doc-sync skill.",
+      "properties": {
+        "apply_status": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Apply Status"
+        },
+        "confidence_notes": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Confidence Notes",
+          "type": "array"
+        },
+        "follow_up_actions": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Follow Up Actions",
+          "type": "array"
+        },
+        "hub_update_candidates": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Hub Update Candidates",
+          "type": "array"
+        },
+        "impacted_documents": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Impacted Documents",
+          "type": "array"
+        },
+        "reasoning_notes": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Reasoning Notes",
+          "type": "array"
+        },
+        "recommended_review_order": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Recommended Review Order",
+          "type": "array"
+        },
+        "source_context": {
+          "properties": {
+            "change_summary": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Change Summary"
+            },
+            "changed_files": {
+              "items": {
+                "type": "string"
+              },
+              "title": "Changed Files",
+              "type": "array"
+            },
+            "latest_backlog_path": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Latest Backlog Path"
+            },
+            "project_profile_path": {
+              "title": "Project Profile Path",
+              "type": "string"
+            },
+            "session_handoff_path": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Session Handoff Path"
+            },
+            "work_backlog_index_path": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Work Backlog Index Path"
+            }
+          },
+          "required": [
+            "project_profile_path",
+            "changed_files"
+          ],
+          "title": "DocSyncSourceContext",
+          "type": "object"
+        },
+        "stale_warnings": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Stale Warnings",
+          "type": "array"
+        },
+        "status": {
+          "enum": [
+            "ok",
+            "warning",
+            "error"
+          ],
+          "title": "Status",
+          "type": "string"
+        },
+        "status_doc_candidates": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Status Doc Candidates",
+          "type": "array"
+        },
+        "tool_version": {
+          "description": "Version of the tool that generated this output",
+          "title": "Tool Version",
+          "type": "string"
+        },
+        "validation_doc_candidates": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Validation Doc Candidates",
+          "type": "array"
+        },
+        "warnings": {
+          "description": "List of non-fatal warnings encountered",
+          "items": {
+            "type": "string"
+          },
+          "title": "Warnings",
+          "type": "array"
+        },
+        "written_paths": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Written Paths",
+          "type": "array"
+        }
+      },
+      "required": [
+        "tool_version",
+        "source_context"
+      ],
+      "title": "DocSyncOutput",
+      "type": "object"
+    },
+    "existing_project_onboarding": {
+      "description": "Output contract for the existing-project-onboarding skill.",
+      "properties": {
+        "onboarding_summary": {
+          "properties": {
+            "inferred_commands": {
+              "additionalProperties": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "title": "Inferred Commands",
+              "type": "object"
+            },
+            "primary_stack": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Primary Stack"
+            },
+            "recommended_next_steps": {
+              "items": {
+                "type": "string"
+              },
+              "title": "Recommended Next Steps",
+              "type": "array"
+            },
+            "review_assessment_first": {
+              "title": "Review Assessment First",
+              "type": "boolean"
+            }
+          },
+          "required": [
+            "review_assessment_first",
+            "inferred_commands"
+          ],
+          "title": "OnboardingSummary",
+          "type": "object"
+        },
+        "orchestration_plan": {
+          "properties": {
+            "integration_notes": {
+              "items": {
+                "type": "string"
+              },
+              "title": "Integration Notes",
+              "type": "array"
+            },
+            "model_split": {
+              "additionalProperties": {
+                "type": "string"
+              },
+              "title": "Model Split",
+              "type": "object"
+            },
+            "recommended_pattern": {
+              "title": "Recommended Pattern",
+              "type": "string"
+            },
+            "worker_assignments": {
+              "items": {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              "title": "Worker Assignments",
+              "type": "array"
+            }
+          },
+          "required": [
+            "recommended_pattern",
+            "model_split"
+          ],
+          "title": "OrchestrationPlan",
+          "type": "object"
+        },
+        "source_context": {
+          "additionalProperties": true,
+          "title": "Source Context",
+          "type": "object"
+        },
+        "status": {
+          "enum": [
+            "ok",
+            "warning",
+            "error"
+          ],
+          "title": "Status",
+          "type": "string"
+        },
+        "tool_version": {
+          "description": "Version of the tool that generated this output",
+          "title": "Tool Version",
+          "type": "string"
+        },
+        "warnings": {
+          "description": "List of non-fatal warnings encountered",
+          "items": {
+            "type": "string"
+          },
+          "title": "Warnings",
+          "type": "array"
+        }
+      },
+      "required": [
+        "tool_version",
+        "orchestration_plan",
+        "onboarding_summary",
+        "source_context"
+      ],
+      "title": "OnboardingOutput",
+      "type": "object"
+    },
+    "git_conflict_resolver": {
+      "description": "Output contract for the git-conflict-resolver skill.",
+      "properties": {
+        "conflict_count": {
+          "description": "Total number of conflicts found",
+          "title": "Conflict Count",
+          "type": "integer"
+        },
+        "conflicts": {
+          "items": {
+            "properties": {
+              "file_path": {
+                "description": "Path to the file containing the conflict",
+                "title": "File Path",
+                "type": "string"
+              },
+              "line_number": {
+                "anyOf": [
+                  {
+                    "type": "integer"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "description": "Approximate line number of the conflict",
+                "title": "Line Number"
+              },
+              "our_content": {
+                "description": "Content from the current branch (OURS)",
+                "title": "Our Content",
+                "type": "string"
+              },
+              "resolution_note": {
+                "description": "Rationale for the chosen resolution",
+                "title": "Resolution Note",
+                "type": "string"
+              },
+              "resolution_strategy": {
+                "enum": [
+                  "ours",
+                  "theirs",
+                  "merge",
+                  "manual"
+                ],
+                "title": "ResolutionStrategy",
+                "type": "string"
+              },
+              "their_content": {
+                "description": "Content from the incoming branch (THEIRS)",
+                "title": "Their Content",
+                "type": "string"
+              }
+            },
+            "required": [
+              "file_path",
+              "our_content",
+              "their_content",
+              "resolution_strategy",
+              "resolution_note"
+            ],
+            "title": "ConflictPoint",
+            "type": "object"
+          },
+          "title": "Conflicts",
+          "type": "array"
+        },
+        "resolution_summary": {
+          "description": "Human-readable summary of resolutions",
+          "title": "Resolution Summary",
+          "type": "string"
+        },
+        "resolved_count": {
+          "description": "Number of conflicts successfully resolved",
+          "title": "Resolved Count",
+          "type": "integer"
+        },
+        "source_context": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "title": "Source Context",
+          "type": "object"
+        },
+        "status": {
+          "enum": [
+            "ok",
+            "warning",
+            "error"
+          ],
+          "title": "Status",
+          "type": "string"
+        },
+        "tool_version": {
+          "description": "Version of the tool that generated this output",
+          "title": "Tool Version",
+          "type": "string"
+        },
+        "unresolved_conflicts": {
+          "items": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "type": "object"
+          },
+          "title": "Unresolved Conflicts",
+          "type": "array"
+        },
+        "warnings": {
+          "description": "List of non-fatal warnings encountered",
+          "items": {
+            "type": "string"
+          },
+          "title": "Warnings",
+          "type": "array"
+        }
+      },
+      "required": [
+        "tool_version",
+        "conflict_count",
+        "resolved_count",
+        "resolution_summary"
+      ],
+      "title": "GitConflictResolverOutput",
+      "type": "object"
+    },
+    "latest_backlog": {
+      "properties": {
+        "candidates": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Candidates",
+          "type": "array"
+        },
+        "latest_backlog_path": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Latest Backlog Path"
+        },
+        "status": {
+          "enum": [
+            "ok",
+            "warning",
+            "error"
+          ],
+          "title": "Status",
+          "type": "string"
+        },
+        "tool_version": {
+          "description": "Version of the tool that generated this output",
+          "title": "Tool Version",
+          "type": "string"
+        },
+        "warnings": {
+          "description": "List of non-fatal warnings encountered",
+          "items": {
+            "type": "string"
+          },
+          "title": "Warnings",
+          "type": "array"
+        }
+      },
+      "required": [
+        "tool_version"
+      ],
+      "title": "LatestBacklogOutput",
+      "type": "object"
+    },
+    "merge_doc_reconcile": {
+      "description": "Output contract for the merge-doc-reconcile skill.",
+      "properties": {
+        "apply_status": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Apply Status"
+        },
+        "backlog_update_note": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Backlog Update Note"
+        },
+        "draft_reconcile_notes": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Draft Reconcile Notes",
+          "type": "array"
+        },
+        "handoff_update_note": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Handoff Update Note"
+        },
+        "hub_update_note": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Hub Update Note"
+        },
+        "recommended_review_order": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Recommended Review Order",
+          "type": "array"
+        },
+        "reconcile_targets": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Reconcile Targets",
+          "type": "array"
+        },
+        "reconfirmation_points": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Reconfirmation Points",
+          "type": "array"
+        },
+        "source_context": {
+          "properties": {
+            "changed_files": {
+              "items": {
+                "type": "string"
+              },
+              "title": "Changed Files",
+              "type": "array"
+            },
+            "merge_result_summary": {
+              "title": "Merge Result Summary",
+              "type": "string"
+            },
+            "project_profile_path": {
+              "title": "Project Profile Path",
+              "type": "string"
+            }
+          },
+          "required": [
+            "project_profile_path",
+            "merge_result_summary"
+          ],
+          "title": "ReconcileSourceContext",
+          "type": "object"
+        },
+        "state_cache_missing_paths": {
+          "items": {
+            "type": "string"
+          },
+          "title": "State Cache Missing Paths",
+          "type": "array"
+        },
+        "state_cache_refresh_command": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "State Cache Refresh Command"
+        },
+        "state_cache_status": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "State Cache Status"
+        },
+        "state_cache_update_note": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "State Cache Update Note"
+        },
+        "state_conflicts": {
+          "items": {
+            "type": "string"
+          },
+          "title": "State Conflicts",
+          "type": "array"
+        },
+        "status": {
+          "enum": [
+            "ok",
+            "warning",
+            "error"
+          ],
+          "title": "Status",
+          "type": "string"
+        },
+        "tool_version": {
+          "description": "Version of the tool that generated this output",
+          "title": "Tool Version",
+          "type": "string"
+        },
+        "validation_follow_up": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Validation Follow Up"
+        },
+        "warnings": {
+          "description": "List of non-fatal warnings encountered",
+          "items": {
+            "type": "string"
+          },
+          "title": "Warnings",
+          "type": "array"
+        },
+        "written_paths": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Written Paths",
+          "type": "array"
+        }
+      },
+      "required": [
+        "tool_version",
+        "source_context"
+      ],
+      "title": "ReconcileOutput",
+      "type": "object"
+    },
+    "session_start": {
+      "description": "Output contract for the session-start skill.",
+      "properties": {
+        "blocked_items": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Blocked Items",
+          "type": "array"
+        },
+        "environment_constraints": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Environment Constraints",
+          "type": "array"
+        },
+        "in_progress_items": {
+          "items": {
+            "type": "string"
+          },
+          "title": "In Progress Items",
+          "type": "array"
+        },
+        "latest_backlog_path": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Latest Backlog Path"
+        },
+        "next_documents": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Next Documents",
+          "type": "array"
+        },
+        "recommended_next_action": {
+          "default": "",
+          "title": "Recommended Next Action",
+          "type": "string"
+        },
+        "source_documents": {
+          "properties": {
+            "project_profile_path": {
+              "title": "Project Profile Path",
+              "type": "string"
+            },
+            "session_handoff_path": {
+              "title": "Session Handoff Path",
+              "type": "string"
+            },
+            "work_backlog_index_path": {
+              "title": "Work Backlog Index Path",
+              "type": "string"
+            }
+          },
+          "required": [
+            "session_handoff_path",
+            "work_backlog_index_path",
+            "project_profile_path"
+          ],
+          "title": "SessionStartSourceDocs",
+          "type": "object"
+        },
+        "status": {
+          "enum": [
+            "ok",
+            "warning",
+            "error"
+          ],
+          "title": "Status",
+          "type": "string"
+        },
+        "summary": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Summary",
+          "type": "array"
+        },
+        "tool_version": {
+          "description": "Version of the tool that generated this output",
+          "title": "Tool Version",
+          "type": "string"
+        },
+        "validation_notes": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Validation Notes",
+          "type": "array"
+        },
+        "warnings": {
+          "description": "List of non-fatal warnings encountered",
+          "items": {
+            "type": "string"
+          },
+          "title": "Warnings",
+          "type": "array"
+        }
+      },
+      "required": [
+        "tool_version",
+        "source_documents"
+      ],
+      "title": "SessionStartOutput",
+      "type": "object"
+    },
+    "smart_context_reader": {
+      "properties": {
+        "extracted_content": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Extracted Content",
+          "type": "array"
+        },
+        "not_found_symbols": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Not Found Symbols",
+          "type": "array"
+        },
+        "status": {
+          "enum": [
+            "ok",
+            "warning",
+            "error"
+          ],
+          "title": "Status",
+          "type": "string"
+        },
+        "tool_version": {
+          "description": "Version of the tool that generated this output",
+          "title": "Tool Version",
+          "type": "string"
+        },
+        "warnings": {
+          "description": "List of non-fatal warnings encountered",
+          "items": {
+            "type": "string"
+          },
+          "title": "Warnings",
+          "type": "array"
+        }
+      },
+      "required": [
+        "tool_version"
+      ],
+      "title": "SmartContextReaderOutput",
+      "type": "object"
+    },
+    "suggest_impacted_docs": {
+      "properties": {
+        "impacted_documents": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Impacted Documents",
+          "type": "array"
+        },
+        "reasoning_notes": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Reasoning Notes",
+          "type": "array"
+        },
+        "status": {
+          "enum": [
+            "ok",
+            "warning",
+            "error"
+          ],
+          "title": "Status",
+          "type": "string"
+        },
+        "tool_version": {
+          "description": "Version of the tool that generated this output",
+          "title": "Tool Version",
+          "type": "string"
+        },
+        "warnings": {
+          "description": "List of non-fatal warnings encountered",
+          "items": {
+            "type": "string"
+          },
+          "title": "Warnings",
+          "type": "array"
+        }
+      },
+      "required": [
+        "tool_version"
+      ],
+      "title": "SuggestImpactedDocsOutput",
+      "type": "object"
+    },
+    "validation_plan": {
+      "description": "Output contract for the validation-plan skill.",
+      "properties": {
+        "commands_requiring_confirmation": {
+          "items": {
+            "properties": {
+              "command": {
+                "title": "Command",
+                "type": "string"
+              },
+              "reason": {
+                "title": "Reason",
+                "type": "string"
+              }
+            },
+            "required": [
+              "command",
+              "reason"
+            ],
+            "title": "ValidationCommand",
+            "type": "object"
+          },
+          "title": "Commands Requiring Confirmation",
+          "type": "array"
+        },
+        "confidence_notes": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Confidence Notes",
+          "type": "array"
+        },
+        "deferred_validation_items": {
+          "items": {
+            "properties": {
+              "item": {
+                "title": "Item",
+                "type": "string"
+              },
+              "suggested_record_path": {
+                "title": "Suggested Record Path",
+                "type": "string"
+              }
+            },
+            "required": [
+              "item",
+              "suggested_record_path"
+            ],
+            "title": "DeferredValidationItem",
+            "type": "object"
+          },
+          "title": "Deferred Validation Items",
+          "type": "array"
+        },
+        "detected_change_types": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Detected Change Types",
+          "type": "array"
+        },
+        "documentation_checks": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Documentation Checks",
+          "type": "array"
+        },
+        "evidence_expectations": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Evidence Expectations",
+          "type": "array"
+        },
+        "recommended_commands": {
+          "items": {
+            "properties": {
+              "command": {
+                "title": "Command",
+                "type": "string"
+              },
+              "reason": {
+                "title": "Reason",
+                "type": "string"
+              }
+            },
+            "required": [
+              "command",
+              "reason"
+            ],
+            "title": "ValidationCommand",
+            "type": "object"
+          },
+          "title": "Recommended Commands",
+          "type": "array"
+        },
+        "recommended_validation_levels": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Recommended Validation Levels",
+          "type": "array"
+        },
+        "scaffold_path": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Scaffold Path"
+        },
+        "scaffold_status": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Scaffold Status"
+        },
+        "source_context": {
+          "properties": {
+            "change_summary": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Change Summary"
+            },
+            "changed_files": {
+              "items": {
+                "type": "string"
+              },
+              "title": "Changed Files",
+              "type": "array"
+            },
+            "project_name": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Project Name"
+            },
+            "project_profile_path": {
+              "title": "Project Profile Path",
+              "type": "string"
+            }
+          },
+          "required": [
+            "project_profile_path"
+          ],
+          "title": "ValidationPlanSourceContext",
+          "type": "object"
+        },
+        "status": {
+          "enum": [
+            "ok",
+            "warning",
+            "error"
+          ],
+          "title": "Status",
+          "type": "string"
+        },
+        "tool_version": {
+          "description": "Version of the tool that generated this output",
+          "title": "Tool Version",
+          "type": "string"
+        },
+        "warnings": {
+          "description": "List of non-fatal warnings encountered",
+          "items": {
+            "type": "string"
+          },
+          "title": "Warnings",
+          "type": "array"
+        },
+        "written_paths": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Written Paths",
+          "type": "array"
+        }
+      },
+      "required": [
+        "tool_version",
+        "source_context"
+      ],
+      "title": "ValidationPlanOutput",
+      "type": "object"
+    },
+    "worker_response": {
+      "description": "Payload returned by a sub-agent (worker) to the orchestrator.",
+      "properties": {
+        "produced_artifacts": {
+          "description": "Paths to files created or modified",
+          "items": {
+            "type": "string"
+          },
+          "title": "Produced Artifacts",
+          "type": "array"
+        },
+        "raw_worker_output": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Optional raw output or logs from the worker execution",
+          "title": "Raw Worker Output"
+        },
+        "risks_identified": {
+          "description": "Potential issues or technical debt identified during execution",
+          "items": {
+            "type": "string"
+          },
+          "title": "Risks Identified",
+          "type": "array"
+        },
+        "status": {
+          "enum": [
+            "ok",
+            "warning",
+            "error"
+          ],
+          "title": "Status",
+          "type": "string"
+        },
+        "suggested_follow_up": {
+          "description": "Next steps recommended by the worker",
+          "items": {
+            "type": "string"
+          },
+          "title": "Suggested Follow Up",
+          "type": "array"
+        },
+        "summary": {
+          "description": "Human-readable summary of the work performed",
+          "title": "Summary",
+          "type": "string"
+        },
+        "tool_version": {
+          "description": "Version of the tool that generated this output",
+          "title": "Tool Version",
+          "type": "string"
+        },
+        "warnings": {
+          "description": "List of non-fatal warnings encountered",
+          "items": {
+            "type": "string"
+          },
+          "title": "Warnings",
+          "type": "array"
+        }
+      },
+      "required": [
+        "tool_version",
+        "summary"
+      ],
+      "title": "WorkerResponse",
+      "type": "object"
+    },
+    "worker_task": {
+      "description": "Payload sent by the orchestrator to a sub-agent (worker).",
+      "properties": {
+        "constraints": {
+          "description": "Specific limitations or rules for the task",
+          "items": {
+            "type": "string"
+          },
+          "title": "Constraints",
+          "type": "array"
+        },
+        "context_summary": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Short summary of why this task is being delegated",
+          "title": "Context Summary"
+        },
+        "input_files": {
+          "description": "List of files the worker should read",
+          "items": {
+            "type": "string"
+          },
+          "title": "Input Files",
+          "type": "array"
+        },
+        "output_files": {
+          "description": "List of files the worker is expected to modify or create",
+          "items": {
+            "type": "string"
+          },
+          "title": "Output Files",
+          "type": "array"
+        },
+        "task_description": {
+          "description": "High-level description of what the worker should do",
+          "title": "Task Description",
+          "type": "string"
+        },
+        "worker_id": {
+          "description": "ID of the target worker (e.g., 'doc-worker')",
+          "title": "Worker Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "worker_id",
+        "task_description"
+      ],
+      "title": "WorkerTask",
+      "type": "object"
+    },
+    "workflow_linter": {
+      "description": "Output contract for the workflow-linter skill.",
+      "properties": {
+        "issues": {
+          "items": {
+            "properties": {
+              "code": {
+                "description": "Specific error code",
+                "title": "Code",
+                "type": "string"
+              },
+              "description": {
+                "description": "Detailed description of the issue",
+                "title": "Description",
+                "type": "string"
+              },
+              "fix_suggestion": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "description": "Recommended action to resolve the issue",
+                "title": "Fix Suggestion"
+              },
+              "severity": {
+                "description": "Severity level: 'low', 'medium', 'high'",
+                "title": "Severity",
+                "type": "string"
+              },
+              "type": {
+                "description": "Category of the issue (e.g., 'sync_error', 'broken_link')",
+                "title": "Type",
+                "type": "string"
+              }
+            },
+            "required": [
+              "type",
+              "code",
+              "description",
+              "severity"
+            ],
+            "title": "LinterIssue",
+            "type": "object"
+          },
+          "title": "Issues",
+          "type": "array"
+        },
+        "source_context": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "title": "Source Context",
+          "type": "object"
+        },
+        "status": {
+          "enum": [
+            "ok",
+            "warning",
+            "error"
+          ],
+          "title": "Status",
+          "type": "string"
+        },
+        "summary": {
+          "properties": {
+            "bloat_warnings": {
+              "title": "Bloat Warnings",
+              "type": "integer"
+            },
+            "broken_links": {
+              "title": "Broken Links",
+              "type": "integer"
+            },
+            "sync_errors": {
+              "title": "Sync Errors",
+              "type": "integer"
+            },
+            "total_issues": {
+              "title": "Total Issues",
+              "type": "integer"
+            }
+          },
+          "required": [
+            "total_issues",
+            "sync_errors",
+            "broken_links",
+            "bloat_warnings"
+          ],
+          "title": "LinterSummary",
+          "type": "object"
+        },
+        "tool_version": {
+          "description": "Version of the tool that generated this output",
+          "title": "Tool Version",
+          "type": "string"
+        },
+        "warnings": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Warnings",
+          "type": "array"
+        }
+      },
+      "required": [
+        "tool_version",
+        "summary"
+      ],
+      "title": "WorkflowLinterOutput",
+      "type": "object"
+    }
+  }
+}

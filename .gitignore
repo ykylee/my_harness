@@ -1,0 +1,48 @@
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# Editors / IDEs
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.cursor/
+
+# Build / distribution outputs
+dist/
+build/
+
+# Logs and temp
+*.log
+*.tmp
+tmp/
+tmp-test/
+scratch/
+
+# Mavis local config (secrets live here)
+.MiniMax/config.json
+.MiniMax/config.local.json
+
+# Codex local config (in case the user enables codex harness later)
+.codex/config.toml
+
+# Local memory per-host branches
+# (the framework supports ai-workflow/memory/<host>/.../ ; ignore non-current host)
+ai-workflow/memory/environments/

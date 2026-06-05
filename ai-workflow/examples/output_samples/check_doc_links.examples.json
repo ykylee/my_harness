@@ -1,0 +1,21 @@
+{
+  "status": "ok",
+  "tool_version": "v0.5.0-beta",
+  "checked_files": [
+    "/Users/yklee/repos/standard_ai_workflow/examples/README.md",
+    "/Users/yklee/repos/standard_ai_workflow/examples/acme_delivery_platform/backlog/2026-04-18.md",
+    "/Users/yklee/repos/standard_ai_workflow/examples/acme_delivery_platform/PROJECT_PROFILE.md",
+    "/Users/yklee/repos/standard_ai_workflow/examples/acme_delivery_platform/session_handoff.md",
+    "/Users/yklee/repos/standard_ai_workflow/examples/acme_delivery_platform/work_backlog.md",
+    "/Users/yklee/repos/standard_ai_workflow/examples/bootstrap_output_samples.md",
+    "/Users/yklee/repos/standard_ai_workflow/examples/end_to_end_mcp_demo.md",
+    "/Users/yklee/repos/standard_ai_workflow/examples/end_to_end_skill_demo.md",
+    "/Users/yklee/repos/standard_ai_workflow/examples/output_samples/README.md",
+    "/Users/yklee/repos/standard_ai_workflow/examples/research_eval_hub/backlog/2026-04-19.md",
+    "/Users/yklee/repos/standard_ai_workflow/examples/research_eval_hub/PROJECT_PROFILE.md",
+    "/Users/yklee/repos/standard_ai_workflow/examples/research_eval_hub/session_handoff.md",
+    "/Users/yklee/repos/standard_ai_workflow/examples/research_eval_hub/work_backlog.md"
+  ],
+  "broken_links": [],
+  "warnings": []
+}

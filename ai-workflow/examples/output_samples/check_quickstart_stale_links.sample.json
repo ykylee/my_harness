@@ -1,0 +1,23 @@
+{
+  "status": "ok",
+  "tool_version": "v0.5.0-beta",
+  "checked_files": [
+    "/Users/yklee/repos/standard_ai_workflow/examples/bootstrap_output_samples.md"
+  ],
+  "broken_links": [],
+  "missing_expected_links": [
+    {
+      "path": "/Users/yklee/repos/standard_ai_workflow/examples/bootstrap_output_samples.md",
+      "missing_targets": [
+        "../templates/project_workflow_profile_template.md"
+      ]
+    }
+  ],
+  "stale_link_warnings": [
+    "bootstrap_output_samples.md 문서가 현재 워크플로우 핵심 진입 문서 일부를 직접 가리키지 않아 onboarding 흐름이 약할 수 있다."
+  ],
+  "reasoning_notes": [
+    "`bootstrap_output_samples.md` 문서에서 상대 링크 무결성과 핵심 진입 문서 링크 존재 여부를 함께 점검했다."
+  ],
+  "warnings": []
+}
