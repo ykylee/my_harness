@@ -40,14 +40,17 @@
 
 ## 다음에 할 일 (Next Actions)
 
-- [ ] **TASK-004 즉시 착수** — 5개 레퍼런스를 8축(언어/TUI/cross-platform/토폴로지/컨텍스트/세션/확장/워크플로우 호환)으로 비교 분석. 결과는 `docs/REFERENCES.md` 에 1차 정리.
-- [ ] TASK-002/003 은 우선순위 medium 으로 후순위 (방향 전환으로 인함). 단, TASK-005 진행 중 새 CLI 의 워크플로우 레이어 설계 시 TASK-002/003 의 결론 재활용 가능.
-- [ ] TASK-004 종료 후 yklee 와 디자인 리뷰 — 언어 / TUI 라이브러리 / 패키징 / 이름 결정 → TASK-005 세부 분해.
+- [x] TASK-004 1차 draft 작성 (`docs/REFERENCES.md`) — yklee 리뷰 대기
+- [ ] **yklee**: REFERENCES.md §5 의 Rust 1안 vs TypeScript 2안 중 픽
+- [ ] **yklee**: Gitea PAT 발급 (web UI) → 토큰 값 Mavis 에 전달 → keychain 셋업 마무리
+- [ ] TASK-002/003 은 우선순위 medium 으로 후순위. 단, TASK-005 진행 중 새 CLI 의 워크플로우 레이어 설계 시 결론 재활용
+- [ ] TASK-004 1차 draft 리뷰 후 yklee 가 deep-dive 1~2개 픽 → §3 1-페이지 프로필 확장
+- [ ] TASK-005 시작: 스택 결정 → MVP 범위 → 컨셉 한 줄 → 세부 분해
 
 ## Risks & Blockers
 
 - 5개 레퍼런스 중 **Goose** 가 Agentic AI Foundation 으로 이전 중. URL `block/goose` 는 동작하나 곧 aaif.io 가 canonical 이 될 가능성 — 분석엔 영향 없음, 추적.
 - `my_harness` 의 현재 standard_ai_workflow 기반 구조와 미래 CLI/TUI 구조가 공존해야 함. 빌드 시스템 / 의존성 / 진입점 충돌 가능. TASK-005.1 (스택 결정) 시 우선 정리.
 - 디스크 사용: harness-refs unshallow 후 ~1.3GB 추정. 분석용이라 유지가 기본. 불필요시 `trash` 로 회수.
-- Gitea 인증: yklee 계정 / 비밀번호 기반. 토큰 발급 + credential helper 설정 안 됨. 향후 push 시 매번 자격증명 입력 필요. 장기는 Gitea PAT 발급 + `git credential helper` 설정 권장.
+- Gitea 인증: yklee 계정 / 비밀번호 기반. **Gitea 1.25.5 가 POST 응답에서 token secret 을 노출하지 않음** (헤더에도 없음). PAT 발급 = web UI 에서만 가능. 현재 yklee 가 발급 후 토큰 값 전달 대기.
 - yklee 비밀번호를 메모리/문서에 저장하지 않음.
