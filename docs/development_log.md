@@ -71,6 +71,7 @@ yklee 가 판단: 외부 워커 컨슈밍만으로는 **yklee 만이 진화 가�
 | D-17 | 2026-06-07 | **백데이터 문서** (본 문서) 신설 | 보고/리뷰용 self-contained 레퍼런스 | doc 자체 유지보수 부담 |
 | D-18 | 2026-06-07 | Gitea `headroom` private repo push 완료 | dual-remote 동일 정책 | (D-07 과 동일) |
 | D-19 | 2026-06-07 | mavis 환경 (`XDG_CONFIG_HOME=/Users/yklee/.mavis/...`) 의 gh CLI macOS keychain fallback 충돌 → `~/.mavis/agents/mavis/gh` → `~/.config/gh` symlink | mavis 격리 환경에서도 keychain 정상 사용 | symlink 유지 (mavis 재시작 후에도) |
+| D-20 | 2026-06-07 | **Gitea + GitHub dual-remote 첫 push** — `origin=https://homelab.ddn777.synology.me/gitea/yklee/my_harness.git` (private) + `upstream=https://github.com/ykylee/my_harness.git` (public) | dual-remote 정책 (D-07) my_harness 레포에도 적용 | GitHub repo public 노출 (의도된 외부 미러링) |
 
 ---
 
@@ -106,6 +107,7 @@ yklee 가 판단: 외부 워커 컨슈밍만으로는 **yklee 만이 진화 가�
 - headroom Notable Patterns 13 adopt + 7 anti-pattern 추출 — 우리 my_harness 설계 직접 입력
 - **mavis 환경 gh CLI keychain 충돌** 발견 + symlink 워크어라운드 (D-19)
 - **본 백데이터 문서** (D-17) 신설
+- **Gitea + GitHub dual-remote 첫 push** (D-20) — origin (Gitea, private) + upstream (GitHub, public), 두 커밋 (headroom + dev log) 모두 푸시
 
 ---
 
