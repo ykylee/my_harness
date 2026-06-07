@@ -576,6 +576,231 @@ produced_artifacts:
 
 ---
 
+### 5.10 Agent 모드 (3가지, D-29)
+
+my_harness 의 **메인 에이전트**는 기본적으로 **orchestrator** 역할. 작업 카테고리마다 **sub-agent 를 내장**하여 작업 분배 + context 효율화. 모드 변경으로 단일 에이전트 / 무한루프 모드 전환 가능.
+
+| 모드 | 기본? | 동작 | 사용 시나리오 |
+| --- | --- | --- | --- |
+| **orchestrator** (default) | ✅ | 메인 에이전트 = orchestrator. 작업 카테고리별 sub-agent spawn, 통합 | 일반 작업 (코드/서버/환경) |
+| **single** | 🟡 opt-in (`--mode=single`) | 단일 에이전트, sub-agent spawn 안 함. context 직접 처리 | 간단한 Q&A, 단일 파일 작업 |
+| **loop** | 🟡 opt-in (`--mode=loop`) | orchestrator + sub-agent + 무한루프 (ralph-wiggum 패턴). goal 달성까지 자동 반복 | well-defined goal (e.g., "fix all failing tests", "implement X until CI green") |
+
+**CLI flag**:
+```bash
+myharness --mode=orchestrator code review <pr>    # default
+myharness --mode=single ask "what does this do?"
+myharness --mode=loop --goal "fix all TODO comments" --max-iterations=20 .
+```
+
+**Loop mode 상세 (claude-code ralph-wiggum 패턴, D-29)**:
+- `--goal "<text>"` — 달성 목표 (필수)
+- `--success-criteria "<text>"` — LLM 이 success 평가 기준 (선택)
+- `--max-iterations N` — 최대 반복 (default: 20)
+- Stop condition: success-criteria 충족 OR max-iterations 도달 OR user Ctrl+C
+- 안전: --max-iterations 기본값 + user interrupt 가능 (run-away 방지)
+
+### 5.11 Built-in sub-agents (D-29)
+
+3-도메인 × 4-5 sub-agents = **~15 내장** sub-agent. 각 sub-agent = specialized system prompt + tool restrictions + our Context component 의 sub-set.
+
+| 도메인 | sub-agent | 역할 |
+| --- | --- | --- |
+| **코드** | `code-reviewer` | PR/code review (multi-aspect: bugs / style / tests) |
+| | `code-implementer` | 새 기능 구현, multi-file 변경 |
+| | `code-tester` | test 실행 + 결과 분석 + fix 제안 |
+| | `code-refactorer` | 리팩토링 (rename / extract / dedup) |
+| | `code-searcher` | codebase 검색 + 구조 분석 |
+| **서버** | `server-status` | 프로세스/서비스 상태 점검 |
+| | `log-analyzer` | 로그 분석 + 이상 패턴 detection |
+| | `deployer` | 배포 헬퍼 (ssh / k8s / docker) |
+| | `config-manager` | 설정 조회/변경 (with backup) |
+| **환경** | `env-setup` | 스택별 부트스트랩 (brew/asdf/dotfiles) |
+| | `env-installer` | 의존성 설치 (with idempotency) |
+| | `env-shell` | 셸 명령 + LLM 분석 |
+| | `env-diagnose` | 환경 진단 (path/version/permission) |
+| **Utility** | `git-operator` | git workflow (commit/PR/branch) |
+| | `file-searcher` | file glob/find/grep |
+
+**Sub-agent 정의 위치**:
+- v1: 하드코딩 (Python module 내장) — 빠르고 검증 용이
+- v1.5+: `~/.myharness/sub-agents/<name>/SYSTEM.md` (사용자 정의 가능, claude-code 4-계층 agents 와 정합)
+
+**Orchestrator 의 dispatch 로직**:
+- user 명령 분석 → 도메인/카테고리 매칭 → 적절한 sub-agent spawn
+- sub-agent 결과 통합 → user 에게 한국어 보고 (D-26)
+
+### 5.12 `~/.myharness/` 디렉토리 구조 (D-31)
+
+yklee 환경 검증: 다른 agent 도구 모두 `~/.<toolname>/` 컨벤션 (claude/codex/gemini/headroom/minimax/jules/coderabbit). 우리도 동일.
+
+```
+~/.myharness/                          # ROOT (XDG-aware)
+├── config/                           # 사용자 편집 가능 config
+│   ├── config.yaml                   # 메인 설정 (LLM, mode, compression, permission)
+│   ├── providers.yaml                # provider registry (D-28)
+│   ├── plugins/                      # user plugins (commands/agents/skills/hooks)
+│   ├── skills/                       # user skills (claude-code 13.3)
+│   ├── hooks/                        # global hooks (markdown rules, D-13.4)
+│   └── mcp.json                      # MCP server config (D-33)
+├── state/                            # workflow state (D-26, standard_ai_workflow)
+│   ├── current.yaml                  # current task
+│   └── tasks/                        # task history
+├── memory/                           # auto + manual memory
+│   ├── auto/                         # LLM 자동 축적 (D-26)
+│   └── manual/                       # user-marked
+├── handoff/                          # session handoff (D-26, Mavis 호환)
+├── log.jsonl                         # event log (append-only, D-26)
+├── compression/                      # built-in compression artifacts (D-27, D-30)
+│   ├── cache/                        # CacheAligner prefix cache
+│   ├── summaries/                    # Layer 1 auto-summaries (D-30)
+│   └── ccr/                          # CCR reversible storage (D-27, v1.5+)
+├── sub-agents/                       # built-in sub-agents (D-29)
+│   ├── code-reviewer/
+│   ├── code-implementer/
+│   └── ...
+├── llm-wiki/                         # LLM Wiki memory (D-32, v2+)
+│   ├── raw/                          # source materials
+│   ├── wiki/                         # compiled interlinked markdown
+│   ├── schema/                       # constraints
+│   ├── index/                        # searchable
+│   └── log/                          # change history
+├── runtime/                          # runtime state (not user-edited)
+│   ├── lock                          # single instance
+│   ├── session.pid
+│   └── metrics.json
+└── cache/                            # regenerable cache
+    ├── models/                       # ONNX (Kompress-base, v1.5+)
+    ├── tree-sitter/                  # tree-sitter parsers
+    └── embeddings/                   # v2+
+```
+
+**Cross-platform (D-31)**:
+- macOS / Linux: `~/.myharness/` (XDG-style root)
+- Windows: `%USERPROFILE%\.myharness\` (동일)
+- 구현: `directories` (Rust) / `env-paths` (TS) cross-platform wrapper
+- 우리 v1 = single root (yklee 환경 검증 결과, sibling tools 와 일치)
+
+**옵션 Mavis 디렉토리 발견 시 sync (D-26)**:
+- `ai-workflow/memory/state.json` 발견 → `~/.myharness/state/current.yaml` 와 sync
+- `ai-workflow/memory/work_backlog.md` 발견 → task 등록/갱신
+- 미발견 시 → `~/.myharness/` 만 사용 (zero coupling 유지)
+
+### 5.13 LLM Wiki memory (D-32)
+
+**Karpathy's LLM Wiki Pattern (2026-04)**:
+> "Instead of just retrieving from raw documents at query time, the LLM incrementally builds and maintains a persistent wiki — a structured, interlinked collection of markdown files that sits between you and the raw sources."
+
+핵심 비유: **"Obsidian is the IDE, the LLM is the programmer, the wiki is the codebase"** — LLM 이 wiki 를 **쓰는** 것 (사용자가 wiki 를 **읽는** 것).
+
+**3 계층 + 운영 메커니즘**:
+| 계층 | 내용 | 예시 |
+| --- | --- | --- |
+| **raw/** | 원본 자료 (변경 안 함) | session log, handoff, log.jsonl |
+| **wiki/** | LLM 이 컴파일한 interlinked markdown | `<topic>.md` pages, cross-references, 종합 |
+| **schema/** | 제약, 검증 규칙 | "wiki page must have Observations + Relations" |
+
+| 운영 | 내용 |
+| --- | --- |
+| **index/** | 검색 가능 (entity, topic) |
+| **log/** | 변경 이력 (append-only) |
+| **lint/** | 검증 (contradiction detection, link integrity) |
+
+**v1: 기본 flat memory (LLM Wiki 미적용)**:
+- `~/.myharness/memory/auto/` + `manual/` (단순 파일)
+- 검색: ripgrep
+- LLM 이 명시적으로 compile 안 함
+
+**v2+: LLM Wiki (D-32)**:
+- 3 계층 (raw/wiki/schema) 자동 운영
+- LLM 이 task 종료 시 raw → wiki compile (background)
+- 사용자 query 시 wiki 에서 cross-reference 따라 탐색
+- contradiction detection + resolution
+- Karpathy gist reference: `gist.github.com/karpathy/442a6bf555914893e9891c11519de94f`
+
+**우리 적용**:
+- v1: LLM Wiki 미구현. 기본 flat memory + handoff 만
+- TASK-005-2 (v1.5): LLM Wiki v1 — schema + lint 만
+- TASK-005-4 (v2.5): LLM Wiki v2 — full compile + cross-reference
+
+### 5.14 Skill/MCP first-class (D-33)
+
+다른 도구 (claude-code, gemini-cli, goose) 와 **동등한** extension 지원.
+
+#### Skills (claude-code 13.3 차용)
+
+```
+~/.myharness/skills/<name>/
+├── SKILL.md          # 자동 invoke knowledge (markdown + YAML frontmatter)
+├── examples/         # (optional)
+└── scripts/          # (optional)
+```
+
+**SKILL.md 형식**:
+```markdown
+---
+name: frontend-design
+description: Auto-invoke for frontend work (bold design, typography, animations)
+auto_invoke:
+  triggers: [frontend, UI, design, component]
+  priority: high
+---
+
+# Frontend Design Skill
+
+## Principles
+- Distinctive design (avoid generic AI aesthetic)
+- Bold typography, motion, visual details
+...
+```
+
+**Built-in skills catalog (3-도메인)**:
+| skill | 도메인 | invoke trigger |
+| --- | --- | --- |
+| `code-review-best-practices` | 코드 | PR review, code review |
+| `git-workflow` | 코드 | commit, PR, branch |
+| `server-health-check` | 서버 | status, health |
+| `log-pattern-analysis` | 서버 | log analysis |
+| `env-bootstrap` | 환경 | setup, install |
+| `dotfiles-sync` | 환경 | dotfiles, shell config |
+
+#### MCP (Model Context Protocol)
+
+```
+~/.myharness/mcp.json
+{
+  "mcpServers": {
+    "filesystem": {
+      "command": "uvx",
+      "args": ["mcp-server-filesystem", "/Users/yklee"]
+    },
+    "github": {
+      "command": "uvx",
+      "args": ["mcp-server-github"],
+      "env": { "GITHUB_TOKEN": "${GITHUB_TOKEN}" }
+    }
+  }
+}
+```
+
+**구현**:
+- Rust 1안: `rmcp` (Rust MCP SDK) — goose 와 동일 crate
+- TS 2안: `@modelcontextprotocol/sdk` — 공식 표준
+
+**Auto tool exposure** (D-32):
+- MCP server 의 tools 가 우리 sub-agent 의 tool registry 에 자동 등록
+- `mcp__filesystem__read_file`, `mcp__github__create_pr` 등
+
+**v1: 기본 (3-4개 MCP server pre-config)**:
+- `filesystem` (read/write local file)
+- `git` (git operations)
+- `shell` (bash execution)
+- (선택) `github` (PR/issue)
+
+**v1.5+**: marketplace / plugin 으로 사용자 정의 MCP 추가.
+
+---
+
 ## 6. v2+ 로드맵 (TASK-005-N 형식)
 
 > **TASK-005 (스택 결정) 후속 마일스톤** 들. 각 TASK-005-N = v1 MVP 이후 순차 milestone.
