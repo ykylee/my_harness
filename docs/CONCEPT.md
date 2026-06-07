@@ -896,7 +896,7 @@ auto_invoke:
 | **TASK-002** | 도메인별 명령 | yklee 인프라 정보 필요 | yklee 인프라 정보 수령 후 |
 | **TASK-005** | 스택 (Rust 1안 vs TS 2안) | — | ✅ **D-36 결정: Rust 1안** (§11.3 참조) |
 | **TASK-006** | TUI 라이브러리 (ratatui vs React/Ink) | — | ✅ **D-36 결정: ratatui + crossterm** (TASK-005 종속) |
-| **TASK-007** | headroom built-in 알고리즘 구현 우선순위 | CacheAligner/ContentRouter/CCR/SmartCrusher/CodeCompressor/Kompress-base 중 v1 우선 3개 | yklee 가 v1 우선순위 결정 후 |
+| **TASK-007** | headroom built-in 알고리즘 구현 우선순위 | — | ✅ **D-37 결정: v1 = 3 알고리즘 (CacheAligner + ContentRouter + SmartCrusher + CodeCompressor), CCR + Kompress-base v1.5+ 로 연기** |
 | **TASK-008** | Provider fallback list (3 모델) | yklee 의 LLM 선호/비용 | yklee 결정 후 |
 
 ### 11.3 결정 완료 (Decided) — D-36
