@@ -75,6 +75,8 @@ yklee 가 판단: 외부 워커 컨슈밍만으로는 **yklee 만이 진화 가�
 | D-21 | 2026-06-07 | **claude-code 7번째 reference 통합** — `docs/references/claude-code.md` (1,029줄, 14섹션, closed source 분석, 13.1-13.26 adopt + 13.27-13.37 anti-pattern) + `docs/references/README.md` (7-doc 통합 인덱스 + 8축 비교 매트릭스 + my_harness 영향 분석) | claude-code 누락 확인 → 공개 분석 자료(arxiv 2604.14228, Zain Hasan blog, CSDN, Reddit leak analysis) + repo 의 inspectable 부분(plugin 12개 + CHANGELOG 4,263줄) 결합 | closed source 의 leak 분석 의존 (❓ 표시) |
 | D-22 | 2026-06-07 | **my_harness v1 컨셉 확립** — `docs/CONCEPT.md` (마스터 SSOT) 신설. 7 reference 분석 종합 + yklee 작업 컨셉 + TASK-005/002/007 결정 입력 통합. 12섹션 (positioning/타겟/가치/스코프/v1 MVP spec/v2+ 로드맵/채택 23/안티 6/KPI/리스크/Open decisions/참조) | 7-doc 분석 후 컨셉 통합 필요. 각 문서가 독립 결정하면 일관성 깨짐. 단일 SSOT 필요. | 컨셉 갱신 시 관련 문서 (MiniMax/PROJECT_PROFILE/REFERENCES/PROVIDERS) 도 함께 align 필수 |
 | D-23 | 2026-06-07 | **기존 문서 align to CONCEPT.md** — `MiniMax.md`, `PROJECT_PROFILE.md`, `REFERENCES.md`, `PROVIDERS.md` 의 메타데이터 + 도메인별 명령 섹션 + 7-doc 확장 섹션 + claude-code 3-fallback 패턴 추가. 각 문서 본래 목적 유지 + CONCEPT.md SSOT 참조 추가. | 7-doc 분석 결과가 기존 문서에 미반영. 동기화 필요. | 향후 컨셉 갱신 시 4 문서 동시 align 룰 |
+| D-24 | 2026-06-07 | **CONCEPT.md 컨셉 교정 1차** — "외부 4-워커 통합/오케스트레이션" framing 제거. my_harness = standalone harness tool 로 재확립. Mavis 가 spawn 가능한 worker framing 추가. | yklee 가 "외부 4-워커 운영은 맞지 않음" 교정 — my_harness 는 sibling standalone tool 일 뿐 | (D-25 에서 더 보강) |
+| D-25 | 2026-06-07 | **CONCEPT.md 컨셉 교정 2차 (Mavis zero coupling)** — §0.5 다이어그램에서 Mavis/orchestrator/standard_ai_workflow 모두 제거. §2 타겟 사용자에서 Mavis 행 삭제. §5.8 "외부 의존성 없음" 섹션 신설. **my_harness = 100% standalone, Mavis/Mavis/mavis-team/standard_ai_workflow 어느 것과도 결합 없음**. 유일한 런타임 의존 = LLM provider API + (선택) headroom MCP | yklee 가 "Mavis 랑도 관계 없이 동작되어야" 교정 — my_harness 는 Mavis 와 zero coupling. yklee 가 my_harness 개발 시 Mavis 를 dev tool 로 쓸 수는 있으나 my_harness 자체는 Mavis 를 모름. | 향후 docs 에 Mavis 언급 시 my_harness 본체 vs my_harness 개발 workflow 구분 필수 |
 
 ---
 
@@ -114,6 +116,8 @@ yklee 가 판단: 외부 워커 컨슈밍만으로는 **yklee 만이 진화 가�
 - **claude-code 7번째 reference 분석** (D-21) — 1,029줄 14섹션 분석 + 7-doc 통합 인덱스. 8축 비교 매트릭스 + my_harness 영향 분석 §3 + Adopt 23개 (1차 8 / 2차 7 / 3차 8) + Anti 6개
 - **my_harness v1 컨셉 확립** (D-22) — `docs/CONCEPT.md` 마스터 SSOT 신설. 12섹션 (positioning/타겟/가치/스코프/v1 MVP spec/v2+ 로드맵/채택 23/안티 6/KPI/리스크/Open decisions/참조)
 - **기존 문서 align** (D-23) — MiniMax.md / PROJECT_PROFILE.md / REFERENCES.md / PROVIDERS.md 의 메타 + 도메인 명령 + 7-doc 확장 + claude-code 3-fallback 섹션 추가. CONCEPT.md SSOT 참조.
+- **CONCEPT.md 컨셉 교정 1차** (D-24) — "외부 4-워커 통합/오케스트레이션" framing 제거. my_harness = standalone harness tool. Sibling to claude-code/codex/aider/goose/gemini-cli/opencode.
+- **CONCEPT.md 컨셉 교정 2차 (Mavis zero coupling)** (D-25) — §0.5 다이어그램에서 Mavis/orchestrator/standard_ai_workflow 모두 제거. §2 타겟에서 Mavis 행 삭제. §5.8 "외부 의존성 없음" 신설. **my_harness = 100% standalone**, 유일한 런타임 의존 = LLM provider API + (선택) headroom MCP.
 
 ---
 

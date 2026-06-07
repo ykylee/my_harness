@@ -4,7 +4,49 @@
 >
 > **갱신 정책**: 마일스톤 별 갱신. 본 문서 갱신 시 관련 (MiniMax.md, PROJECT_PROFILE.md, REFERENCES.md, README.md, development_log.md) 도 함께 align.
 >
-> **최종 갱신**: 2026-06-07 (v1 draft, 7 reference 분석 후)
+> **최종 갱신**: 2026-06-07 (v1 draft, 7 reference 분석 후) — **D-24: orchestration framing 제거** (standalone harness tool 로 재확립)
+
+---
+
+## 0. 핵심 Positioning (D-25 교정 후, Mavis zero coupling)
+
+### my_harness 는
+
+- **완전 standalone CLI/TUI coding agent** — `myharness <command>` 로 terminal 에서 직접 실행
+- **Harness-first 5 components** (Tools · Context · Session · Plugins · Sub-agents) — Model + Harness = Agent
+- **Direct LLM provider 통신** — Anthropic/OpenAI/Google/local Ollama 등 provider API 와 직접 통신
+- **Zero external dependency** — Mavis, Mavis, Mavis, mavis-team, standard_ai_workflow, 4-워커 어느 것과도 결합 없음
+- **Sibling to claude-code / codex / aider / goose / gemini-cli / opencode** — 7 reference 분석이 동급 comparison
+
+### my_harness 는 **아니다** (NOT)
+
+- ❌ **다른 도구의 오케스트레이션 도구** (orchestrator 가 아님)
+- ❌ **Mavis / Mavis / mavis-team / standard_ai_workflow 와 결합된 도구** — yklee 가 Mavis 로 my_harness 를 개발할 수는 있으나 my_harness 자체는 Mavis 와 무관
+- ❌ **외부 4-워커(Claude/Codex/Gemini/OpenCode) 운영/통합 도구** — 그 도구들은 sibling 이지 my_harness 의 dispatch 대상 아님
+- ❌ **workflow / state management 시스템** — workflow 는 my_harness 의 concern 아님
+- ❌ **필수 headroom 통합** — `headroom` 은 **선택적 (optional) MCP server**, 사용자가 켜고 끔
+
+### 위치 (Positioning)
+
+```
+┌─────────────────────────────────────────┐
+│  yklee (user)                            │
+└─────────────────────────────────────────┘
+              ↓ terminal 직접 호출
+              ↓ (또는 Mavis 가 spawn — Mavis 와 zero coupling)
+┌─────────────────────────────────────────┐
+│  my_harness (CLI/TUI)                    │  ← STANDALONE
+│  Harness 5 components                    │
+└─────────────────────────────────────────┘
+              ↓ Direct LLM API call
+              (Anthropic/OpenAI/...)
+              ↓ (optional, user on/off)
+              headroom MCP server
+```
+
+**my_harness** = terminal 에서 직접 실행되는 standalone CLI/TUI. Mavis / Mavis / 4-워커 어느 것과도 무관. 3-도메인 (코드/서버/환경) 작업 전문.
+
+---
 
 ---
 
@@ -18,25 +60,23 @@
 
 | 대상 | 사용 패턴 |
 | --- | --- |
-| **yklee (오너)** | CLI 직접 + TUI + plugin 직접 작성. multi-surface 사용 |
-| **외부 4-워커 운영** | Claude/Codex/Gemini/OpenCode 결과를 my_harness 가 통합/추적 |
-| **Mavis orchestrator** | my_harness 의 harness 5 components 가 multi-agent 작업 분해/통합 |
-| **팀 동료 (v2+)** | plugin marketplace 로 도메인별 명령 공유 |
+| **yklee (오너, single user)** | terminal 에서 `myharness <command>` 직접 호출. 3-도메인 (코드/서버/환경) 작업 |
+| **plugin 개발자 (v2+)** | `~/.myharness/plugins/<name>/` 에 plugin 직접 작성. marketplace 공유 |
 
-**v1 scope = yklee single user** (multi-user/marketplace 는 v2+)
+**v1 scope = yklee single user, terminal 직접 실행** (multi-user/marketplace 는 v2+)
 
 ---
 
 ## 3. 핵심 가치 (3가지)
 
 ### 3.1 **Harness-first** (claude-code 13.1)
-모델보다 **Harness 5 components** (Tools, Context, Session, Plugins, Sub-agents) 가 차별점. mavis-team 의 orchestrator 가 Harness 의 instance.
+모델보다 **Harness 5 components** (Tools, Context, Session, Plugins, Sub-agents) 가 차별점. claude-code 의 `Agent = Model + Harness` 청사진 차용. my_harness 단독으로 LLM provider 와 직접 통신하여 코드/서버/환경 작업 수행.
 
 ### 3.2 **Provider 비종속** (aider/opencode/goose 13.2 + claude-code 13.15)
-12+ (Rust 1안 `rig-core`) 또는 15+ (TS 2안 `Vercel AI SDK`) provider + **3 fallback model** (claude-code 패턴).
+12+ (Rust 1안 `rig-core`) 또는 15+ (TS 2안 `Vercel AI SDK`) provider + **3 fallback model** (claude-code 패턴). 어떤 provider 든 my_harness 가 직접 통신 — 외부 orchestrator 불필요.
 
-### 3.3 **3-도메인 동시 + CCR** (headroom 13.3)
-코드/서버/환경 3-도메인 모두 통합, **CCR (Context Cache Reduction)** 로 토큰 한계 해결 — `headroom` MCP server 1안 통합.
+### 3.3 **3-도메인 동시 + 선택적 CCR** (headroom 13.3)
+코드/서버/환경 3-도메인 모두 통합. **CCR (Context Cache Reduction)** 는 **선택적 (optional) MCP server** 통합 — `~/.myharness/config.yaml` 에서 `headroom.enabled: true|false`. 기본값은 `false` (사용자가 켜야 동작). 토큰 한계는 CCR 없이도 provider 의 native cache 로 대응 가능.
 
 ---
 
@@ -201,17 +241,29 @@ llm:
 - 서버 = Haiku 4 + no thinking
 - 환경 = local Ollama + no thinking
 
-### 5.6 Context 관리 (claude-code 13.6 + headroom 13.3)
+### 5.6 Context 관리 (claude-code 13.6 + 선택적 headroom 13.3)
 
 **3 계층**:
-1. **`CLAUDE.md` (project root)** — yklee 의 프로젝트별 규칙, 5 surface 공유. 우리 `MiniMax.md` 가 이미 동급.
+1. **`CLAUDE.md` (project root)** — yklee 의 프로젝트별 규칙, 5 surface 공유. 우리 v1 = `MiniMax.md` 가 이미 동급 (Mavis 의 메타 진입점).
 2. **Auto memory** — yklee 의 작업 패턴 자동 학습. `~/.myharness/memory/auto/`
-3. **`/compact` slash command** — context 압축. CCR integration.
+3. **`/compact` slash command** — context 압축. **선택적 headroom MCP server** integration (사용자 on/off).
 
-**CCR integration** (TASK-007, headroom 13.3):
-- 우리 my_harness 가 **headroom MCP server** 호출
-- `mcp__headroom__compress(messages, model)` — 65-95% 토큰 절감
-- 필요 시 `mcp__headroom__retrieve(id)` — 원문 복원
+**CCR integration (선택적, 기본 off)**:
+```yaml
+# ~/.myharness/config.yaml
+context:
+  compression: native   # native (provider cache only) | headroom-mcp
+  headroom:
+    enabled: false      # ← 기본 OFF. 사용자가 true 로 켜면 동작
+    mode: token         # token | cache | ccr
+    target_ratio: 0.35
+    mcp_server: headroom
+```
+
+- **native 모드 (기본)**: provider native cache (Anthropic prompt cache, OpenAI cached prompt) 만 사용
+- **headroom-mcp 모드 (opt-in)**: 우리 my_harness 가 headroom MCP server 호출. `mcp__headroom__compress(messages, model)` — 65-95% 토큰 절감. `mcp__headroom__retrieve(id)` — 원문 복원 (CCR mode 시)
+
+→ **v1 부터 양 모드 지원**, 사용자가 선택. CCR 은 v1 핵심 ❌ (anti-pattern 회피).
 
 ### 5.7 Plugin 시스템 (claude-code 13.3)
 
@@ -227,13 +279,27 @@ llm:
 
 **v1 MVP**: local plugin only (commands + hooks). marketplace 는 v2+.
 
-### 5.8 standard_ai_workflow 통합 (D-01)
+### 5.8 외부 의존성 없음 (Zero external dependency)
 
-기존 workflow 와 결합:
-- `state.json` + journal → Session component
-- `session_handoff.md` → cross-session state
-- `work_backlog.md` → work scheduling
-- 한국어 보고, 이벤트 소싱, 비참조 원칙
+my_harness 는 다음 어느 것과도 **결합 없음**:
+- ❌ Mavis (Mavis) — chat agent
+- ❌ Mavis / mavis-team — orchestration engine
+- ❌ standard_ai_workflow — Mavis 의 workflow meta layer
+- ❌ 4-워커 (Claude/Codex/Gemini/OpenCode) — sibling 일 뿐
+
+**유일한 런타임 의존**:
+- LLM provider API (Anthropic / OpenAI / Google / local Ollama) — **직접 통신**
+- OS 표준 라이브러리 (filesystem, network, process)
+- (선택) headroom MCP server — 사용자 opt-in
+
+**호환되는 외부 도구** (sibling, not dependency):
+- 사용자가 plugin 으로 추가 가능 (claude-code 4-계층 plugin 시스템)
+- 사용자가 MCP server 추가로 연결 가능
+- 사용자가 shell script / 다른 CLI 와 pipe/compose 가능 (Unix philosophy)
+
+**개발 시 사용 도구 (사용자 환경)**:
+- my_harness 자체는 Mavis / Mavis 와 무관
+- 단, yklee 가 my_harness 를 **개발**할 때 Mavis 를 dev tool 로 사용 (D-01 의 standard_ai_workflow 는 my_harness 개발 workflow 일 뿐, my_harness 의 runtime dependency 아님)
 
 ---
 
@@ -327,7 +393,7 @@ llm:
 | --- | --- | --- |
 | **TASK-005 스택** (Rust 1안 vs TS 2안) | yklee 의 desktop 우선순위 | 즉시 결정 가능 (입력 다 갖춤) |
 | **TASK-002 도메인별 명령** | yklee 인프라 정보 필요 | yklee 인프라 정보 수령 후 |
-| **TASK-007 headroom 통합** (MCP server) | headroom MCP server 사용 가능 여부 | MCP server 검증 후 |
+| **TASK-007 headroom 통합** (선택적 MCP) | 사용자 opt-in 방식 + MCP server 사용 가능 여부 | MCP server 검증 후 |
 | **TUI 라이브러리** (ratatui vs React/Ink) | 스택 결정 의존 | TASK-005 결정 후 |
 | **Provider fallback list** (3 모델) | yklee 의 LLM 선호/비용 | yklee 결정 후 |
 
