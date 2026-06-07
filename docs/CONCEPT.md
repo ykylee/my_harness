@@ -220,31 +220,128 @@ myharness env diagnose                 # 환경 진단
 - Linux Secret Service (libsecret)
 - 토큰 값은 메모리/문서/git 저장 금지
 
-### 5.5 LLM 통합 (claude-code 13.15 + aider 13.2)
+### 5.5 LLM 통합 (claude-code 13.15 + aider 13.2, D-28)
 
-**Provider 비종속**:
-- 1안 (Rust) = `rig-core` (12+ provider)
-- 2안 (TS) = `Vercel AI SDK` (15+ provider)
-- Cross-runtime fallback = `litellm proxy`
+**지원 Provider (D-28, yklee 의 5개 + local)**:
 
-**3 fallback model** (claude-code 2.1.166 패턴):
+| # | Provider | Native SDK | OpenAI 호환 | 권장 | 비고 |
+| - | --- | --- | --- | --- | --- |
+| 1 | **claude** (Anthropic) | ✅ `anthropic` SDK | (OpenRouter 경유 가능) | native | Sonnet 4.5 / Haiku 4 / Opus 4.5 |
+| 2 | **codex** (OpenAI) | ✅ `openai` SDK | — | native | GPT-5 / GPT-5-Codex / GPT-4.1 |
+| 3 | **gemini** (Google) | ✅ `google-genai` SDK | (OpenAI 호환 endpoint 제공) | native | Gemini 2.5 Pro / Flash |
+| 4 | **deepseek** | — | ✅ (`https://api.deepseek.com/v1`) | OpenAI 호환 | deepseek-chat / deepseek-reasoner |
+| 5 | **minimax** | — | ✅ (base_url TBD 검증 필요) | OpenAI 호환 | 모델명/API 형식 검증 필요 (D-28) |
+| 6 | **local LLM** | — | ✅ (`http://localhost:11434/v1` 등) | OpenAI 호환 | Ollama / vLLM / LM Studio / llama.cpp server |
+
+**추상화 전략 (OpenAI 호환 = lingua franca, premium = native)**:
+- **Premium providers** (claude/codex/gemini) → **native SDK** 사용 (각 vendor 의 최적 기능: prompt cache, thinking, function calling)
+- **OpenAI 호환 providers** (deepseek/minimax/local) → **공통 OpenAI 호환 client** 사용 (1개 구현으로 N개 provider 지원)
+- **Provider registry** (config.yaml) → 사용자 정의 provider 추가 가능 (v1.5+ plugin)
+
+**Provider config 예시 (D-28)**:
 ```yaml
 # ~/.myharness/config.yaml
 llm:
-  primary: claude-sonnet-4-5
-  fallback:
-    - claude-haiku-4
-    - ollama/qwen2.5-coder
-  thinking:
-    code: enabled      # Sonnet
-    server: disabled   # Haiku
-    env: disabled      # local
+  primary: anthropic/claude-sonnet-4-5       # 도메인 무관 기본
+  fallback:                                   # 3 fallback (D-15, claude-code 2.1.166 패턴)
+    - openai/gpt-5-codex                      # codex (OpenAI)
+    - ollama/qwen2.5-coder:32b                # local (always-on)
+  domain_mapping:                             # 도메인별 model (D-15)
+    code: anthropic/claude-sonnet-4-5
+    server: anthropic/claude-haiku-4
+    env: ollama/qwen2.5-coder:32b
+  thinking:                                   # claude-code per-model thinking
+    code: enabled
+    server: disabled
+    env: disabled
+
+  providers:
+    # 1. claude (Anthropic) — native
+    - name: anthropic
+      type: native
+      sdk: anthropic                          # anthropic SDK
+      api_key_env: ANTHROPIC_API_KEY
+      secret_store: keychain                  # macOS Keychain / wincred / libsecret
+      supports: [prompt_cache, thinking, vision, tool_use]
+      models: [claude-sonnet-4-5, claude-haiku-4, claude-opus-4-5]
+
+    # 2. codex (OpenAI) — native
+    - name: openai
+      type: native
+      sdk: openai
+      api_key_env: OPENAI_API_KEY
+      secret_store: keychain
+      supports: [prompt_cache, tool_use, vision]
+      models: [gpt-5, gpt-5-codex, gpt-4.1, gpt-4o]
+
+    # 3. gemini (Google) — native
+    - name: gemini
+      type: native
+      sdk: google-genai
+      api_key_env: GOOGLE_API_KEY
+      secret_store: keychain
+      supports: [prompt_cache, thinking, vision, tool_use]
+      models: [gemini-2.5-pro, gemini-2.5-flash]
+
+    # 4. deepseek — OpenAI 호환
+    - name: deepseek
+      type: openai-compatible
+      base_url: https://api.deepseek.com/v1
+      api_key_env: DEEPSEEK_API_KEY
+      secret_store: keychain
+      supports: [reasoning, tool_use]
+      models: [deepseek-chat, deepseek-reasoner]
+
+    # 5. minimax — OpenAI 호환 (D-28, base_url 검증 필요)
+    - name: minimax
+      type: openai-compatible
+      base_url: <TBD: 사용자 확인 필요>      # base_url + API 형식 검증
+      api_key_env: <TBD: MINIMAX_API_KEY?>
+      secret_store: keychain
+      supports: [TBD]
+      models: [TBD]
+
+    # 6. local LLM — OpenAI 호환 (Ollama default)
+    - name: local-llm
+      type: openai-compatible
+      base_url: http://localhost:11434/v1     # Ollama default
+      api_key_env: null                       # 보통 key 불필요
+      supports: [varies by model]
+      models: auto_discover                   # GET /v1/models 로 자동
+      # 다른 local server 예시:
+      #   vLLM:    http://localhost:8000/v1
+      #   LM Studio: http://localhost:1234/v1
+      #   llama.cpp: http://localhost:8080/v1
 ```
 
-**도메인별 model 자동 매핑** (claude-code per-model thinking 패턴):
-- 코드 = Sonnet 4.5 + thinking
-- 서버 = Haiku 4 + no thinking
-- 환경 = local Ollama + no thinking
+**Retry / Fallback 정책 (D-15, claude-code 2.1.166)**:
+- primary 호출 실패 시 → fallback 1 → fallback 2 순서 시도
+- **즉시 surface** 되는 error: auth, rate_limit, request_size, transport
+- **retry-able** error: overloaded, timeout, transient → 1회 fallback retry
+- fallback 발동률 모니터링 (KPI §9, v2 목표 <1%)
+
+**Secret 관리 (D-06)**:
+- 모든 API key = **macOS Keychain / Windows Credential Manager / Linux Secret Service** (provider config 의 `secret_store: keychain`)
+- 환경변수 fallback (CI/CD 한정, token rotation 시)
+- 토큰 값은 메모리/문서/git 저장 금지 (D-06 정책)
+
+**Provider 비종속 library 권장 (PROVIDERS.md 상세)**:
+- 1안 (Rust) = `rig-core` (Anthropic/OpenAI/Google/Ollama native SDK 추상화) + 자체 OpenAI 호환 client
+- 2안 (TS) = `Vercel AI SDK` (15+ provider) + 자체 OpenAI 호환 client
+- 두 안 모두 DeepSeek / local LLM 은 OpenAI 호환 client 로 처리 (built-in)
+- **minimax** 은 D-28 TBD: base_url + API 검증 후 v1 또는 v1.5 통합
+
+**모델 prefix 규약** (D-28):
+```
+anthropic/claude-sonnet-4-5
+openai/gpt-5-codex
+gemini/gemini-2.5-pro
+deepseek/deepseek-reasoner
+minimax/<model>
+ollama/qwen2.5-coder:32b
+```
+
+→ unified identifier 로 config / log / cache key 모두 일관.
 
 ### 5.6 Context 관리 (claude-code 13.6 + built-in headroom 13.3, D-27)
 
