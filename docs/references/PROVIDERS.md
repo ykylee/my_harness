@@ -3,8 +3,10 @@
 - 문서 목적: TASK-005 my_harness CLI/TUI 의 LLM 통합 — *어떤 프로바이더와도 통신 가능* 한 추상화 옵션 비교 검토.
 - 범위: 1안(Rust) / 2안(TypeScript) 별로 가능한 라이브러리 + 직접 구현 옵션 + 우리 권장안.
 - 대상 독자: yklee, Mavis, TASK-005 디자인 리뷰.
-- 상태: draft (1차 검토).
-- 최종 수정일: 2026-06-07.
+- 상태: **active (1차 검토 + claude-code 3-fallback 패턴 반영)**
+- 최종 수정일: 2026-06-07
+- **v1 컨셉 SSOT**: [`../CONCEPT.md` §5.5](../CONCEPT.md) 가 LLM 통합 결정의 SSOT. 본 문서는 비교 검토 입력.
+- **관련**: 7 reference 통합 리뷰 [`README.md`](./README.md) §2 축 2 (LLM 통합), [`claude-code.md`](./claude-code.md) §5 (3-fallback 패턴)
 
 ## 1. 왜 추상화가 필요한가
 
@@ -191,3 +193,37 @@ impl LlmRouter {
 - v1 구현: rig-core (Rust) 또는 ai SDK (TS) 1개 provider 만 활성화
 - v1.1: 다중 provider + 도메인별 override
 - v2: aggregator (litellm/OpenRouter) + 로컬 모델 (Ollama)
+
+## 9. claude-code 3-fallback 패턴 (v1 권장, 2026-06-07 추가)
+
+[claude-code v2.1.166+](https://docs.claude.com) 의 **fallback model** 패턴이 우리 v1 의 fallback 구현 청사진:
+
+```yaml
+# ~/.myharness/config.yaml (예시, v1)
+llm:
+  primary: anthropic/claude-sonnet-4-5
+  fallback:
+    - anthropic/claude-haiku-4          # 1순위 fallback (저비용)
+    - ollama/qwen2.5-coder:7b           # 2순위 fallback (오프라인)
+  domain_mapping:
+    code: anthropic/claude-sonnet-4-5   # + thinking enabled
+    server: anthropic/claude-haiku-4    # + thinking disabled
+    env: ollama/qwen2.5-coder:7b        # + thinking disabled, local
+  retry_policy:
+    on_unexpected_error: 1_fallback_retry  # claude-code v2.1.166 동일
+    surface_immediately: [auth, rate_limit, request_size, transport]
+```
+
+**3-fallback 의 가치**:
+- primary overloaded/unavailable 시 자동 failover → 가용성 99%+
+- claude-code 의 1 fallback retry (v2.1.166) 와 동일 — 우리도 v1 부터
+- surface-immediately error (auth, rate-limit, request-size, transport) 는 즉시 사용자 알림
+
+**우리 권장 (CONCEPT.md §5.5 와 정합)**:
+- **3 fallback slots** (primary + 2 fallback) — claude-code 와 동일
+- **도메인별 model 자동 매핑** — claude-code per-model thinking 패턴
+- **error 분류** (retry-able vs surface-immediately) — claude-code v2.1.166 동일
+- **추상화 layer = rig-core (1안) / Vercel AI SDK (2안)** — 본 문서 §2/§3 권장
+- **cross-runtime escape hatch = litellm proxy** — 50+ provider, 우리 v1 의 `Vercel AI SDK → litellm` 또는 `rig-core → litellm proxy` 직통 fallback
+
+**참조**: [claude-code §5.2 fallback model](./claude-code.md), [CONCEPT.md §5.5](../CONCEPT.md)

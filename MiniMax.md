@@ -3,9 +3,9 @@
 - 문서 목적: MiniMax Code(Mavis / 미니맥스 코드) 하네스가 이 저장소에서 먼저 읽어야 할 workflow 진입 규칙을 제공한다.
 - 범위: 세션 복원, workflow state docs 참조 순서, 사용자 보고 언어, 기본 실행/검증 명령, 오케스트레이터/워커 운영 원칙
 - 대상 독자: MiniMax Code, 저장소 관리자, 멀티 에이전트 운영자
-- 상태: draft
-- 최종 수정일: 2026-06-05
-- 관련 문서: `ai-workflow/memory/state.json`, `ai-workflow/memory/session_handoff.md`, `ai-workflow/memory/work_backlog.md`, `ai-workflow/memory/PROJECT_PROFILE.md`, `AGENTS.md`
+- 상태: active
+- 최종 수정일: 2026-06-07
+- 관련 문서: `ai-workflow/memory/state.json`, `ai-workflow/memory/session_handoff.md`, `ai-workflow/memory/work_backlog.md`, `ai-workflow/memory/PROJECT_PROFILE.md`, `AGENTS.md`, **[docs/CONCEPT.md](./docs/CONCEPT.md)** ← **my_harness v1 컨셉 (SSOT, 2026-06-07 확립)**
 
 ## 목적
 
@@ -48,10 +48,13 @@
 
 ## 프로젝트 실행 기본값 (도메인별)
 
-이 하네스는 **코드 개발 / 서버 관리 / 환경 셋업** 세 도메인의 작업 진입점이다. 각 도메인별 표준 명령은 yklee의 점진적 사용 패턴에 따라 `docs/PROJECT_PROFILE.md` §3.1 와 본 섹션에 채워진다. 초기값은 의도적인 TODO 다.
+이 하네스는 **코드 개발 / 서버 관리 / 환경 셋업** 세 도메인의 작업 진입점이다. 각 도메인별 표준 명령은 **[`docs/CONCEPT.md`](./docs/CONCEPT.md) §5.2 (명령 가이드)** 가 SSOT — 본 섹션은 그 참조 + 점진 채움용.
+
+**v1 컨셉 핵심 (CONCEPT.md §3)**: Harness 5 components · Provider 비종속 (rig-core 1안 / Vercel AI SDK 2안) · 3-도메인 + CCR.
 
 ### 코드 개발
 
+- v1 명령: `myharness code review|implement|test|commit` (CONCEPT.md §5.2 코드 도메인)
 - 설치: `TODO` (대상 프로젝트별 — 일반적으로 `pnpm install` / `npm ci` / `go mod download` 등)
 - 로컬 실행: `TODO`
 - 빠른 테스트: `TODO` (vitest / jest / go test 등)
@@ -60,6 +63,7 @@
 
 ### 서버 관리
 
+- v1 명령: `myharness server status|logs|deploy|config` (CONCEPT.md §5.2 서버 도메인)
 - 서버 호스트 목록 / SSH 별칭: `TODO` (`~/.ssh/config` 별칭 또는 운영 alias)
 - 헬스체크: `TODO` (curl, ping, systemctl 등 도메인별 헬퍼)
 - 로그 확인: `TODO` (journalctl, lnav, tail 패턴)
@@ -68,6 +72,7 @@
 
 ### 환경 셋업
 
+- v1 명령: `myharness env setup|install|shell|diagnose` (CONCEPT.md §5.2 환경 도메인)
 - Homebrew 패키지 목록: `TODO` (`brew bundle --file=Brewfile` 패턴)
 - 런타임 버전 매니저: `TODO` (asdf / rtx / mise 등)
 - dotfiles / 셸 설정: `TODO` (저장소 path + 동기화 명령)

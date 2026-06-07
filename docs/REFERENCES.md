@@ -1,11 +1,11 @@
 # Reference Harness Analysis
 
-- 문서 목적: TASK-004 산출물. 5개 오픈소스 코딩 에이전트 하네스를 8축으로 비교 분석해 `my_harness` CLI/TUI 툴의 아키텍처 결정 입력을 만든다.
+- 문서 목적: TASK-004 산출물. **최초 5개** 오픈소스 코딩 에이전트 하네스를 8축으로 비교 분석해 `my_harness` CLI/TUI 툴의 아키텍처 결정 입력을 만든다.
 - 범위: 5개 레퍼런스 × 8축 비교표 + 1-페이지 프로필 + 교차 인사이트 + 우리 방향성 초안
 - 대상 독자: yklee, Mavis orchestrator, 다음 디자인 리뷰 참여자
-- 상태: draft (1차)
-- 최종 수정일: 2026-06-06
-- 관련 문서: [PROJECT_PROFILE](../../docs/PROJECT_PROFILE.md), [TASK-005 (my_harness CLI/TUI 전환)](../../ai-workflow/memory/backlog/2026-06-05.md), [harness-refs/.upstream-urls](../../../../harness-refs/.upstream-urls)
+- 상태: **superseded** — 5 reference 1차 (TASK-004) 한정. 7 reference 통합 리뷰는 [`docs/references/README.md`](./references/README.md) (D-21, 2026-06-07) 가 SSOT. v1 컨셉은 [`CONCEPT.md`](./CONCEPT.md) 가 SSOT.
+- 최종 수정일: 2026-06-07
+- 관련 문서: [PROJECT_PROFILE](./PROJECT_PROFILE.md), [CONCEPT.md](./CONCEPT.md), [references/README.md](./references/README.md) (7-doc 통합), [references/claude-code.md](./references/claude-code.md), [references/headroom.md](./references/headroom.md), [TASK-005](../../ai-workflow/memory/backlog/2026-06-05.md), [harness-refs/.upstream-urls](../../../harness-refs/.upstream-urls)
 
 ## 1. 어떻게 읽을 문서
 
@@ -180,3 +180,16 @@
 - `/Users/yklee/repos/harness-refs/codex/` → `AGENTS.md`, `codex-rs/tui/Cargo.toml`, `codex-rs/message-history/`
 - `/Users/yklee/repos/harness-refs/goose/` → `AGENTS.md`, `crates/goose-cli/`, `crates/goose-mcp/`
 - `/Users/yklee/repos/harness-refs/gemini-cli/` → `GEMINI.md`, `packages/core/src/hooks/`, `packages/a2a-server/`
+
+## 8. 7 reference 확장 (v1.1, 2026-06-07) — superseded
+
+> 본 문서는 TASK-004 1차 (5 reference × 8축) 의 산출물. 이후 **6번째 headroom + 7번째 claude-code** 가 추가되어 7 reference 통합 분석이 작성됨.
+
+- **6번째 reference**: `headroom` (chopratejas/headroom) — context compression layer. 분석: [`references/headroom.md`](./references/headroom.md) (D-15, 14섹션, 863줄). **우리 my_harness 의 CCR 통합 (TASK-007) 의 1순위 source**.
+- **7번째 reference**: `claude-code` (anthropics/claude-code, closed source) — Harness 5 components + 5 surfaces + plugin 4-계층. 분석: [`references/claude-code.md`](./references/claude-code.md) (D-21, 14섹션, 1,029줄). **우리 my_harness 의 architecture 청사진**.
+
+**7 reference 통합 리뷰 / 8축 → 10축 확장 매트릭스 / my_harness 영향 분석 / 채택 패턴 23 + 안티 6** = [`docs/references/README.md`](./references/README.md) (D-21) 가 SSOT.
+
+**v1 컨셉 확립** = [`CONCEPT.md`](./CONCEPT.md) (D-22, 2026-06-07) 가 SSOT — 7 reference 분석 종합 + yklee 작업 컨셉 + TASK-005/002/007 결정 입력 통합.
+
+**본 문서 (REFERENCES.md) 의 §5 "우리 방향성 초안"** 은 CONCEPT.md §5 v1 MVP spec 으로 발전 + 통합됨.
