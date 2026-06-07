@@ -24,7 +24,7 @@
 - ❌ **Mavis / Mavis / mavis-team / standard_ai_workflow 와 결합된 도구** — yklee 가 Mavis 로 my_harness 를 개발할 수는 있으나 my_harness 자체는 Mavis 와 무관
 - ❌ **외부 4-워커(Claude/Codex/Gemini/OpenCode) 운영/통합 도구** — 그 도구들은 sibling 이지 my_harness 의 dispatch 대상 아님
 - ❌ **workflow / state management 시스템** — workflow 는 my_harness 의 concern 아님
-- ❌ **필수 headroom 통합** — `headroom` 은 **선택적 (optional) MCP server**, 사용자가 켜고 끔
+- ❌ **외부 headroom proxy 의존** — headroom 의 압축 알고리즘은 **built-in 으로** 우리 Context component 에 내장 (D-27). proxy 방식 의존 안 함
 
 ### 위치 (Positioning)
 
@@ -33,18 +33,23 @@
 │  yklee (user)                            │
 └─────────────────────────────────────────┘
               ↓ terminal 직접 호출
-              ↓ (또는 Mavis 가 spawn — Mavis 와 zero coupling)
 ┌─────────────────────────────────────────┐
 │  my_harness (CLI/TUI)                    │  ← STANDALONE
 │  Harness 5 components                    │
+│  ┌───────────────────────────────────┐  │
+│  │ Context component:                │  │
+│  │  - CLAUDE.md, auto memory         │  │
+│  │  - built-in compression ⭐        │  │  ← D-27: headroom 알고리즘 built-in
+│  │    (CacheAligner, ContentRouter,  │  │     (선택적, user on/off)
+│  │     CCR, SmartCrusher, CodeComp,  │  │
+│  │     Kompress-base)               │  │
+│  └───────────────────────────────────┘  │
 └─────────────────────────────────────────┘
               ↓ Direct LLM API call
               (Anthropic/OpenAI/...)
-              ↓ (optional, user on/off)
-              headroom MCP server
 ```
 
-**my_harness** = terminal 에서 직접 실행되는 standalone CLI/TUI. Mavis / Mavis / 4-워커 어느 것과도 무관. 3-도메인 (코드/서버/환경) 작업 전문.
+**my_harness** = terminal 에서 직접 실행되는 standalone CLI/TUI. **headroom 의 압축 알고리즘은 built-in 으로** 내장 (외부 proxy 의존 X). 사용자가 끄면 native cache 만 사용. 3-도메인 (코드/서버/환경) 작업 전문.
 
 ---
 
@@ -75,8 +80,8 @@
 ### 3.2 **Provider 비종속** (aider/opencode/goose 13.2 + claude-code 13.15)
 12+ (Rust 1안 `rig-core`) 또는 15+ (TS 2안 `Vercel AI SDK`) provider + **3 fallback model** (claude-code 패턴). 어떤 provider 든 my_harness 가 직접 통신 — 외부 orchestrator 불필요.
 
-### 3.3 **3-도메인 동시 + 선택적 CCR** (headroom 13.3)
-코드/서버/환경 3-도메인 모두 통합. **CCR (Context Cache Reduction)** 는 **선택적 (optional) MCP server** 통합 — `~/.myharness/config.yaml` 에서 `headroom.enabled: true|false`. 기본값은 `false` (사용자가 켜야 동작). 토큰 한계는 CCR 없이도 provider 의 native cache 로 대응 가능.
+### 3.3 **3-도메인 동시 + 선택적 built-in 압축** (headroom 13.3, D-27)
+코드/서버/환경 3-도메인 모두 통합. **headroom 의 6 압축 알고리즘** (CacheAligner, ContentRouter, CCR, SmartCrusher, CodeCompressor, Kompress-base) 을 **우리 Context component 에 built-in** — 외부 proxy 의존 X. `~/.myharness/config.yaml` 에서 `builtin.enabled: true|false`. 기본값은 `false` (사용자가 켜야 동작). 토큰 한계는 native cache 만으로도 v1 가능.
 
 ---
 
@@ -241,29 +246,70 @@ llm:
 - 서버 = Haiku 4 + no thinking
 - 환경 = local Ollama + no thinking
 
-### 5.6 Context 관리 (claude-code 13.6 + 선택적 headroom 13.3)
+### 5.6 Context 관리 (claude-code 13.6 + built-in headroom 13.3, D-27)
 
-**3 계층**:
-1. **`CLAUDE.md` (project root)** — yklee 의 프로젝트별 규칙, 5 surface 공유. 우리 v1 = `MiniMax.md` 가 이미 동급 (Mavis 의 메타 진입점).
+**3 계층 + built-in compression**:
+1. **`CLAUDE.md` (project root)** — yklee 의 프로젝트별 규칙, 5 surface 공유.
 2. **Auto memory** — yklee 의 작업 패턴 자동 학습. `~/.myharness/memory/auto/`
-3. **`/compact` slash command** — context 압축. **선택적 headroom MCP server** integration (사용자 on/off).
+3. **`/compact` slash command** — context 압축. **built-in compression 알고리즘** 호출.
+4. **Built-in compression (D-27, 선택적, 기본 off)** — headroom 의 6 알고리즘을 **우리 Context component 에 내장**. 외부 proxy/MCP 의존 X.
 
-**CCR integration (선택적, 기본 off)**:
+**Built-in compression 설계 (D-27, headroom.md §7.4 6 알고리즘 참고)**:
+
 ```yaml
 # ~/.myharness/config.yaml
 context:
-  compression: native   # native (provider cache only) | headroom-mcp
-  headroom:
-    enabled: false      # ← 기본 OFF. 사용자가 true 로 켜면 동작
-    mode: token         # token | cache | ccr
-    target_ratio: 0.35
-    mcp_server: headroom
+  compression: native       # native | builtin (D-27)
+  builtin:
+    enabled: false          # ← 기본 OFF. 사용자가 true 로 켜면 동작
+    algorithms:
+      cache_aligner: true   # CacheAligner — prefix 안정화 (KV cache hit)
+      content_router: true  # ContentRouter — content type 감지 → 알고리즘 선택
+      ccr: false            # CCR — reversible + retrieval (round-trip 비용)
+      smart_crusher: true   # SmartCrusher — JSON 구조 보존 압축
+      code_compressor: true # CodeCompressor — AST-aware (tree-sitter)
+      kompress_base: false  # Kompress-base ML — 자유 텍스트 (95% 압축, ONNX)
+    target_ratio: 0.35      # 65% 압축 목표
+    protect_recent: 5       # 최근 N 메시지 보호
 ```
 
-- **native 모드 (기본)**: provider native cache (Anthropic prompt cache, OpenAI cached prompt) 만 사용
-- **headroom-mcp 모드 (opt-in)**: 우리 my_harness 가 headroom MCP server 호출. `mcp__headroom__compress(messages, model)` — 65-95% 토큰 절감. `mcp__headroom__retrieve(id)` — 원문 복원 (CCR mode 시)
+**흐름 (D-27: user → harness → (headroom) → LLM)**:
 
-→ **v1 부터 양 모드 지원**, 사용자가 선택. CCR 은 v1 핵심 ❌ (anti-pattern 회피).
+```
+yklee 명령
+   ↓
+my_harness 의 Context component
+   ↓
+   ├─ CLAUDE.md load
+   ├─ auto memory inject
+   ├─ /compact (user-callable) or auto-detect
+   ↓
+   └─ Built-in compression layer (선택적, off 가능)
+        ├─ CacheAligner (prefix 안정화) [always on if enabled]
+        ├─ ContentRouter (content type 감지)
+        │    ├─ JSON → SmartCrusher
+        │    ├─ code → CodeCompressor
+        │    ├─ log → LogCompressor
+        │    └─ text → Kompress-base ML (if enabled)
+        └─ CCR (reversible, round-trip)
+   ↓
+LLM provider API
+```
+
+**핵심 (D-27)**:
+- **headroom 의 압축 알고리즘을 우리 Context component 에 built-in** — 외부 proxy/MCP 의존 X
+- headroom 의 **알고리즘/원리만 참고** (CacheAligner, ContentRouter, CCR, SmartCrusher, CodeCompressor, Kompress-base) — Apache 2.0 알고리즘 디자인
+- **선택적, 기본 off** — 사용자가 켜야 동작. native cache (Anthropic prompt cache, OpenAI cached prompt) 만으로도 v1 가능
+- **proxy 제약 회피** — proxy mode 의 인증/transport 제약 없음, 우리 harness 의 Tools/Plugins 와 직접 통합 가능
+
+**v1 우선 구현 (3 알고리즘)**:
+1. **CacheAligner** — prefix 안정화 (가장 효과 큰 1순위, Anthropic prompt cache hit ↑)
+2. **ContentRouter + SmartCrusher** — JSON 출력 (tool result) 65% 압축
+3. **CodeCompressor** — code snippet (tree-sitter) 식별자 shorten + 주석 제거
+
+**v1.5+ 구현**:
+- CCR (reversible + retrieval) — round-trip 비용 trade-off
+- Kompress-base (ONNX) — 95% 자유 텍스트 압축, ML 모델 weight 포함 (~수 MB)
 
 ### 5.7 Plugin 시스템 (claude-code 13.3)
 
@@ -300,6 +346,117 @@ my_harness 는 다음 어느 것과도 **결합 없음**:
 **개발 시 사용 도구 (사용자 환경)**:
 - my_harness 자체는 Mavis / Mavis 와 무관
 - 단, yklee 가 my_harness 를 **개발**할 때 Mavis 를 dev tool 로 사용 (D-01 의 standard_ai_workflow 는 my_harness 개발 workflow 일 뿐, my_harness 의 runtime dependency 아님)
+
+### 5.9 standard_ai_workflow 준수 (D-26, native + 옵션 통합)
+
+my_harness 는 `standard_ai_workflow` (ykylee/standard_ai_workflow) 의 **6 원칙을 native 로 내장**. **Zero coupling** (Mavis 파일 없어도 동작) + **옵션 통합** (Mavis 디렉토리 발견 시 자동 연결).
+
+#### 5.9.1 6 원칙 native 구현 (항상 동작)
+
+| 원칙 | 구현 |
+| --- | --- |
+| **한국어 보고** | 모든 사용자 facing output 기본 한국어. `--lang=en` 으로 override |
+| **컨텍스트 절약** | 결론 + 다음 행동만 출력. 중간 reasoning 노출 안 함 |
+| **상태값** | `planned \| in_progress \| blocked \| done` 4 값 (TASK status 출력 시) |
+| **이벤트 소싱** | 모든 상태 변경/명령 실행을 `.myharness/log.jsonl` 에 기록 (자체 저장) |
+| **비참조 원칙** | 다른 세션/이전 세션 참조 안 함. handoff 만 사용 |
+| **handoff 형식** | 모든 work 종료 시 `summary / risks / suggested_follow_up` 구조화 출력 |
+
+#### 5.9.2 옵션 Mavis 통합 (auto-detect, opt-in)
+
+```yaml
+# ~/.myharness/config.yaml (예시)
+workflow:
+  mode: auto              # auto | none | mavis
+  mavis_root: ~/mavis     # Mavis 디렉토리 위치
+  # auto: Mavis 디렉토리 (`.ai-workflow/` 또는 `ai-workflow/`) 발견 시 자동 통합
+  # none: 항상 my_harness 자체 `.myharness/` 만 사용 (Mavis 무시)
+  # mavis: 명시적 통합 (Mavis 디렉토리 없으면 에러)
+```
+
+**auto mode 동작**:
+- `ai-workflow/memory/state.json` 발견 시 → task status 자동 sync
+- `ai-workflow/memory/work_backlog.md` 발견 시 → task 등록/갱신
+- `ai-workflow/memory/session_handoff.md` 발견 시 → 종료 시 자동 append
+- 미발견 시 → my_harness 자체 `.myharness/state/`, `.myharness/handoff/` 사용 (zero coupling 유지)
+
+**호환되는 Mavis 워크플로우 파일**:
+- `ai-workflow/memory/state.json` — 워크플로우 상태 캐시
+- `ai-workflow/memory/session_handoff.md` — 세션 인계
+- `ai-workflow/memory/work_backlog.md` — 작업 인덱스
+- `ai-workflow/memory/backlog/YYYY-MM-DD.md` — 일별 백로그
+- `ai-workflow/core/global_workflow_standard.md` — 표준 자체 (참조만, my_harness 가 직접 읽지 않음)
+
+#### 5.9.3 Task/handoff 출력 형식 (Mavis 호환)
+
+```yaml
+# myharness task start
+task:
+  id: TASK-005
+  title: "my_harness 스택 결정 (Rust 1안 vs TS 2안)"
+  status: in_progress
+  started_at: 2026-06-07T12:08:24+09:00
+  priority: high
+context_summary: |
+  Rust 1안 vs TS 2안 결정. 입력: REFERENCES.md §5, PROVIDERS.md §9,
+  headroom.md §13, claude-code.md §13, README.md §3, CONCEPT.md §5.5/§5.7
+constraints: |
+  - 단일 binary 우선
+  - 3-도메인 동시 지원
+  - Mavis zero coupling
+output_files:
+  - docs/TASK-005_DECISION.md
+  - docs/architecture/...
+```
+
+```yaml
+# myharness task end
+task:
+  id: TASK-005
+  status: done
+  completed_at: 2026-06-07T12:35:00+09:00
+summary: |
+  Rust 1안 (ratatui + rig-core + cargo-dist) 으로 결정. 근거: ...
+risks_identified:
+  - TUI 학습곡선 (Rust 진입장벽)
+  - MCP SDK Rust 성숙도 (rmcp 1.4 검증 필요)
+suggested_follow_up:
+  - TASK-005-1: ratatui POC 작성
+  - TASK-005-2: rig-core integration test
+  - TASK-005-3: cargo-dist cross-build 검증
+produced_artifacts:
+  - docs/TASK-005_DECISION.md
+```
+
+#### 5.9.4 우리 my_harness 의 위치 (재확인)
+
+```
+┌─────────────────────────────────────────┐
+│  yklee (terminal 직접)                   │
+└─────────────────────────────────────────┘
+              ↓ `myharness <command>`
+┌─────────────────────────────────────────┐
+│  my_harness (CLI/TUI)                    │  ← 100% standalone
+│  - Harness 5 components                  │
+│  - standard_ai_workflow 6 원칙 native   │  ← 한국어/절약/상태/이벤트/비참조/handoff
+│  - LLM provider 직접 통신                │
+└─────────────────────────────────────────┘
+       ↓                          ↓
+   LLM provider           .myharness/ (자체)
+                              ├── state/         (항상)
+                              ├── handoff/       (항상)
+                              ├── log.jsonl      (항상)
+                              ├── memory/auto/   (항상)
+                              └── plugins/       (항상)
+                            ↓ (opt) auto-detect
+                       ai-workflow/memory/    (Mavis 디렉토리 발견 시만)
+```
+
+**핵심**:
+- **my_harness = 자체 `.myharness/` 디렉토리 + standard_ai_workflow 6 원칙 native** — Mavis 없어도 동작
+- **옵션 Mavis 통합** — auto-detect 로 seamless, 사용자 flag 로 off 가능
+- **Mavis 가 my_harness 를 spawn 해도** 동일한 6 원칙 + 자체 디렉토리 + 옵션 통합
+- **my_harness 개발 workflow** (이 repo 의 Mavis + standard_ai_workflow) = **my_harness 산출물과 무관** (D-25)
 
 ---
 
@@ -393,7 +550,7 @@ my_harness 는 다음 어느 것과도 **결합 없음**:
 | --- | --- | --- |
 | **TASK-005 스택** (Rust 1안 vs TS 2안) | yklee 의 desktop 우선순위 | 즉시 결정 가능 (입력 다 갖춤) |
 | **TASK-002 도메인별 명령** | yklee 인프라 정보 필요 | yklee 인프라 정보 수령 후 |
-| **TASK-007 headroom 통합** (선택적 MCP) | 사용자 opt-in 방식 + MCP server 사용 가능 여부 | MCP server 검증 후 |
+| **TASK-007 headroom built-in 알고리즘 구현 우선순위** | CacheAligner/ContentRouter/CCR/SmartCrusher/CodeCompressor/Kompress-base 중 v1 우선 3개 | yklee 가 v1 우선순위 결정 후 |
 | **TUI 라이브러리** (ratatui vs React/Ink) | 스택 결정 의존 | TASK-005 결정 후 |
 | **Provider fallback list** (3 모델) | yklee 의 LLM 선호/비용 | yklee 결정 후 |
 

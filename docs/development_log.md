@@ -77,6 +77,8 @@ yklee 가 판단: 외부 워커 컨슈밍만으로는 **yklee 만이 진화 가�
 | D-23 | 2026-06-07 | **기존 문서 align to CONCEPT.md** — `MiniMax.md`, `PROJECT_PROFILE.md`, `REFERENCES.md`, `PROVIDERS.md` 의 메타데이터 + 도메인별 명령 섹션 + 7-doc 확장 섹션 + claude-code 3-fallback 패턴 추가. 각 문서 본래 목적 유지 + CONCEPT.md SSOT 참조 추가. | 7-doc 분석 결과가 기존 문서에 미반영. 동기화 필요. | 향후 컨셉 갱신 시 4 문서 동시 align 룰 |
 | D-24 | 2026-06-07 | **CONCEPT.md 컨셉 교정 1차** — "외부 4-워커 통합/오케스트레이션" framing 제거. my_harness = standalone harness tool 로 재확립. Mavis 가 spawn 가능한 worker framing 추가. | yklee 가 "외부 4-워커 운영은 맞지 않음" 교정 — my_harness 는 sibling standalone tool 일 뿐 | (D-25 에서 더 보강) |
 | D-25 | 2026-06-07 | **CONCEPT.md 컨셉 교정 2차 (Mavis zero coupling)** — §0.5 다이어그램에서 Mavis/orchestrator/standard_ai_workflow 모두 제거. §2 타겟 사용자에서 Mavis 행 삭제. §5.8 "외부 의존성 없음" 섹션 신설. **my_harness = 100% standalone, Mavis/Mavis/mavis-team/standard_ai_workflow 어느 것과도 결합 없음**. 유일한 런타임 의존 = LLM provider API + (선택) headroom MCP | yklee 가 "Mavis 랑도 관계 없이 동작되어야" 교정 — my_harness 는 Mavis 와 zero coupling. yklee 가 my_harness 개발 시 Mavis 를 dev tool 로 쓸 수는 있으나 my_harness 자체는 Mavis 를 모름. | 향후 docs 에 Mavis 언급 시 my_harness 본체 vs my_harness 개발 workflow 구분 필수 |
+| D-26 | 2026-06-07 | **standard_ai_workflow 준수 (native + 옵션 통합)** — §5.9 신설. **6 원칙 native 구현** (한국어 보고 / 컨텍스트 절약 / 상태값 / 이벤트 소싱 / 비참조 / handoff 형식 — 항상 동작) + **옵션 Mavis 통합** (auto-detect 로 `ai-workflow/memory/` 발견 시 sync, 미발견 시 자체 `.myharness/` 만 사용). Task/handoff 출력 형식 Mavis 호환. Zero coupling 유지 (Mavis 디렉토리 없어도 동작) | yklee 가 "우리 하네스는 기본적으로 standard ai workflow를 준수해서 동작되도록 해볼 수 있을까?" — native 준수 + 옵션 통합의 하이브리드 채택. | 향후 my_harness 가 Mavis 와 동시 사용 시 호환성 자동 보장 |
+| D-27 | 2026-06-07 | **headroom = built-in 압축 layer (외부 proxy 의존 X)** — §0.5 NOT list + §3.3 + §5.6 갱신. **흐름: user → my_harness → (built-in 압축) → LLM provider**. headroom 의 6 알고리즘 (CacheAligner/ContentRouter/CCR/SmartCrusher/CodeCompressor/Kompress-base) 을 우리 Context component 에 **built-in 으로 내장**. 외부 headroom proxy/MCP 의존 안 함. 기본 off (사용자 opt-in). v1 우선 3개 (CacheAligner + ContentRouter+SmartCrusher + CodeCompressor), v1.5+ CCR/Kompress-base. | yklee 가 "사용자 - harness - (headroom) - llm provider 의 순서" 제안 + "proxy 방식은 제약 있음" → built-in 으로 우리 Context component 에 심기. | 향후 headroom upstream 변경 시 우리 코드만 갱신. 외부 의존성 0. |
 
 ---
 
@@ -118,6 +120,8 @@ yklee 가 판단: 외부 워커 컨슈밍만으로는 **yklee 만이 진화 가�
 - **기존 문서 align** (D-23) — MiniMax.md / PROJECT_PROFILE.md / REFERENCES.md / PROVIDERS.md 의 메타 + 도메인 명령 + 7-doc 확장 + claude-code 3-fallback 섹션 추가. CONCEPT.md SSOT 참조.
 - **CONCEPT.md 컨셉 교정 1차** (D-24) — "외부 4-워커 통합/오케스트레이션" framing 제거. my_harness = standalone harness tool. Sibling to claude-code/codex/aider/goose/gemini-cli/opencode.
 - **CONCEPT.md 컨셉 교정 2차 (Mavis zero coupling)** (D-25) — §0.5 다이어그램에서 Mavis/orchestrator/standard_ai_workflow 모두 제거. §2 타겟에서 Mavis 행 삭제. §5.8 "외부 의존성 없음" 신설. **my_harness = 100% standalone**, 유일한 런타임 의존 = LLM provider API + (선택) headroom MCP.
+- **standard_ai_workflow 준수 (D-26)** — §5.9 신설. 6 원칙 native (한국어/절약/상태/이벤트/비참조/handoff) + 옵션 Mavis 통합 (auto-detect `ai-workflow/memory/`, 미발견 시 자체 `.myharness/`). Zero coupling 유지.
+- **headroom built-in 압축 layer (D-27)** — §0.5 / §3.3 / §5.6 갱신. 흐름 = `user → my_harness → (built-in 압축) → LLM provider`. headroom 의 6 알고리즘을 우리 Context component 에 built-in. 외부 proxy 의존 X, 기본 off, v1 우선 3개 알고리즘.
 
 ---
 
