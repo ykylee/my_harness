@@ -1008,24 +1008,7 @@ Distribution: 5 install paths (install.sh / install.ps1 / brew / winget / apt-dn
 - §5.14 Built-in skills 에 `provider-auto-config` 추가
 - §5.12 디렉토리 구조에 `~/.myharness/state/auth/` 추가
 - D-15 (3 fallback 패턴) — **Phase 1 은 hardcoded 유지**, **Phase 2 부터 동적**
-- D-34 (2.1.169 영향) — Anthropic fallback 동작 검증 후 Phase 2 에 반영
-
-### 11.2 외부 의존성 pending 결정 (claude-code 2.1.169 changelog 대기)
-
-> **claude-code 2.1.169** (Anthropic, 2026-06) 의 changelog 에 다음 변경 예정 (사용자 제보, 공개 소스 미확인):
-> - **context var/cache** — 우리 §5.6 Context 관리 (D-30 Layer 1+2 압축, CacheAligner 패턴) 영향 가능
-> - **MCP** — 우리 §5.14 Skill/MCP first-class (D-33) 영향 가능
-> - **permission** — 우리 §5.4 4 permission mode (D-13.8) 영향 가능
->
-> 공개 채널 (GitHub release, feed.xml, CHANGELOG.md) 모두 v2.1.168 까지만 노출. 2.1.169 changelog 가 공개되면 아래 결정들 검증 후 v1 spec 잠금.
-
-| 영향 받는 우리 결정 | 의존 § | 영향 가능성 | 검증 시점 |
-| --- | --- | --- | --- |
-| **TASK-007** (headroom built-in 알고리즘 우선순위) | §5.6 Layer 2 | context var/cache 변경 시 CacheAligner/CCR 설계 재검토 | 2.1.169 공개 후 |
-| **D-32** (LLM Wiki memory) | §5.13 (v2+ vision) | context var 변경 시 wiki 스키마 영향 | 2.1.169 공개 후 |
-| **D-33** (MCP first-class) | §5.14 | MCP 변경 시 우리 MCP client/서버 구현 재검토 | 2.1.169 공개 후 |
-| **§5.4** (4 permission mode) | §5.4 | permission 변경 시 우리 permission 시스템 정합 검증 | 2.1.169 공개 후 |
-| **D-15** (3 fallback model) | §5.5 | Anthropic fallback 동작 변경 가능 | 2.1.169 공개 후 |
+- D-34 (2.1.169 영향) — **D-40 으로 취소, 검증 미진행** (v1 spec 잠금)
 
 ---
 
