@@ -86,7 +86,7 @@ yklee 가 판단: 외부 워커 컨슈밍만으로는 **yklee 만이 진화 가�
 | D-32 | 2026-06-07 | **LLM Wiki memory layer (Karpathy pattern, v2+)** — §5.13 신설. 3 계층 (raw/wiki/schema) + index/log/lint 운영. "Obsidian is the IDE, the LLM is the programmer, the wiki is the codebase". v1 = 기본 flat memory (LLM Wiki 미적용), v1.5+ = schema+lint, v2.5+ = full compile + cross-reference. Reference: `gist.github.com/karpathy/442a6bf555914893e9891c11519de94f`. | yklee 가 "llm wiki 의 컨셉을 참고하면 어떨까?" — Karpathy 2026-04 LLM Wiki Pattern (3-layer architecture). | v1 simple memory, v2+ LLM Wiki 자동 운영. |
 | D-33 | 2026-06-07 | **Skill/MCP first-class (claude-code/goose 동급)** — §5.14 신설. **Skills** = `~/.myharness/skills/<name>/SKILL.md` (claude-code 13.3) + built-in 6 skills (3-도메인). **MCP** = `~/.myharness/mcp.json` + `rmcp` (Rust) / `@modelcontextprotocol/sdk` (TS) + 4 pre-config server (filesystem/git/shell/github). MCP tool 자동 노출 (`mcp__*`). | yklee 가 "skill/mcp 지원은 다른 도구와 동등하게" 요구. | v1.5+ marketplace, plugin 으로 사용자 정의. |
 | D-34 | 2026-06-07 | **TASK-NNN 형식 통일 + 2.1.169 pending 표** — §6 v2+ 로드맵 v1.0/v1.5/v2.0/v2.5/v3.0 마일스톤 → **TASK-005-1~TASK-005-5** (sub-task of TASK-005 스택 결정). §11.1 결정 보류 표의 TUI 라이브러리 → **TASK-006**, Provider fallback list → **TASK-008** (TASK-007 headroom 사이 번호 보존). **§11.2 신설** = claude-code 2.1.169 영향 결정 pending 표 (context var/cache → §5.6/D-32, MCP → §5.14/D-33, permission → §5.4, fallback → §5.5/D-15). 2.1.169 changelog 공개 시 검증. | yklee 가 "마일스톤 TASK-005-1 형식으로" + "2.1.169 영향 결정 §11.1 관련 항목으로" 요구. | 향후 task_id 추적 가능, 외부 reference 변경 시 영향 결정 즉시 식별. |
-| D-34 | 2026-06-07 | **TASK-NNN 형식 통일 + 2.1.169 pending 표** — §6 v2+ 로드맵 v1.0/v1.5/v2.0/v2.5/v3.0 마일스톤 → **TASK-005-1~TASK-005-5** (sub-task of TASK-005 스택 결정). §11.1 결정 보류 표의 TUI 라이브러리 → **TASK-006**, Provider fallback list → **TASK-008** (TASK-007 headroom 사이 번호 보존). **§11.2 신설** = claude-code 2.1.169 영향 결정 pending 표 (context var/cache → §5.6/D-32, MCP → §5.14/D-33, permission → §5.4, fallback → §5.5/D-15). 2.1.169 changelog 공개 시 검증. | yklee 가 "마일스톤 TASK-005-1 형식으로" + "2.1.169 영향 결정 §11.1 관련 항목으로" 요구. | 향후 task_id 추적 가능, 외부 reference 변경 시 영향 결정 즉시 식별. |
+| D-35 | 2026-06-07 | **관련 문서 align to CONCEPT.md v1 (D-22~D-34)** — 4 docs 일괄 갱신. `MiniMax.md` + `docs/PROJECT_PROFILE.md` 의 관련 문서 에 §5.10~§5.14 + §11 결정 보류 cross-ref 추가. `README.md` (root) 전체 재작성 — my_harness v1 산출물 vs 개발 workflow 분리 (D-25) 명확화 + v1 핵심 컨셉 10개 결정 table + v1 CLI 명령 (§5.2, §5.10) + v1 산출물 디렉토리 구조 (D-31) + TASK-NNN 다음 결정 (§11.1). `docs/references/PROVIDERS.md` 관련 섹션에 §5.14 (MCP), §11.2 (2.1.169 pending) cross-ref 추가. | yklee 가 "관련 문서 align으로 해" 요구. 기존 4 문서가 D-22~D-34 결정 미반영. | 향후 D-23 (이전 align) + D-35 (이번 align) = align 룰 확립. 컨셉 갱신 시 4 문서 동시 갱신. |
 
 ---
 
@@ -137,7 +137,7 @@ yklee 가 판단: 외부 워커 컨슈밍만으로는 **yklee 만이 진화 가�
 - **LLM Wiki memory (D-32)** — §5.13 신설. Karpathy 3-layer (raw/wiki/schema) + index/log/lint. v1 flat, v2+ LLM Wiki.
 - **Skill/MCP first-class (D-33)** — §5.14 신설. skills (claude-code 13.3 차용) + MCP (rmcp/@modelcontextprotocol/sdk) + 4 pre-config server.
 - **TASK-NNN 형식 통일 + 2.1.169 pending 표 (D-34)** — §6 마일스톤 → TASK-005-1~TASK-005-5. §11.1 TUI/Provider fallback → TASK-006/008. §11.2 신설 = claude-code 2.1.169 영향 결정 pending 표.
-- **TASK-NNN 형식 통일 + 2.1.169 pending 표 (D-34)** — §6 마일스톤 → TASK-005-1~TASK-005-5. §11.1 TUI/Provider fallback → TASK-006/008. §11.2 신설 = claude-code 2.1.169 영향 결정 pending 표.
+- **관련 문서 align to CONCEPT.md v1 (D-35)** — MiniMax.md / PROJECT_PROFILE.md 관련 문서 에 §5.10~§5.14 cross-ref. README.md (root) 전체 재작성 (v1 산출물 vs 개발 workflow 분리). PROVIDERS.md cross-ref 갱신.
 
 ---
 

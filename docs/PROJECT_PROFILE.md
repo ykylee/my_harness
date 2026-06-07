@@ -6,6 +6,12 @@
 - 상태: active
 - 최종 수정일: 2026-06-07 (D-25 Mavis zero coupling 교정)
 - 관련 문서: [공통 표준](../ai-workflow/core/global_workflow_standard.md) (Mavis 워크플로우 표준 — 이 저장소 개발 workflow 한정), [MiniMax 진입점](../MiniMax.md) (Mavis 진입점 — 이 저장소 개발 workflow 한정), **[CONCEPT.md](./CONCEPT.md) ← my_harness v1 컨셉 SSOT (Mavis zero coupling)**, [development_log.md](./development_log.md), [REFERENCES.md](./REFERENCES.md)
+  - CONCEPT.md §5.10 Agent 모드 (orchestrator/single/loop)
+  - CONCEPT.md §5.11 Built-in sub-agents (15개, 3-도메인)
+  - CONCEPT.md §5.12 `~/.myharness/` 디렉토리 구조
+  - CONCEPT.md §5.13 LLM Wiki memory (v2+)
+  - CONCEPT.md §5.14 Skill/MCP first-class
+  - CONCEPT.md §11 결정 보류 (TASK-002/005/006/007/008)
 
 ## 1. 프로젝트 개요
 - 프로젝트명: My Harness

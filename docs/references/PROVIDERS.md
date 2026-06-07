@@ -3,10 +3,14 @@
 - 문서 목적: TASK-005 my_harness CLI/TUI 의 LLM 통합 — *어떤 프로바이더와도 통신 가능* 한 추상화 옵션 비교 검토.
 - 범위: 1안(Rust) / 2안(TypeScript) 별로 가능한 라이브러리 + 직접 구현 옵션 + 우리 권장안.
 - 대상 독자: yklee, Mavis, TASK-005 디자인 리뷰.
-- 상태: **active (1차 검토 + claude-code 3-fallback 패턴 반영)**
-- 최종 수정일: 2026-06-07
+- 상태: **active (1차 검토 + claude-code 3-fallback 패턴 반영 + D-28 6 provider 확정)**
+- 최종 수정일: 2026-06-07 (D-34 TASK-NNN 형식 통일)
 - **v1 컨셉 SSOT**: [`../CONCEPT.md` §5.5](../CONCEPT.md) 가 LLM 통합 결정의 SSOT. 본 문서는 비교 검토 입력.
-- **관련**: 7 reference 통합 리뷰 [`README.md`](./README.md) §2 축 2 (LLM 통합), [`claude-code.md`](./claude-code.md) §5 (3-fallback 패턴)
+- **관련**:
+  - 7 reference 통합 리뷰 [`README.md`](./README.md) §2 축 2 (LLM 통합)
+  - [`claude-code.md`](./claude-code.md) §5 (3-fallback 패턴)
+  - CONCEPT.md §5.14 (MCP first-class — `rmcp` / `@modelcontextprotocol/sdk` 가 provider 비종속 추상화의 일부)
+  - CONCEPT.md §11.2 (claude-code 2.1.169 영향 결정 pending 표 — Anthropic fallback 동작 검증 대기)
 
 ## 1. 왜 추상화가 필요한가
 

@@ -6,6 +6,12 @@
 - 상태: active
 - 최종 수정일: 2026-06-07
 - 관련 문서: `ai-workflow/memory/state.json`, `ai-workflow/memory/session_handoff.md`, `ai-workflow/memory/work_backlog.md`, `ai-workflow/memory/PROJECT_PROFILE.md`, `AGENTS.md`, **[docs/CONCEPT.md](./docs/CONCEPT.md)** ← **my_harness v1 컨셉 (SSOT, 2026-06-07 확립)**
+  - §5.10 Agent 모드 (orchestrator/single/loop)
+  - §5.11 Built-in sub-agents
+  - §5.12 `~/.myharness/` 디렉토리 구조
+  - §5.13 LLM Wiki memory
+  - §5.14 Skill/MCP first-class
+  - §11 결정 보류 (TASK-002/005/006/007/008)
 
 ## 목적
 
