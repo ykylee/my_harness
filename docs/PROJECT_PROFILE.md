@@ -27,7 +27,7 @@
   - 이 workflow 는 **yklee 가 my_harness 를 개발할 때** 사용. my_harness 가 동작할 때는 무관 (CONCEPT.md §5.8 참조)
 - 주요 이해관계자: yklee (오너/유지보수), Mavis / Mavis 워커 (개발 workflow 한정, 산출물 무관)
 - 적용 환경 (개발 시): macOS (M-series), Python 3.11+, Mavis 데몬, gh CLI, 필요 시 원격 서버 SSH
-- 적용 환경 (산출물 my_harness): **사용자 terminal** (macOS / Linux / Windows), LLM provider API (Anthropic/OpenAI/Google/Ollama), (선택) headroom MCP server
+- 적용 환경 (산출물 my_harness): **사용자 terminal** (macOS / Linux / Windows), **Rust 1안** (D-36 — ratatui + rig-core + rmcp + keyring + cargo-dist), LLM provider API (Anthropic/OpenAI/Google/DeepSeek/local Ollama), (선택) headroom built-in 알고리즘
 
 ## 2. 문서 구조 (Path)
 - 문서 위키 홈: `README.md`

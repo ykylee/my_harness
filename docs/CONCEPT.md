@@ -894,10 +894,54 @@ auto_invoke:
 | task_id | 결정 | 보류 이유 | 결정 시점 |
 | --- | --- | --- | --- |
 | **TASK-002** | 도메인별 명령 | yklee 인프라 정보 필요 | yklee 인프라 정보 수령 후 |
-| **TASK-005** | 스택 (Rust 1안 vs TS 2안) | yklee 의 desktop 우선순위 | 즉시 결정 가능 (입력 다 갖춤) |
-| **TASK-006** | TUI 라이브러리 (ratatui vs React/Ink) | 스택 결정 의존 | TASK-005 결정 후 |
+| **TASK-005** | 스택 (Rust 1안 vs TS 2안) | — | ✅ **D-36 결정: Rust 1안** (§11.3 참조) |
+| **TASK-006** | TUI 라이브러리 (ratatui vs React/Ink) | — | ✅ **D-36 결정: ratatui + crossterm** (TASK-005 종속) |
 | **TASK-007** | headroom built-in 알고리즘 구현 우선순위 | CacheAligner/ContentRouter/CCR/SmartCrusher/CodeCompressor/Kompress-base 중 v1 우선 3개 | yklee 가 v1 우선순위 결정 후 |
 | **TASK-008** | Provider fallback list (3 모델) | yklee 의 LLM 선호/비용 | yklee 결정 후 |
+
+### 11.3 결정 완료 (Decided) — D-36
+
+#### TASK-005: 스택 = **Rust 1안** (2026-06-07)
+
+**결정**: yklee 결정 (Rust 1안 우선). 향후 변경 시 재검토.
+
+**선택 근거**:
+1. **단일 binary** — `cargo-dist` 로 macOS/Linux/Windows 동시 빌드. 우리 §5.3 5 install paths (D-31) + cross-platform + native auto-update 에 최적
+2. **TUI 검증** — `ratatui + crossterm` (codex 가 검증, Rust TUI 표준)
+3. **MCP 성숙** — `rmcp` 1.4 (goose 가 사용 중)
+4. **Keychain 안정** — `keyring` crate (goose 검증, macOS Keychain / Windows Credential Manager / Linux Secret Service)
+5. **빠른 startup + low memory** — 단일 binary = TUI latency ↓
+6. **Provider 비종속** — `rig-core` 12+ provider (Anthropic/OpenAI/Google/Ollama native)
+7. **headroom 알고리즘 native 구현** — tree-sitter (Rust), CCR (Rust), Kompress-base (ONNX C++ binding) 모두 Rust 생태계 성숙
+8. **Desktop 확장 (TASK-005-3, v2.0)** — Tauri (Rust) = 5 surface cross-session 시 single binary + Web view 동시
+
+**참조**: [REFERENCES.md §5.1](./REFERENCES.md), [references/README.md §2 축 1](./references/README.md), [references/PROVIDERS.md §2-3](./references/PROVIDERS.md), [references/claude-code.md §13.1](./references/claude-code.md)
+
+#### TASK-006: TUI 라이브러리 = **ratatui + crossterm** (TASK-005 종속, D-36)
+
+**결정**: TASK-005 = Rust 1안 종속으로 자동 확정. `ratatui` (TUI) + `crossterm` (terminal backend) 사용.
+
+**v1 스택 종합**:
+```
+Language:    Rust 2024 edition
+TUI:         ratatui + crossterm
+LLM:         rig-core 12+ provider
+MCP:         rmcp 1.4
+Secret:      keyring crate
+Compression: tree-sitter-rust + ONNX Runtime (Kompress-base, v1.5+)
+Build:       cargo + cargo-dist
+Distribution: 5 install paths (install.sh / install.ps1 / brew / winget / apt-dnf-apk)
+```
+
+**구현 우선순위 (TASK-005-1, v1 MVP)**:
+1. Rust 프로젝트 init + cargo workspace
+2. ratatui TUI shell (메뉴/스크롤/키바인딩)
+3. rig-core LLM client (Anthropic 우선, 1 provider)
+4. basic Tools (Read/Write/Edit/Bash)
+5. Context (CLAUDE.md load + /compact)
+6. standard_ai_workflow output (한국어/상태/handoff)
+7. 4 permission mode (§5.4)
+8. 1-2 built-in sub-agent (code-reviewer, server-status)
 
 ### 11.2 외부 의존성 pending 결정 (claude-code 2.1.169 changelog 대기)
 

@@ -87,6 +87,7 @@ yklee 가 판단: 외부 워커 컨슈밍만으로는 **yklee 만이 진화 가�
 | D-33 | 2026-06-07 | **Skill/MCP first-class (claude-code/goose 동급)** — §5.14 신설. **Skills** = `~/.myharness/skills/<name>/SKILL.md` (claude-code 13.3) + built-in 6 skills (3-도메인). **MCP** = `~/.myharness/mcp.json` + `rmcp` (Rust) / `@modelcontextprotocol/sdk` (TS) + 4 pre-config server (filesystem/git/shell/github). MCP tool 자동 노출 (`mcp__*`). | yklee 가 "skill/mcp 지원은 다른 도구와 동등하게" 요구. | v1.5+ marketplace, plugin 으로 사용자 정의. |
 | D-34 | 2026-06-07 | **TASK-NNN 형식 통일 + 2.1.169 pending 표** — §6 v2+ 로드맵 v1.0/v1.5/v2.0/v2.5/v3.0 마일스톤 → **TASK-005-1~TASK-005-5** (sub-task of TASK-005 스택 결정). §11.1 결정 보류 표의 TUI 라이브러리 → **TASK-006**, Provider fallback list → **TASK-008** (TASK-007 headroom 사이 번호 보존). **§11.2 신설** = claude-code 2.1.169 영향 결정 pending 표 (context var/cache → §5.6/D-32, MCP → §5.14/D-33, permission → §5.4, fallback → §5.5/D-15). 2.1.169 changelog 공개 시 검증. | yklee 가 "마일스톤 TASK-005-1 형식으로" + "2.1.169 영향 결정 §11.1 관련 항목으로" 요구. | 향후 task_id 추적 가능, 외부 reference 변경 시 영향 결정 즉시 식별. |
 | D-35 | 2026-06-07 | **관련 문서 align to CONCEPT.md v1 (D-22~D-34)** — 4 docs 일괄 갱신. `MiniMax.md` + `docs/PROJECT_PROFILE.md` 의 관련 문서 에 §5.10~§5.14 + §11 결정 보류 cross-ref 추가. `README.md` (root) 전체 재작성 — my_harness v1 산출물 vs 개발 workflow 분리 (D-25) 명확화 + v1 핵심 컨셉 10개 결정 table + v1 CLI 명령 (§5.2, §5.10) + v1 산출물 디렉토리 구조 (D-31) + TASK-NNN 다음 결정 (§11.1). `docs/references/PROVIDERS.md` 관련 섹션에 §5.14 (MCP), §11.2 (2.1.169 pending) cross-ref 추가. | yklee 가 "관련 문서 align으로 해" 요구. 기존 4 문서가 D-22~D-34 결정 미반영. | 향후 D-23 (이전 align) + D-35 (이번 align) = align 룰 확립. 컨셉 갱신 시 4 문서 동시 갱신. |
+| D-36 | 2026-06-07 | **TASK-005 결정: Rust 1안 (스택)** — yklee 결정. v1 MVP = **Rust 1안** (codex/goose 모델). §11.1 갱신 (TASK-005, TASK-006 → ✅ 결정 완료), **§11.3 신설** (결정 근거 + v1 스택 종합: Rust 2024 + ratatui + rig-core + rmcp + keyring + cargo-dist). TASK-006 자동 확정 = ratatui + crossterm. PROJECT_PROFILE.md 적용 환경 에 Rust 1안 명시. **v1 스택 결정 후속 작업**: TASK-005-1 (v1 MVP 빌드) = cargo workspace init → ratatui shell → rig-core Anthropic → basic tools → /compact → standard_ai_workflow output. | yklee 가 "1안으로 우선 결정하자" — 8개 선정 근거 (단일 binary / TUI 검증 / MCP 성숙 / keychain 안정 / 빠른 startup / provider 비종속 / headroom native / Desktop 확장). | 향후 TASK-005-1~TASK-005-5 순차 진행. TS 2안 으로 변경 시 재검토. |
 
 ---
 
@@ -138,6 +139,7 @@ yklee 가 판단: 외부 워커 컨슈밍만으로는 **yklee 만이 진화 가�
 - **Skill/MCP first-class (D-33)** — §5.14 신설. skills (claude-code 13.3 차용) + MCP (rmcp/@modelcontextprotocol/sdk) + 4 pre-config server.
 - **TASK-NNN 형식 통일 + 2.1.169 pending 표 (D-34)** — §6 마일스톤 → TASK-005-1~TASK-005-5. §11.1 TUI/Provider fallback → TASK-006/008. §11.2 신설 = claude-code 2.1.169 영향 결정 pending 표.
 - **관련 문서 align to CONCEPT.md v1 (D-35)** — MiniMax.md / PROJECT_PROFILE.md 관련 문서 에 §5.10~§5.14 cross-ref. README.md (root) 전체 재작성 (v1 산출물 vs 개발 workflow 분리). PROVIDERS.md cross-ref 갱신.
+- **TASK-005 결정: Rust 1안 (D-36)** — yklee 결정. v1 MVP 스택 = Rust 2024 + ratatui + rig-core + rmcp + keyring + cargo-dist. §11.1 TASK-005/006 ✅ 결정 완료. §11.3 신설 (결정 근거 8개 + v1 스택 종합). PROJECT_PROFILE.md 적용 환경 갱신.
 
 ---
 
