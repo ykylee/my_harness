@@ -1,0 +1,333 @@
+version: 1
+plan:
+  name: '5-레퍼런스 코딩 에이전트 하네스 심층분석'
+  max_concurrency: 5
+  max_consecutive_failures: 2
+  max_cycles: 3
+  verifier_config:
+    default_verifiers: [verifier]
+    audit_sample_rate: 0.0
+tasks:
+  - id: analyze-opencode
+    title: 'opencode (sst/opencode) 심층분석 — 14섹션 + Notable Patterns'
+    prompt: |
+      ## 작업
+      `/Users/yklee/repos/harness-refs/opencode` 의 **실제 코드** 를 심층 분석해
+      `/Users/yklee/repos/my_harness/docs/references/opencode.md` 에 14섹션 표준 마크다운 1개 작성.
+
+      ## 표준 템플릿
+      `/Users/yklee/repos/my_harness/docs/references/ANALYSIS_PLAN.md` §2.1 의 14섹션 + §2.2 의 opencode 특화 항목
+      (packages/* 워크스페이스, Effect 라이브러리 사용 패턴, worker/server 분리) 전부 채움.
+      해당 없으면 "N/A" + 1줄 사유.
+
+      ## 출력 형식
+      - 파일: `/Users/yklee/repos/my_harness/docs/references/opencode.md`
+      - 표준 6필드 헤더 (ai-workflow/core/global_workflow_standard.md 준수)
+      - 14 섹션 + §2.2 특화
+      - 분량 1,500~3,000줄 (코드 인용 + 다이어그램 포함)
+      - 코드 인용: ```언어 `path/to/file.ts:line` 형태, 5~20줄 발췌
+      - ASCII 다이어그램 (아키텍처 / 데이터 흐름 / 플러그인 시스템 등)
+      - 표 (디렉토리 트리 / 명령어 / 설정 키 등)
+
+      ## 품질 기준 (매우 중요)
+      이 분석은 **my_harness CLI/TUI 의 1차 참조 자료** 다. 사용자가 이 문서만 읽고도 판단할 수 있어야 함.
+      - **Self-contained**: 소스 다시 보지 않아도 이해됨
+      - **숫자/통계 명시**: LOC, 바이너리 크기, 의존성 개수 등 측정 가능 데이터
+      - **§13 Notable Patterns** 가 가장 중요: ✅ (우리 가 차야 할 것) / 💡 (놀라운 것) / ❌ (피할 것) 각각 코드 인용 + 우리 적용 방안
+      - **1차 분석 보완**: 기존 `docs/REFERENCES.md` §3.1 의 1-페이지를 **깊이 10배** 로
+      - **사실/평가 분리**: 사실은 사실로, 평가는 §13 에서
+
+      ## 특별 관심사 (opencode)
+      1. `packages/opencode/src/cli/cmd/tui/` 디렉토리 구조 — TUI 진입점, render loop, attach/worker 패턴
+      2. `packages/server/` — HTTP API, 미들웨어, 핸들러
+      3. `packages/opencode/src/plugin/` — 플러그인 시스템 추상화
+      4. `.opencode/` 의 7개 서브디렉토리 (agent/command/glossary/plugin/skill/theme/tool) 각각 어떤 포맷
+      5. Effect 라이브러리 (`effect`, `effect-drizzle-sqlite`, `effect-sqlite-node`) 사용 패턴 — TUI 에서 어떻게 쓰는지
+      6. journal.json / EventV2 / SessionID 스키마 — 세션 영속화
+      7. Windows FFI (`win32.ts`) — 크로스플랫폼 전략
+      8. `packages/opencode/src/cli/cmd/tui/event.ts` — TUI 가 정의한 이벤트들
+
+      ## 절대 금지
+      - Git push / commit (오너 작업)
+      - CI / 리뷰 폴링
+      - 다른 레퍼런스 분석
+      - 시크릿/토큰 값 노출 (있으면 REDACTED)
+
+      ## 보고
+      작업 끝나면 `mavis communication send` 로 메인(mvs_51ad429f7aaf4fe1bbe25965e8788083) 에게:
+      1. 작성한 파일 절대경로
+      2. 분량 (줄 수)
+      3. 가장 중요한 인사이트 3개
+      4. 미해결 질문 (있다면)
+    assigned_to: coder
+    verified_by: verifier
+    verify_prompt: |
+      `/Users/yklee/repos/harness-refs/opencode` 의 코드를 직접 다시 읽고 다음을 재검증.
+
+      1. **TUI 라이브러리**: `packages/opencode/src/cli/cmd/tui/app.tsx` 의 import 라인 확인 — `@opentui/solid` + `@opentui/core` + `@opentui/keymap` 가 실제로 import 되는지. 분석서의 코드 인용이 실제 파일과 일치하는지.
+      2. **TUI-Server 분리**: `packages/opencode/src/cli/cmd/tui/worker.ts` 가 별도 worker process 인지, server 와 어떻게 통신하는지 (RPC/HTTP). 분석서의 다이어그램이 실제 코드와 맞는지.
+      3. **`.opencode/` 디렉토리**: 실제 디렉토리 ls — plugin/command/theme/tool/skill/agent/glossary 가 존재하는지. 분석서가 누락 없이 모두 다뤘는지.
+      4. **AGENTS.md 컨벤션**: 루트 `AGENTS.md` 의 "Commits and PR Titles" 섹션 — conventional commits, type/scope 규칙이 분석서 §9 또는 §13 에 정확히 반영됐는지.
+      5. **SessionID 스키마**: `packages/opencode/src/cli/cmd/tui/validate-session.ts` 의 SessionID 사용, `@/session/schema` 가 effect Schema 로 정의됐는지.
+
+      추가로:
+      - 14섹션 전부 채워졌는지 (§1~§14 빠짐없이, 빈 섹션 N/A 표시했는지)
+      - §13 Notable Patterns 가 구체적인지 — 각 항목이 코드 인용 + 우리 적용 방안을 포함하는지, 추상적 조언만 있으면 FAIL
+      - 코드 발췌가 실제 소스 파일과 1:1 일치하는지 (오타, 잘못된 라인 번호, 변형된 코드 → FAIL)
+      - 분량이 1,500줄 이상인지 (너무 짧으면 분석 부족으로 FAIL)
+
+      결과: PASS / FAIL + (재검증한 5개 주장에 대한 소스 인용 vs 분석서 인용 짝 비교)
+    timeout_ms: 1800000
+
+  - id: analyze-aider
+    title: 'aider (Aider-AI/aider) 심층분석 — 14섹션 + Notable Patterns'
+    prompt: |
+      ## 작업
+      `/Users/yklee/repos/harness-refs/aider` 의 **실제 코드** 를 심층 분석해
+      `/Users/yklee/repos/my_harness/docs/references/aider.md` 에 14섹션 표준 마크다운 1개 작성.
+
+      ## 표준 템플릿
+      `/Users/yklee/repos/my_harness/docs/references/ANALYSIS_PLAN.md` §2.1 의 14섹션 + §2.2 의 aider 특화 항목
+      (repo.py 의 git 인덱싱, repomap.py 의 그래프 토큰 최적화) 전부 채움.
+
+      ## 출력 형식
+      - 파일: `/Users/yklee/repos/my_harness/docs/references/aider.md`
+      - 표준 6필드 헤더
+      - 14 섹션
+      - 분량 1,500~3,000줄
+      - 코드 인용, ASCII 다이어그램, 표
+
+      ## 품질 기준
+      - **Self-contained**: 소스 다시 보지 않아도 이해됨
+      - **§13 Notable Patterns** 가 가장 중요: ✅ / 💡 / ❌ 각각 코드 인용 + 우리 적용 방안
+      - **1차 분석 보완**: `docs/REFERENCES.md` §3.2 의 1-페이지를 깊이 10배로
+      - **숫자 명시**: LOC, 파일 개수, 의존성 수 등
+      - **사실/평가 분리**
+
+      ## 특별 관심사 (aider)
+      1. `aider/repo.py` — git repo 추상화, 인덱싱, dirty file 추적
+      2. `aider/repomap.py` — 그래프 기반 토큰 최적화, ChatModel.token_count 흐름
+      3. `aider/history.py` — token-based summarization (max_tokens=1024), ChatSummary 클래스
+      4. `aider/io.py` — rich 라이브러리 사용 패턴 (Color/Columns/Console/Markdown/Style)
+      5. `aider/coders/base_coder.py` — Coder 추상화, 명령 처리 흐름
+      6. `aider/main.py` — CLI 진입점, 인자 파싱
+      7. `aider/commands.py` (있다면) — slash command 시스템
+      8. `pyproject.toml` — dynamic dependency (setuptools_scm), optional-dependencies
+      9. **확장성 부재 분석** 가 핵심 — aider 는 plugin/MCP/hooks 가 없는데 어떻게 이게 작동하는지, 우리한테 주는 시사점
+
+      ## 절대 금지
+      - Git push / commit
+      - CI / 리뷰 폴링
+      - 다른 레퍼런스 분석
+      - 시크릿/토큰 값 노출
+
+      ## 보고
+      `mavis communication send` 로 메인(mvs_51ad429f7aaf4fe1bbe25965e8788083) 에게:
+      1. 작성한 파일 절대경로
+      2. 분량
+      3. 가장 중요한 인사이트 3개
+      4. 미해결 질문
+    assigned_to: coder
+    verified_by: verifier
+    verify_prompt: |
+      `/Users/yklee/repos/harness-refs/aider` 의 코드를 직접 다시 읽고 다음을 재검증.
+
+      1. **rich 라이브러리**: `aider/io.py` 의 `from rich.X import` 라인들 — Color/Columns/Console/Markdown/Style 가 실제로 import 되는지. 분석서가 인용한 import 가 실제 파일과 일치하는지.
+      2. **repo.py 의 git 추상화**: `aider/repo.py` 의 `Repo` 클래스 — `add_file` / `get_tracked_files` / `get_dirty_files` 같은 메서드가 실제로 존재하는지. 분석서 §6 또는 §7 의 코드 발췌가 맞는지.
+      3. **history.py 의 토큰 요약**: `aider/history.py` 의 `ChatSummary.summarize_real` — max_tokens=1024, min_split=4, depth>3 같은 로직이 실제 코드와 일치하는지.
+      4. **CLI 진입점**: `pyproject.toml` 의 `[project.scripts]` — `aider = "aider.main:main"` 가 있는지. main.py 의 entry 함수가 `main` 인지.
+      5. **확장성 부재**: aider 디렉토리에 `plugins/` / `hooks/` / `extensions/` 가 정말 없는지 (없으면 분석서가 "확장성 없음" 결론 맞음, 있으면 분석서 오류).
+
+      추가로 14섹션 채움 / §13 구체성 / 코드 발췌 일치 / 1,500줄+ / 사실-평가 분리.
+
+      결과: PASS / FAIL + 5개 주장 짝 비교.
+    timeout_ms: 1800000
+
+  - id: analyze-codex
+    title: 'codex (openai/codex) 심층분석 — 14섹션 + Notable Patterns'
+    prompt: |
+      ## 작업
+      `/Users/yklee/repos/harness-refs/codex` 의 **실제 코드** 를 심층 분석해
+      `/Users/yklee/repos/my_harness/docs/references/codex.md` 에 14섹션 표준 마크다운 1개 작성.
+
+      ## 표준 템플릿
+      `/Users/yklee/repos/my_harness/docs/references/ANALYSIS_PLAN.md` §2.1 의 14섹션 + §2.2 의 codex 특화 항목
+      (codex-core 비대화 방지 규율, codex-message-history 10K 토큰 캡) 전부 채움.
+
+      ## 출력 형식
+      - 파일: `/Users/yklee/repos/my_harness/docs/references/codex.md`
+      - 표준 6필드 헤더
+      - 14 섹션
+      - 분량 1,500~3,000줄
+
+      ## 품질 기준
+      - **Self-contained**
+      - **§13 Notable Patterns** 가장 중요
+      - **1차 분석 보완**
+      - **숫자 명시**
+      - **사실/평가 분리**
+
+      ## 특별 관심사 (codex)
+      1. `codex-rs/` 워크스페이스 — 100+ crate 의 구조와 모듈 경계. **codex-core 비대화 방지 규율** (`AGENTS.md` "The codex-core crate" 섹션)
+      2. `codex-rs/tui/` — ratatui + crossterm TUI, `codex-tui` crate, `md-events` 바이너리
+      3. `codex-rs/message-history/` — 세션 영속화 crate
+      4. `codex-rs/core/` — agent 로직, `codex-core`
+      5. **AGENTS.md 의 "Model visible context" 6개 규칙** — 10K 토큰/item 캡, no history rewrite, 1K 토큰 경고 등
+      6. **AGENTS.md 의 800줄 변경 가이드** — "Change size guidance (800 lines)"
+      7. **AGENTS.md 의 sandbox 변수 규칙** — CODEX_SANDBOX_NETWORK_DISABLED, CODEX_SANDBOX=seatbelt
+      8. `codex-rs/hooks/`, `codex-rs/core-plugins/`, `codex-rs/core-skills/`, `codex-rs/ext/extension-api/` — 확장 시스템
+      9. `codex-rs/ansi-escape/`, `codex-rs/shell-escalation/`, `codex-rs/bwrap/` — 크로스플랫폼 / 샌드박스
+
+      ## 절대 금지
+      - Git push / commit
+      - CI / 리뷰 폴링
+      - 다른 레퍼런스 분석
+      - 시크릿/토큰 값 노출
+
+      ## 보고
+      메인(mvs_51ad429f7aaf4fe1bbe25965e8788083)에게:
+      1. 작성한 파일 절대경로
+      2. 분량
+      3. 가장 중요한 인사이트 3개
+      4. 미해결 질문
+    assigned_to: coder
+    verified_by: verifier
+    verify_prompt: |
+      `/Users/yklee/repos/harness-refs/codex` 의 코드를 직접 다시 읽고 다음을 재검증.
+
+      1. **ratatui + crossterm**: `codex-rs/tui/Cargo.toml` 의 `[dependencies]` 에 `ratatui`, `crossterm`, `ratatui-macros` 가 있는지. 분석서가 인용한 Cargo.toml 발췌가 실제 파일과 일치하는지.
+      2. **10K 토큰 캡**: 루트 `AGENTS.md` 의 "Model visible context" 섹션 — "No items larger than 10K tokens" 규칙이 실제로 있는지. 분석서가 이 규칙을 §6 또는 §13 에 정확히 반영했는지.
+      3. **codex-core 비대화 방지**: 루트 `AGENTS.md` 의 "The codex-core crate" 섹션 — "resist adding code to codex-core" 권고가 실제 문서에 있는지. 분석서가 §3 또는 §13 에 반영했는지.
+      4. **800줄 변경 가이드**: 루트 `AGENTS.md` 의 "Change size guidance (800 lines)" — 분석서가 §13 Notable Patterns 에 이 규칙을 우리한테 적용했는지.
+      5. **md-events 바이너리**: `codex-rs/tui/Cargo.toml` 의 `[[bin]] name = "md-events"` — 분석서가 §3 또는 §6 에서 언급했는지.
+
+      추가로 14섹션 / §13 / 코드 발췌 일치 / 1,500줄+.
+
+      결과: PASS / FAIL + 5개 짝 비교.
+    timeout_ms: 1800000
+
+  - id: analyze-goose
+    title: 'goose (block/goose) 심층분석 — 14섹션 + Notable Patterns'
+    prompt: |
+      ## 작업
+      `/Users/yklee/repos/harness-refs/goose` 의 **실제 코드** 를 심층 분석해
+      `/Users/yklee/repos/my_harness/docs/references/goose.md` 에 14섹션 표준 마크다운 1개 작성.
+
+      ## 표준 템플릿
+      `/Users/yklee/repos/my_harness/docs/references/ANALYSIS_PLAN.md` §2.1 의 14섹션 + §2.2 의 goose 특화 항목
+      (TUI 부재의 트레이드오프, Electron desktop + server (goosed) + CLI 멀티 인터페이스) 전부 채움.
+
+      ## 출력 형식
+      - 파일: `/Users/yklee/repos/my_harness/docs/references/goose.md`
+      - 표준 6필드 헤더
+      - 14 섹션
+      - 분량 1,500~3,000줄
+
+      ## 품질 기준
+      - **Self-contained**
+      - **§13 Notable Patterns** 가장 중요
+      - **1차 분석 보완**
+      - **숫자 명시**
+      - **사실/평가 분리**
+
+      ## 특별 관심사 (goose)
+      1. **TUI 부재** 의 트레이드오프 — cliclack + clap + console 조합으로 무엇을 하고, 무엇을 안 하는지. `crates/goose-cli/` 의 `src/main.rs`, `src/cli.rs`, `src/commands/`
+      2. **멀티 인터페이스** — `crates/goose-cli/` (CLI), `crates/goose-server/` (`goosed` 바이너리), `ui/desktop/` (Electron). 각 인터페이스의 책임 분담
+      3. **시크릿 관리** — `keyring` 3.6.3 (vendored) 의 사용 패턴. 토큰 어디 저장? 어떻게 회수?
+      4. **MCP 1급** — `crates/goose-mcp/`, `rmcp` 1.4 SDK 사용
+      5. **테스트 전략** — `crates/goose/tests/`, `goose-self-test.yaml`, `evals/open-model-gym/`
+      6. **AGENTS.md** — DCO sign-off, build/test 명령, UI 명령
+      7. **`goose-acp-macros`** — proc macros (Agent Client Protocol)
+      8. **AAIF 이전** — repo 의 `GOVERNANCE.md` / `MAINTAINERS.md` / `Cargo.toml` 의 `authors` 필드에서 추적 단서 찾기
+
+      ## 절대 금지
+      - Git push / commit
+      - CI / 리뷰 폴링
+      - 다른 레퍼런스 분석
+      - 시크릿/토큰 값 노출
+
+      ## 보고
+      메인(mvs_51ad429f7aaf4fe1bbe25965e8788083)에게:
+      1. 작성한 파일 절대경로
+      2. 분량
+      3. 가장 중요한 인사이트 3개
+      4. 미해결 질문
+    assigned_to: coder
+    verified_by: verifier
+    verify_prompt: |
+      `/Users/yklee/repos/harness-refs/goose` 의 코드를 직접 다시 읽고 다음을 재검증.
+
+      1. **TUI 부재**: `crates/goose-cli/Cargo.toml` 에 `ratatui` / `tui` 가 정말 없는지 (없어야 함). `cliclack`, `clap`, `console` 가 있는지. 분석서 §4 의 결론 "TUI 부재, 프롬프트 기반" 이 맞는지.
+      2. **keyring 사용**: `Cargo.toml` 의 `[workspace.dependencies]` 에 `keyring = { version = "3.6.3", default-features = false, features = ["vendored"] }` 가 있는지. 분석서가 인용한 발췌와 실제 파일 비교.
+      3. **rmcp 사용**: 같은 파일에 `rmcp = { version = "1.4", ... }` 가 있는지. 분석서가 §9 또는 §13 에서 "MCP 1급" 결론을 잘 뒷받침하는지.
+      4. **멀티 인터페이스**: `crates/` 디렉토리에 `goose-cli`, `goose-server`, 그리고 `ui/desktop/` 가 모두 존재하는지. 분석서 §3 가 이 구조를 정확히 반영했는지.
+      5. **AGENTS.md DCO**: 루트 `AGENTS.md` 의 "Git" 섹션 — `git commit -s` (DCO sign-off) 가 명시되어 있는지. 분석서 §11 또는 §13 에 반영했는지.
+
+      추가로 14섹션 / §13 / 코드 발췌 일치 / 1,500줄+.
+
+      결과: PASS / FAIL + 5개 짝 비교.
+    timeout_ms: 1800000
+
+  - id: analyze-gemini-cli
+    title: 'gemini-cli (google-gemini/gemini-cli) 심층분석 — 14섹션 + Notable Patterns'
+    prompt: |
+      ## 작업
+      `/Users/yklee/repos/harness-refs/gemini-cli` 의 **실제 코드** 를 심층 분석해
+      `/Users/yklee/repos/my_harness/docs/references/gemini-cli.md` 에 14섹션 표준 마크다운 1개 작성.
+
+      ## 표준 템플릿
+      `/Users/yklee/repos/my_harness/docs/references/ANALYSIS_PLAN.md` §2.1 의 14섹션 + §2.2 의 gemini-cli 특화 항목
+      (hook 시스템, MCP OAuth, A2A-server) 전부 채움.
+
+      ## 출력 형식
+      - 파일: `/Users/yklee/repos/my_harness/docs/references/gemini-cli.md`
+      - 표준 6필드 헤더
+      - 14 섹션
+      - 분량 1,500~3,000줄
+
+      ## 품질 기준
+      - **Self-contained**
+      - **§13 Notable Patterns** 가장 중요
+      - **1차 분석 보완**
+      - **숫자 명시**
+      - **사실/평가 분리**
+
+      ## 특별 관심사 (gemini-cli)
+      1. **ink 사용**: `package.json` 에 `ink` 가 어떻게 dependency 로 들어있는지 — `"ink": "npm:@jrichman/ink@6.6.9"` (forked). 원본 ink 와 차이점은?
+      2. **Hook 시스템** — `packages/core/src/hooks/` 의 7개 모듈 (Registry/Planner/Handler/Runner/Aggregator/Translator). 이벤트 → 등록 → 평가 → 실행 흐름의 실제 시퀀스 다이어그램
+      3. **MCP OAuth** — `packages/core/src/mcp/` 의 `oauth-provider.ts`, `oauth-token-storage.ts`, `oauth-utils.ts` 등. 토큰 어디 저장? keychain?
+      4. **A2A-server** — `packages/a2a-server/` 의 Agent-to-Agent 프로토콜 구현
+      5. **Settings schema** — `schemas/settings.schema.json` 의 JSON Schema 검증. 어떤 설정 키들이 정의되어 있는지.
+      6. **Sandbox 추상화** — `package.json` scripts 의 `test:integration:sandbox:none/docker/podman` — 3개 backend
+      7. **단일 바이너리 빌드** — `package.json` scripts 의 `build:binary` / `sea-launch`
+      8. **GEMINI.md** — 프로젝트 컨텍스트, conventional commits, license header
+      9. **모노레포 구조** — `packages/cli`, `packages/core`, `packages/a2a-server`, `packages/sdk`, `packages/devtools`, `packages/test-utils`, `packages/vscode-ide-companion`
+
+      ## 절대 금지
+      - Git push / commit
+      - CI / 리뷰 폴링
+      - 다른 레퍼런스 분석
+      - 시크릿/토큰 값 노출
+
+      ## 보고
+      메인(mvs_51ad429f7aaf4fe1bbe25965e8788083)에게:
+      1. 작성한 파일 절대경로
+      2. 분량
+      3. 가장 중요한 인사이트 3개
+      4. 미해결 질문
+    assigned_to: coder
+    verified_by: verifier
+    verify_prompt: |
+      `/Users/yklee/repos/harness-refs/gemini-cli` 의 코드를 직접 다시 읽고 다음을 재검증.
+
+      1. **ink 의존성**: 루트 `package.json` 의 `dependencies` 또는 `devDependencies` 에 `ink` 가 있는지, 어떤 버전인지. 분석서가 인용한 `npm:@jrichman/ink@6.6.9` 같은 발췌가 실제 파일과 일치하는지.
+      2. **Hook 모듈 7개**: `packages/core/src/hooks/` 디렉토리 ls — Registry/Planner/Handler/Runner/Aggregator/Translator 가 실제로 존재하는지. 분석서가 §9 에서 빠짐없이 다뤘는지.
+      3. **MCP OAuth**: `packages/core/src/mcp/` 에 `oauth-provider.ts` / `oauth-token-storage.ts` / `oauth-utils.ts` 가 있는지. 분석서가 인용한 코드 발췌가 실제 파일과 일치하는지.
+      4. **A2A-server 패키지**: `packages/a2a-server/` 디렉토리 존재, `package.json` 의 name 이 `@google/gemini-cli-a2a-server` 인지. 분석서가 §2 또는 §3 에서 이 패키지를 정확히 설명했는지.
+      5. **Sandbox 3개 backend**: `package.json` 의 scripts 에 `test:integration:sandbox:none` / `:docker` / `:podman` 가 있는지. 분석서 §10 또는 §12 가 이 3-backend 패턴을 잘 설명했는지.
+      6. **Settings JSON Schema**: `schemas/settings.schema.json` 이 실제로 존재하고 JSON Schema 형식인지. 분석서가 §9 에서 schema 기반 설정 검증을 설명했는지.
+
+      추가로 14섹션 / §13 / 코드 발췌 일치 / 1,500줄+.
+
+      결과: PASS / FAIL + 5~6개 짝 비교.
+    timeout_ms: 1800000

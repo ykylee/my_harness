@@ -1,0 +1,111 @@
+version: 1
+plan:
+  name: 'headroom (chopratejas/headroom) 심층분석 — 14섹션 + Notable Patterns'
+  max_concurrency: 1
+  max_consecutive_failures: 1
+  max_cycles: 2
+  verifier_config:
+    default_verifiers: [verifier]
+    audit_sample_rate: 0.0
+tasks:
+  - id: analyze-headroom
+    title: 'headroom (chopratejas/headroom) 심층분석 — 14섹션 + Notable Patterns'
+    prompt: |
+      ## 작업
+      `/Users/yklee/repos/harness-refs/headroom` 의 **실제 코드** 를 심층 분석해
+      `/Users/yklee/repos/my_harness/docs/references/headroom.md` 에 14섹션 표준 마크다운 1개 작성.
+      표준 템플릿: `/Users/yklee/repos/my_harness/docs/references/ANALYSIS_PLAN.md` §2.1 (14섹션) + §2.2 (headroom 특화: 6 algorithms + reversible compression + MCP + proxy 모드).
+
+      ## ⚠️ 이전 worker 들의 실패 패턴 — 반드시 피할 것
+
+      1. **1500줄+ 단일 Write tool call 시 worker 세션이 errored 됨**. 절대로 1번에 큰 파일 쓰지 말 것. **반드시 4~6번의 Write/Edit call 로 분할**:
+         - 1차 Write: 헤더 + §1-§4 (200-400줄)
+         - 2차 Write/Edit: §5-§7 append (200-400줄)
+         - 3차 Write/Edit: §8-§10 append
+         - 4차 Write/Edit: §11-§12 append
+         - 5차 Write/Edit: §13 Notable Patterns append (가장 중요)
+         - 6차 Write/Edit: §14 Open Questions append
+      2. **§1-§4 작성 직후 곧바로** `/Users/yklee/.mavis/plans/<plan_id>/outputs/analyze-headroom/deliverable.md` 에 status=in_progress + 1줄 summary 작성. 엔진이 alive 확인 가능.
+      3. **board.md 갱신 최소화** — start 1번 + end 1번만. 매 tool call 마다 갱신 ❌ (컨텍스트 낭비).
+      4. 기존 파일 (`/Users/yklee/repos/my_harness/docs/references/headroom.md`) 없음 — 처음부터. 만약 ls 했을 때 있다면 append 모드로 진행.
+
+      ## 출력 형식
+      - 파일: `/Users/yklee/repos/my_harness/docs/references/headroom.md`
+      - 표준 6필드 헤더
+      - 14 섹션 전부 채움
+      - 분량 1,500~3,000줄
+      - 코드 인용 (` `path/to/file:line` `), ASCII 다이어그램, 표 활용
+      - self-contained (소스 다시 보지 않아도 이해됨)
+
+      ## 품질 기준 (매우 중요)
+      - **§13 Notable Patterns 가 가장 중요**: ✅ (우리 가 차야 할 것) / 💡 (놀라운 것) / ❌ (피할 것) 각각 코드 인용 + 우리 적용 방안
+      - **숫자 명시**: LOC, file 수, dep 수, commit 수 등
+      - **사실/평가 분리**
+
+      ## 특별 관심사 (headroom)
+      1. **6 algorithms 의 실제 구현**:
+         - CacheAligner (`headroom/transforms/cache_aligner.py`) — prefix 안정화로 provider KV cache hit
+         - ContentRouter (`headroom/transforms/content_router.py`) — content type 감지 → 적절한 compressor 선택
+         - CCR (Context Cache Reduction, `headroom/ccr/`) — reversible compression + 로컬 storage + `headroom_retrieve` tool
+         - SmartCrusher (`headroom/transforms/smart_crusher.py`) — JSON 압축
+         - CodeCompressor (`headroom/transforms/code_compressor.py`) — AST 기반 코드 압축
+         - Kompress-base (`headroom/transforms/kompress_compressor.py`) — 자체 ML 모델 (HF chopratejas/kompress-base)
+      2. **20+ transforms** (`headroom/transforms/`): adaptive_sizer, anchor_selector, code_compressor, cache_aligner, diff_compressor, error_detection, html_extractor, log_compressor, read_lifecycle, search_compressor, smart_crusher, tag_protector 등 각각의 역할
+      3. **3가지 통합 모드**:
+         - Library: `from headroom import compress` (Python) / `import { compress } from 'headroom-ai'` (TS)
+         - Proxy: `headroom proxy --port 8787` (zero code change, any language)
+         - MCP: headroom 자체 MCP server
+      4. **Pipeline architecture** (`headroom/pipeline.py` + `headroom/transforms/pipeline.py`): detect → route → compress → emit 흐름
+      5. **ML 모델 자체 호스팅** (`kompress_compressor.py` + `models/`): HuggingFace chopratejas/kompress-base 사용, ONNX runtime (`headroom/onnx_runtime.py`)
+      6. **API key / model config**: `headroom/models/`, `headroom/providers/`, 환경변수 패턴
+      7. **Tests 구조** (`tests/`): pytest, mock 전략 (LLM mocking), proxy backend tests, cache tests, parser tests 등
+      8. **Kompress-base 의 학습 데이터 / 성능** (`Kompress-base` HuggingFace model card)
+      9. **headroom 의 수익화 모델** (ENTERPRISE.md, PR.md): Apache 2.0 + 상용 서비스 분리?
+
+      ## 절대 금지
+      - Git push / commit
+      - CI / 리뷰 폴링
+      - 다른 레퍼런스 분석
+      - 시크릿/토큰 값 노출
+
+      ## 보고
+      `mavis communication send` 로 메인(mvs_51ad429f7aaf4fe1bbe25965e8788083)에게:
+      1. 작성한 파일 절대경로
+      2. 분량
+      3. 가장 중요한 인사이트 3개
+      4. 미해결 질문
+
+      ## Delivery Protocol
+      deliverables: deliverable.md (status=done), headroom.md (14 sections)
+      최종 1줄로 모든 작업 끝.
+
+      ## Delivery Protocol (구체)
+      `/Users/yklee/.mavis/plans/<plan_id>/outputs/analyze-headroom/deliverable.md` 에:
+      1. **Summary** — 2-3 문장
+      2. **Changed files** — 작성/수정한 모든 파일
+      3. **Notes** — verifier 가 알아야 할 것 (예: §1-§4 만 chunked write 로 작성, §5-§14 는 Edit 으로 append)
+
+      ## Plan Workspace
+      workspace: /Users/yklee/.mavis/plans/<plan_id>/workspace
+      outputs: /Users/yklee/.mavis/plans/<plan_id>/outputs/analyze-headroom/
+      board: /Users/yklee/.mavis/plans/<plan_id>/board.md
+    assigned_to: coder
+    verified_by: verifier
+    verify_prompt: |
+      `/Users/yklee/repos/harness-refs/headroom` 의 코드를 직접 다시 읽고 다음을 재검증 (코드 인용 vs 분석서 인용 짝 비교):
+
+      1. **6 algorithms 실제 존재 여부**: `headroom/transforms/` 에 다음 6개 모듈이 실제로 존재하는지 — `cache_aligner.py`, `content_router.py`, `smart_crusher.py`, `code_compressor.py`, `kompress_compressor.py`, `headroom/ccr/` (CCR 디렉토리)
+      2. **Pipeline 흐름**: `headroom/transforms/pipeline.py` 또는 `headroom/pipeline.py` 의 `PipelineStage` enum 또는 동등 구조. 분석서가 인용한 코드 발췌가 실제 파일과 일치하는지
+      3. **`compress(messages)` API**: `headroom/compress.py` 의 `compress()` 함수 시그니처 + `CompressConfig` dataclass 필드. 분석서 인용 검증
+      4. **3 통합 모드 (library/proxy/MCP)**: `headroom/cli/`, `headroom/proxy/`, `headroom/mcp_registry/` 또는 동등 모듈 존재. 분석서가 정확히 설명했는지
+      5. **ML 모델 ONNX runtime**: `headroom/onnx_runtime.py` 또는 `headroom/models/` 에서 HuggingFace `chopratejas/kompress-base` 다운로드 + ONNX 추론. 분석서가 인용한 모델 이름/출처 검증
+      6. **20+ transforms 디렉토리**: `headroom/transforms/` 의 .py 파일 목록이 분석서가 인용한 모듈명과 일치 (adaptive_sizer, anchor_selector, error_detection, log_compressor, html_extractor, diff_compressor, search_compressor, smart_crusher, tag_protector, read_lifecycle 등)
+
+      추가로:
+      - 14섹션 (§1-§14) 빠짐없이 채워졌는지
+      - §13 Notable Patterns 가 코드 인용 + 우리 적용 방안 포함
+      - 코드 발췌가 실제 파일과 1:1 일치
+      - 분량 1,500줄+
+
+      결과: PASS / FAIL + 6개 짝 비교.
+    timeout_ms: 3600000
