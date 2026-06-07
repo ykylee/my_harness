@@ -2,23 +2,26 @@
 
 - 문서 목적: yklee 개인 코딩 에이전트 하네스의 특화 규칙과 실행/검증 기준을 정의한다.
 - 범위: 하네스 개요, 문서 구조, 기본 명령, 검증 포인트, 예외 규칙
-- 대상 독자: yklee, Mavis orchestrator, .MiniMax 워커 에이전트
+- 대상 독자: yklee (single user / 프로젝트 오너), my_harness 개발 시 사용하는 Mavis / Mavis 워커 (이 저장소 개발 workflow 한정)
 - 상태: active
-- 최종 수정일: 2026-06-07
-- 관련 문서: [공통 표준](../ai-workflow/core/global_workflow_standard.md), [MiniMax 진입점](../MiniMax.md), **[CONCEPT.md](./CONCEPT.md) ← v1 컨셉 SSOT**, [development_log.md](./development_log.md), [REFERENCES.md](./REFERENCES.md)
+- 최종 수정일: 2026-06-07 (D-25 Mavis zero coupling 교정)
+- 관련 문서: [공통 표준](../ai-workflow/core/global_workflow_standard.md) (Mavis 워크플로우 표준 — 이 저장소 개발 workflow 한정), [MiniMax 진입점](../MiniMax.md) (Mavis 진입점 — 이 저장소 개발 workflow 한정), **[CONCEPT.md](./CONCEPT.md) ← my_harness v1 컨셉 SSOT (Mavis zero coupling)**, [development_log.md](./development_log.md), [REFERENCES.md](./REFERENCES.md)
 
 ## 1. 프로젝트 개요
 - 프로젝트명: My Harness
 - 프로젝트 슬러그: my-harness
-- 프로젝트 목적: **yklee의 개인 코딩 에이전트 하네스**. yklee가 수행하는 모든 에이전트 작업이 이 저장소의 운영 규칙과 워크플로우를 따르도록 단일 진입점으로 사용한다. 기반은 `standard_ai_workflow` (ykylee/standard_ai_workflow) 의 `minimax-code` 하네스 오버레이.
-- **적용 도메인** (이 하네스가 커버하는 작업 범위):
+- 프로젝트 산출물: **my_harness** — yklee 의 **standalone CLI/TUI coding agent**. terminal 에서 `myharness <command>` 로 직접 실행, LLM provider 와 **직접 통신**, 3-도메인 (코드/서버/환경) 작업. 자세한 컨셉은 **[CONCEPT.md](./CONCEPT.md) (SSOT)** 참조.
+- **산출물의 적용 도메인** (my_harness 가 작업하는 범위):
   - **코드 개발 전반** — 새 기능 구현, 리팩토링, 버그 수정, 리뷰, 테스트, PR 작업
   - **기본 서버 관리** — 프로세스/서비스 상태 점검, 로그 확인, 설정 변경, 배포 헬퍼
   - **환경 셋업** — 로컬/원격 개발 환경 부트스트랩, 의존성 설치, 셸/도구 설정
-- 워크플로우 표준 준수: `ai-workflow/core/global_workflow_standard.md` 의 한국어 보고 / 컨텍스트 절약 / 이벤트 소싱 / 비참조 원칙 / 상태값(`planned|in_progress|blocked|done`)을 모든 작업에 일관 적용.
-- 에이전트 토폴로지: Mavis 메인 orchestrator + doc/code/validation 워커 분화 (multi-agent). 외부 4-워커(Claude/Codex/Gemini/OpenCode) 워크플로우와 직교 — 외부 워커는 코드 리뷰/구현 보조, 본 하네스는 운영 정책/세션 추적/상태 동기화 담당.
-- 주요 이해관계자: yklee (오너/유지보수), Mavis orchestrator, .MiniMax 워커(doc/code/validation)
-- 적용 환경: macOS (M-series), Python 3.11+, Mavis 데몬, gh CLI (Devhub_example 등 GitHub 작업용), 필요 시 원격 서버 SSH
+- **이 저장소(my_harness 개발 repo) 의 workflow 표준** (D-25: my_harness 산출물 자체와 무관, **개발 시**만 사용):
+  - `ai-workflow/core/global_workflow_standard.md` 의 한국어 보고 / 컨텍스트 절약 / 이벤트 소싱 / 비참조 원칙 / 상태값(`planned|in_progress|blocked|done`)
+  - Mavis 가 메인 orchestrator, .MiniMax/agents/ 워커에 bounded scope 작업 위임
+  - 이 workflow 는 **yklee 가 my_harness 를 개발할 때** 사용. my_harness 가 동작할 때는 무관 (CONCEPT.md §5.8 참조)
+- 주요 이해관계자: yklee (오너/유지보수), Mavis / Mavis 워커 (개발 workflow 한정, 산출물 무관)
+- 적용 환경 (개발 시): macOS (M-series), Python 3.11+, Mavis 데몬, gh CLI, 필요 시 원격 서버 SSH
+- 적용 환경 (산출물 my_harness): **사용자 terminal** (macOS / Linux / Windows), LLM provider API (Anthropic/OpenAI/Google/Ollama), (선택) headroom MCP server
 
 ## 2. 문서 구조 (Path)
 - 문서 위키 홈: `README.md`
