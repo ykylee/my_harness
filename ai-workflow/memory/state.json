@@ -1,11 +1,12 @@
 {
   "schema_version": "1",
-  "generated_at": "2026-06-06",
+  "generated_at": "2026-06-07",
   "source_of_truth": {
     "project_profile_path": "docs/PROJECT_PROFILE.md",
     "session_handoff_path": "ai-workflow/memory/session_handoff.md",
     "work_backlog_index_path": "ai-workflow/memory/work_backlog.md",
-    "latest_backlog_path": "ai-workflow/memory/backlog/2026-06-05.md",
+    "latest_backlog_path": "ai-workflow/memory/backlog/2026-06-07.md",
+    "concept_ssot_path": "docs/CONCEPT.md",
     "repository_assessment_path": null
   },
   "project": {
@@ -13,40 +14,94 @@
     "document_home": "README.md",
     "operations_path": null,
     "backlog_path": "ai-workflow/memory/backlog/",
-    "handoff_path": null,
+    "handoff_path": "ai-workflow/memory/session_handoff.md",
     "environment_path": "ai-workflow/memory/environments/"
   },
   "commands": {
     "quick_tests": null,
     "isolated_tests": null,
-    "runtime_checks": null
+    "runtime_checks": null,
+    "v1_mvp_build": "TASK-005-1 (planned): cargo workspace init → ratatui shell → rig-core Anthropic → basic tools → /compact → standard_ai_workflow output"
   },
   "session": {
-    "current_baseline": "**방향 전환 (2026-06-05 22:00)** — yklee 가 `my_harness` 를 단순 워크플로우 컨슈머가 아니라 *직접 개발/배포할 CLI/TUI 코딩 에이전트 하네스* 의 소스 트리로 키우기로 결정.",
-    "current_axis": "**방향 전환 (2026-06-05 22:00)** — yklee 가 `my_harness` 를 단순 워크플로우 컨슈머가 아니라 *직접 개발/배포할 CLI/TUI 코딩 에이전트 하네스* 의 소스 트리로 키우기로 결정.",
-    "current_focus": "TASK-001 my-harness 부트스트랩 (standard_ai_workflow 적용)",
+    "current_baseline": "**v1 컨셉 Phase 종료 (2026-06-07, D-22~D-38)** — my_harness SSOT (CONCEPT.md) 확립. 5/5 결정 검토 완료 (4 ✅, 1 ⏸).",
+    "current_axis": "**TASK-005-1 대기** — Rust 1안 (D-36) 으로 v1 MVP 빌드 시작. cargo workspace init → ratatui shell → rig-core Anthropic → basic tools → /compact → standard_ai_workflow output.",
+    "current_focus": "TASK-005-1 (v1 MVP Rust 빌드) — 다음 세션 시작점",
     "in_progress_items": [],
-    "blocked_items": [],
-    "recent_done_items": [
-      "TASK-001 my-harness 부트스트랩 (standard_ai_workflow 적용)"
+    "blocked_items": [
+      "TASK-002: 도메인별 명령 가이드 (yklee 인프라 정보 의존)"
     ],
-    "environment_constraints": []
+    "recent_done_items": [
+      "CONCEPT.md SSOT 확립 (D-22)",
+      "관련 문서 4종 align (D-23, D-35)",
+      "컨셉 교정 1차/2차 (D-24, D-25)",
+      "standard_ai_workflow 준수 (D-26)",
+      "headroom = built-in 압축 layer (D-27)",
+      "Provider 6개 확정 (D-28)",
+      "Agent 3 모드 + Built-in sub-agents (D-29)",
+      "2-계층 Context 압축 (D-30)",
+      "`~/.myharness/` 디렉토리 구조 (D-31)",
+      "LLM Wiki memory (D-32)",
+      "Skill/MCP first-class (D-33)",
+      "TASK-NNN 형식 통일 + 2.1.169 pending 표 (D-34)",
+      "TASK-005 결정: Rust 1안 (D-36)",
+      "TASK-007 결정: headroom v1 1안 유지 (D-37)",
+      "TASK-008 결정: provider-auto-config skill (D-38)"
+    ],
+    "environment_constraints": [
+      "Mavis zero coupling (D-25): my_harness 자체는 Mavis/Mavis 와 무관",
+      "외부 4-워커 sibling (D-24): claude-code/codex/aider/goose/gemini-cli/opencode — 통합/오케스트레이션 아님",
+      "Rust 1안 (D-36): ratatui + rig-core + rmcp + keyring + cargo-dist",
+      "headroom v1 = 3 알고리즘 (D-37): CacheAligner + ContentRouter + SmartCrusher + CodeCompressor",
+      "Provider fallback 동적 발견 (D-38): provider-auto-config skill, 하드코딩 폐기"
+    ]
+  },
+  "decisions": {
+    "decided": [
+      {"id": "TASK-005", "decision": "Rust 1안", "ref": "D-36", "section": "§11.3"},
+      {"id": "TASK-006", "decision": "ratatui + crossterm", "ref": "D-36 (TASK-005 종속)", "section": "§11.3"},
+      {"id": "TASK-007", "decision": "headroom v1 = 3 알고리즘 (CacheAligner + ContentRouter + SmartCrusher + CodeCompressor), CCR + Kompress-base v1.5+", "ref": "D-37", "section": "§5.6"},
+      {"id": "TASK-008", "decision": "provider-auto-config skill (동적 발견 + per-provider auth, 하드코딩 폐기)", "ref": "D-38", "section": "§5.5"}
+    ],
+    "deferred": [
+      {"id": "TASK-002", "decision": "도메인별 명령 가이드", "reason": "yklee 인프라 정보 의존 (SSH 별칭 / Brewfile / dotfiles / asdf 버전)", "resume": "v1 Rust 구현 시점 또는 yklee 인프라 정보 수령 시"}
+    ]
   },
   "backlog": {
-    "latest_backlog_path": "ai-workflow/memory/backlog/2026-06-05.md",
-    "task_count": 5,
+    "latest_backlog_path": "ai-workflow/memory/backlog/2026-06-07.md",
+    "task_count": 8,
     "in_progress_items": [],
-    "blocked_items": [],
+    "blocked_items": [
+      "TASK-002: 도메인별 명령 가이드 (yklee 인프라 정보 의존)"
+    ],
     "done_items": [
-      "TASK-001 my-harness 부트스트랩 (standard_ai_workflow 적용)"
+      "TASK-001: my-harness 부트스트랩 (standard_ai_workflow 적용)",
+      "TASK-003: Gitea 미러 (5 repo)",
+      "TASK-004: CLI/TUI 툴 레퍼런스 분석 (1차 + 2차 + 7-doc cross-review)",
+      "TASK-005: 스택 결정 (Rust 1안)",
+      "TASK-006: TUI 라이브러리 (ratatui + crossterm)",
+      "TASK-007: headroom v1 우선순위 (3 알고리즘)",
+      "TASK-008: Provider fallback (provider-auto-config skill)"
     ]
   },
   "next_documents": [
+    "docs/CONCEPT.md",
+    "docs/development_log.md",
     "docs/PROJECT_PROFILE.md",
+    "docs/references/README.md",
+    "docs/skills/provider-auto-config/SKILL.md",
     "ai-workflow/memory/session_handoff.md",
     "ai-workflow/memory/work_backlog.md",
-    "ai-workflow/memory/backlog/2026-06-05.md",
-    "ai-workflow/memory/state.json"
+    "ai-workflow/memory/state.json",
+    "ai-workflow/memory/backlog/2026-06-07.md"
+  ],
+  "next_actions": [
+    "TASK-005-1 시작: v1 MVP Rust 빌드 (cargo workspace init → ratatui shell → rig-core Anthropic → basic tools → /compact → standard_ai_workflow output)",
+    "§5.6 Layer 1 구현 (필수 자동 압축): token budget 추적 + auto truncate/summarize + /compact",
+    "§5.12 디렉토리 자동 생성 (v1 first run 시)",
+    "Phase 1 of provider-auto-config: 6 provider 정적 + Anthropic + Ollama + hardcoded fallback",
+    "claude-code 2.1.169 changelog 공개 시 §11.2 검증 (Anthropic fallback / context var / MCP)",
+    "TASK-002 (도메인별 명령): yklee 인프라 정보 (SSH/Brewfile/dotfiles/asdf) 수령 시 진행"
   ],
   "repository_assessment": {
     "path": null,
