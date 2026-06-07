@@ -223,116 +223,139 @@ myharness env diagnose                 # 환경 진단
 - Linux Secret Service (libsecret)
 - 토큰 값은 메모리/문서/git 저장 금지
 
-### 5.5 LLM 통합 (claude-code 13.15 + aider 13.2, D-28)
+### 5.5 LLM 통합 (D-15 + D-28 + D-38)
 
-**지원 Provider (D-28, yklee 의 5개 + local)**:
+#### 5.5.1 지원 Provider (D-28, 정적 등록)
 
-| # | Provider | Native SDK | OpenAI 호환 | 권장 | 비고 |
-| - | --- | --- | --- | --- | --- |
-| 1 | **claude** (Anthropic) | ✅ `anthropic` SDK | (OpenRouter 경유 가능) | native | Sonnet 4.5 / Haiku 4 / Opus 4.5 |
-| 2 | **codex** (OpenAI) | ✅ `openai` SDK | — | native | GPT-5 / GPT-5-Codex / GPT-4.1 |
-| 3 | **gemini** (Google) | ✅ `google-genai` SDK | (OpenAI 호환 endpoint 제공) | native | Gemini 2.5 Pro / Flash |
-| 4 | **deepseek** | — | ✅ (`https://api.deepseek.com/v1`) | OpenAI 호환 | deepseek-chat / deepseek-reasoner |
-| 5 | **minimax** | — | ✅ (base_url TBD 검증 필요) | OpenAI 호환 | 모델명/API 형식 검증 필요 (D-28) |
-| 6 | **local LLM** | — | ✅ (`http://localhost:11434/v1` 등) | OpenAI 호환 | Ollama / vLLM / LM Studio / llama.cpp server |
+| # | Provider | Native SDK | OpenAI 호환 | 비고 |
+| - | --- | --- | --- | --- |
+| 1 | **claude** (Anthropic) | ✅ `anthropic` SDK | (OpenRouter 경유) | Sonnet 4.5 / Haiku 4 / Opus 4.5 |
+| 2 | **codex** (OpenAI) | ✅ `openai` SDK | — | GPT-5 / GPT-5-Codex / GPT-4.1 |
+| 3 | **gemini** (Google) | ✅ `google-genai` SDK | (OpenAI 호환 endpoint) | Gemini 2.5 Pro / Flash |
+| 4 | **deepseek** | — | ✅ (`https://api.deepseek.com/v1`) | deepseek-chat / deepseek-reasoner |
+| 5 | **minimax** | — | ✅ (base_url TBD 검증 필요, D-28) | 모델명/API 형식 검증 |
+| 6 | **local LLM** | — | ✅ (`http://localhost:11434/v1` 등) | Ollama / vLLM / LM Studio / llama.cpp |
 
-**추상화 전략 (OpenAI 호환 = lingua franca, premium = native)**:
-- **Premium providers** (claude/codex/gemini) → **native SDK** 사용 (각 vendor 의 최적 기능: prompt cache, thinking, function calling)
-- **OpenAI 호환 providers** (deepseek/minimax/local) → **공통 OpenAI 호환 client** 사용 (1개 구현으로 N개 provider 지원)
+**추상화 전략**:
+- **Premium** (claude/codex/gemini) → **native SDK** (각 vendor 최적 기능: prompt cache, thinking, function calling)
+- **OpenAI 호환** (deepseek/minimax/local) → **공통 OpenAI 호환 client** (1개 구현으로 N개)
 - **Provider registry** (config.yaml) → 사용자 정의 provider 추가 가능 (v1.5+ plugin)
 
-**Provider config 예시 (D-28)**:
+#### 5.5.2 동적 발견 + Per-Provider Auth (D-38, NEW)
+
+**하드코딩 fallback list 폐기**. yklee 환경 / 조직 / 시점에 따라 provider 가용성이 다르므로 **런타임 discovered list** 로 fallback 구성.
+
+**`provider-auto-config` skill** (D-38, v1.5+ 권장, v1 부터 simple 버전):
+- **위치**: `~/.myharness/skills/provider-auto-config/SKILL.md`
+- **Auto-invoke trigger**: startup / `myharness auth` 명령 / fallback 실패 시
+- **동작**:
+  1. **Discover** — env vars (`ANTHROPIC_API_KEY` 등) + OS keychain + local LLM server (Ollama :11434 등) + MCP configured providers
+  2. **Auth status** — 각 provider 의 auth state 확인
+  3. **Build runtime list** — available providers 의 우선순위 자동 구성
+  4. **Persist** — runtime list 를 `~/.myharness/state/active-providers.yaml` 에 저장
+  5. **Fallback chain** — discovered list + 도메인별 override 적용
+
+**CLI 인터페이스 (per-provider auth)**:
+```bash
+myharness auth list                                    # 모든 provider status
+myharness auth <provider>                              # 한 provider status
+myharness auth <provider> login                        # OAuth/API key 초기화
+myharness auth <provider> logout                       # auth 제거
+myharness auth <provider> set-key <key>                # API key 수동 설정
+myharness auth <provider> set-key --from-keychain      # keychain 에서 가져오기
+myharness auth <provider> test                         # 연결 테스트 (ping model)
+
+myharness auth setup                                    # 모든 provider 일괄 discover + login wizard
+myharness auth default <provider>                       # primary 변경
+```
+
+**Auth state 저장** (`~/.myharness/state/auth/`):
+```
+~/.myharness/state/auth/
+├── anthropic.yaml          # status, last_login, default_model, supports
+├── openai.yaml
+├── gemini.yaml
+├── deepseek.yaml
+├── ollama.yaml             # local server status (Ollama 실행 중 여부 + models)
+└── active-providers.yaml   # 현재 discovered list (fallback chain source)
+```
+
+**Provider status 예시** (anthropic.yaml):
 ```yaml
-# ~/.myharness/config.yaml
+provider: anthropic
+type: native
+sdk: anthropic
+status: authenticated        # authenticated | logged_out | error | not_configured
+last_login: 2026-06-07T13:00:00+09:00
+default_model: claude-sonnet-4-5
+available_models: [claude-sonnet-4-5, claude-haiku-4, claude-opus-4-5]
+supports: [prompt_cache, thinking, vision, tool_use]
+secret_store: keychain
+api_key_env: ANTHROPIC_API_KEY
+test:
+  last_test: 2026-06-07T13:05:00+09:00
+  result: ok
+  latency_ms: 320
+```
+
+**Ollama local 예시** (ollama.yaml):
+```yaml
+provider: ollama
+type: openai-compatible
+base_url: http://localhost:11434/v1
+status: available            # server 실행 중 + models 발견
+server: ollama
+server_version: 0.5.7
+discovered_models: [qwen2.5-coder:32b, llama3:70b, codellama:34b]
+default_model: qwen2.5-coder:32b
+test:
+  last_test: 2026-06-07T13:05:00+09:00
+  result: ok
+  latency_ms: 80
+```
+
+#### 5.5.3 Fallback Chain 동적 구성 (D-38)
+
+**하드코딩 `fallback: [A, B]` → 동적 discovered list**:
+```yaml
+# ~/.myharness/config.yaml (D-38 갱신)
 llm:
-  primary: anthropic/claude-sonnet-4-5       # 도메인 무관 기본
-  fallback:                                   # 3 fallback (D-15, claude-code 2.1.166 패턴)
-    - openai/gpt-5-codex                      # codex (OpenAI)
-    - ollama/qwen2.5-coder:32b                # local (always-on)
-  domain_mapping:                             # 도메인별 model (D-15)
-    code: anthropic/claude-sonnet-4-5
-    server: anthropic/claude-haiku-4
-    env: ollama/qwen2.5-coder:32b
-  thinking:                                   # claude-code per-model thinking
+  primary: <primary-model>             # primary 는 config (도메인 무관 기본)
+  fallback_strategy: discovered         # discovered (default) | hardcoded (legacy)
+  fallback_order:                      # discovered 의 우선순위 (config)
+    - anthropic
+    - openai
+    - gemini
+    - deepseek
+    - ollama                           # always-on (실행 중일 때)
+  domain_mapping:
+    code: <primary>
+    server: <discovered-cheapest>
+    env: <discovered-local-or-cheapest>
+  thinking:
     code: enabled
     server: disabled
     env: disabled
-
-  providers:
-    # 1. claude (Anthropic) — native
-    - name: anthropic
-      type: native
-      sdk: anthropic                          # anthropic SDK
-      api_key_env: ANTHROPIC_API_KEY
-      secret_store: keychain                  # macOS Keychain / wincred / libsecret
-      supports: [prompt_cache, thinking, vision, tool_use]
-      models: [claude-sonnet-4-5, claude-haiku-4, claude-opus-4-5]
-
-    # 2. codex (OpenAI) — native
-    - name: openai
-      type: native
-      sdk: openai
-      api_key_env: OPENAI_API_KEY
-      secret_store: keychain
-      supports: [prompt_cache, tool_use, vision]
-      models: [gpt-5, gpt-5-codex, gpt-4.1, gpt-4o]
-
-    # 3. gemini (Google) — native
-    - name: gemini
-      type: native
-      sdk: google-genai
-      api_key_env: GOOGLE_API_KEY
-      secret_store: keychain
-      supports: [prompt_cache, thinking, vision, tool_use]
-      models: [gemini-2.5-pro, gemini-2.5-flash]
-
-    # 4. deepseek — OpenAI 호환
-    - name: deepseek
-      type: openai-compatible
-      base_url: https://api.deepseek.com/v1
-      api_key_env: DEEPSEEK_API_KEY
-      secret_store: keychain
-      supports: [reasoning, tool_use]
-      models: [deepseek-chat, deepseek-reasoner]
-
-    # 5. minimax — OpenAI 호환 (D-28, base_url 검증 필요)
-    - name: minimax
-      type: openai-compatible
-      base_url: <TBD: 사용자 확인 필요>      # base_url + API 형식 검증
-      api_key_env: <TBD: MINIMAX_API_KEY?>
-      secret_store: keychain
-      supports: [TBD]
-      models: [TBD]
-
-    # 6. local LLM — OpenAI 호환 (Ollama default)
-    - name: local-llm
-      type: openai-compatible
-      base_url: http://localhost:11434/v1     # Ollama default
-      api_key_env: null                       # 보통 key 불필요
-      supports: [varies by model]
-      models: auto_discover                   # GET /v1/models 로 자동
-      # 다른 local server 예시:
-      #   vLLM:    http://localhost:8000/v1
-      #   LM Studio: http://localhost:1234/v1
-      #   llama.cpp: http://localhost:8080/v1
 ```
 
-**Retry / Fallback 정책 (D-15, claude-code 2.1.166)**:
-- primary 호출 실패 시 → fallback 1 → fallback 2 순서 시도
+**동작 (provider-auto-config skill)**:
+1. **Discover phase** — auth state + local server scan → `active-providers.yaml` 생성
+2. **Per LLM call** — runtime 에서 active-providers.yaml 읽고 fallback chain 구성
+3. **Failure 시** — 해당 provider status → `error` (재시도 안 함), 다음 fallback 시도
+4. **Recovery** — `myharness auth <provider> test` 또는 startup 시 status 자동 refresh
+
+**Retry 정책 (D-15, claude-code 2.1.166)**:
+- primary 호출 실패 시 → discovered list 순서로 fallback
 - **즉시 surface** 되는 error: auth, rate_limit, request_size, transport
 - **retry-able** error: overloaded, timeout, transient → 1회 fallback retry
-- fallback 발동률 모니터링 (KPI §9, v2 목표 <1%)
 
-**Secret 관리 (D-06)**:
-- 모든 API key = **macOS Keychain / Windows Credential Manager / Linux Secret Service** (provider config 의 `secret_store: keychain`)
-- 환경변수 fallback (CI/CD 한정, token rotation 시)
-- 토큰 값은 메모리/문서/git 저장 금지 (D-06 정책)
+#### 5.5.4 라이브러리 (Rust 1안, D-36)
 
-**Provider 비종속 library 권장 (PROVIDERS.md 상세)**:
-- 1안 (Rust) = `rig-core` (Anthropic/OpenAI/Google/Ollama native SDK 추상화) + 자체 OpenAI 호환 client
-- 2안 (TS) = `Vercel AI SDK` (15+ provider) + 자체 OpenAI 호환 client
-- 두 안 모두 DeepSeek / local LLM 은 OpenAI 호환 client 로 처리 (built-in)
-- **minimax** 은 D-28 TBD: base_url + API 검증 후 v1 또는 v1.5 통합
+- `rig-core` 12+ provider (Anthropic/OpenAI/Google/Ollama native)
+- 자체 OpenAI 호환 client (deepseek/minimax)
+- `keyring` crate (OS keychain)
+- `rmcp` 1.4 (MCP)
+- **신규**: `auth/` module (per-provider auth + keychain 통합) + `provider/discovery.rs` (런타임 발견)
 
 **모델 prefix 규약** (D-28):
 ```
@@ -763,6 +786,7 @@ auto_invoke:
 | `log-pattern-analysis` | 서버 | log analysis |
 | `env-bootstrap` | 환경 | setup, install |
 | `dotfiles-sync` | 환경 | dotfiles, shell config |
+| **`provider-auto-config`** (D-38) | infra | startup / `auth` / fallback 실패 — 동적 LLM provider 발견 + per-provider auth |
 
 #### MCP (Model Context Protocol)
 
@@ -897,7 +921,7 @@ auto_invoke:
 | **TASK-005** | 스택 (Rust 1안 vs TS 2안) | — | ✅ **D-36 결정: Rust 1안** (§11.3 참조) |
 | **TASK-006** | TUI 라이브러리 (ratatui vs React/Ink) | — | ✅ **D-36 결정: ratatui + crossterm** (TASK-005 종속) |
 | **TASK-007** | headroom built-in 알고리즘 구현 우선순위 | — | ✅ **D-37 결정: v1 = 3 알고리즘 (CacheAligner + ContentRouter + SmartCrusher + CodeCompressor), CCR + Kompress-base v1.5+ 로 연기** |
-| **TASK-008** | Provider fallback list (3 모델) | yklee 의 LLM 선호/비용 | yklee 결정 후 |
+| **TASK-008** | Provider fallback list (3 모델) | — | ✅ **D-38 결정: 하드코딩 폐기 → `provider-auto-config` skill (D-38) 로 런타임 discovered list + per-provider auth 동적 구성** |
 
 ### 11.3 결정 완료 (Decided) — D-36
 
@@ -942,6 +966,49 @@ Distribution: 5 install paths (install.sh / install.ps1 / brew / winget / apt-dn
 6. standard_ai_workflow output (한국어/상태/handoff)
 7. 4 permission mode (§5.4)
 8. 1-2 built-in sub-agent (code-reviewer, server-status)
+
+#### TASK-008: Provider fallback = **런타임 discovered list** (D-38, NEW)
+
+**결정**: yklee 결정 — **하드코딩 fallback list 폐기** → **`provider-auto-config` skill** 로 동적 발견 + per-provider auth.
+
+**선택 근거**:
+1. **환경 가변성** — yklee 의 API key 보유 상태 / 조직의 SSO / local LLM 가용성 모두 시점/맥락 의존
+2. **사용자 개입 최소화** — API key 만 등록하면 자동 fallback chain 구성
+3. **확장성** — 새 provider 추가 시 코드 변경 없이 config + auth 만 등록
+4. **local-first 우선** — Ollama/vLLM 자동 발견 시 cost 0 fallback
+5. **graceful degrade** — primary 실패 시 discovered list 순차 시도, error surface 최소화
+
+**하드코딩 폐기 이유**:
+- A안 (Claude-first) 등 5개 옵션 비교는 모두 **"이 시점의 yklee 환경 가정"** — 다른 환경 (CI, 다른 머신) 에선 무효
+- 시간 지나면 API key 만료 / 새 provider 등장 / local LLM 켜고 끄기 → fallback 갱신 필요
+- 코드로 박으면 환경별 config 분기 폭발
+
+**v1 Phase 1 (TASK-005-1, MVP)**:
+- 6 provider 정적 등록 (`config.yaml`)
+- `auth list` / `auth <provider>` status 조회
+- Anthropic API key (env → keychain fallback)
+- Ollama local server detect
+- **단순 fallback** (config 의 primary + fallback hardcoded) — **동적 발견은 v1.5+**
+
+**v1 Phase 2 (TASK-005-2, v1.5)**:
+- `provider-auto-config` skill 정식 구현
+- 모든 provider auth (login/logout/test)
+- `active-providers.yaml` 자동 생성/갱신
+- **dynamic fallback chain**
+
+**v1 Phase 3 (TASK-005-3, v2.0)**:
+- OAuth flow (Anthropic OAuth, Google OAuth)
+- MCP-based provider 등록 (`mcp__*` 자동 discover)
+- Multi-region / multi-account
+
+**Skill reference design**: [`docs/skills/provider-auto-config/SKILL.md`](./skills/provider-auto-config/SKILL.md) (D-38)
+
+**영향 결정**:
+- §5.5 LLM 통합 전면 갱신 (정적 config → 동적 discover + auth)
+- §5.14 Built-in skills 에 `provider-auto-config` 추가
+- §5.12 디렉토리 구조에 `~/.myharness/state/auth/` 추가
+- D-15 (3 fallback 패턴) — **Phase 1 은 hardcoded 유지**, **Phase 2 부터 동적**
+- D-34 (2.1.169 영향) — Anthropic fallback 동작 검증 후 Phase 2 에 반영
 
 ### 11.2 외부 의존성 pending 결정 (claude-code 2.1.169 changelog 대기)
 
