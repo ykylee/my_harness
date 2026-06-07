@@ -1,0 +1,174 @@
+version: 1
+plan:
+  name: 'my_harness v1 상세 설계 후속 — DD-3 (15 sub-agent) + DD-4 fix (SP-02 regex)'
+  max_concurrency: 2
+  max_consecutive_failures: 2
+  max_cycles: 8
+  auto_reject_retries: 1
+  verifier_config:
+    default_verifiers: [verifier]
+    audit_sample_rate: 0.0
+tasks:
+  - id: dd-4-fix
+    title: 'DD-4 fix: SP-02 force-push regex robust + 27 TC re-validate (verifier FAIL 해소)'
+    prompt: |
+      [목표]
+      docs/specs/security-patterns.md 의 SP-02 (force push to main/master) regex 보강 + 27 TC scaffold (TC-SP-NN-P/N/E × 9) 모두 통과 검증.
+      REVIEW.md §3.2 MINOR-5/15 + verifier feedback 직접 해소.
+
+      [입력 SSOT]
+      - docs/specs/security-patterns.md (메인, 857 lines, 6 sections)
+      - docs/team/REVIEW.md §3.2 MINOR-5
+      - docs/CONCEPT.md §5.4 (Hook system, claude-code 13.4 hookify)
+      - docs/REQUIREMENTS.md NFR-SEC-1~8
+
+      [verifier 가 발견한 결함]
+      - 5-1. SP-02 force push regex 가 implementer perspective 에서 2/27 unit test fail 가능.
+        - 현재 regex: `git push ... (-f|--force-with-lease) ... (main|master)` — `--force-with-lease` 만 잡고 short flag `-f` / flag 없는 변형 miss
+        - 예시 fail case 1: `git push -f origin main` (short flag, no `--force-with-lease`)
+        - 예시 fail case 2: `git push --force origin main` (long flag `--force` 만)
+        - 예시 fail case 3: `git push --delete origin main` (다른 변형)
+      - §0.6 self-check 의 "27/27 TC PASS" 가 현재 false.
+      - §6.3 step 1 "5 spec doc (DD-1/2/3/4/5) suffice to write builtin_hooks.rs" 가 SP-02 fix 후에야 true.
+
+      [산출 작업 (1 file 수정, 1 file 부분 수정)]
+      1. §2.2 SP-02 regex 보강:
+         - 현재: `git push ... (-f|--force-with-lease) ... (main|master)`
+         - fix 권장: `git push\b[^\n]*?(?:-[A-Za-z]+[^\n]*?)*\b(?:--force(?:-(?:if-)?includes?|-with-lease(?:=[^\s]+)?)?|-f|--delete|--prune)\b[^\n]*?\b(?:main|master)\b`
+         - 또는 동등한 robust regex: 모든 force variant (`-f`, `--force`, `--force-with-lease`, `--force-if-includes`, `--force-with-lease=ref`) + `--delete` + `--prune` cover
+      2. §5.1 27 TC scaffold 의 SP-02 TC (3개) 재검증:
+         - TC-SP-02-P (positive): `git push --force origin main` → match
+         - TC-SP-02-P-alt: `git push -f origin master` → match
+         - TC-SP-02-P-lease: `git push --force-with-lease=origin/main origin main` → match
+         - TC-SP-02-N (negative): `git push origin feature-branch` → no match
+         - TC-SP-02-N-trunk: `git push origin dev` (trunk 아닌 다른) → no match
+         - TC-SP-02-E (edge): `GIT_PUSH_DEFAULT=simple git push --mirror origin main` → match (mirror 강제 push)
+         - 실제 7+ TC (positive 3 / negative 2 / edge 2) 로 확장
+      3. §0.6 self-check 표 27 → 30+ TC 정정
+      4. §6.3 step 1 의 implementer checklist 보강 (SP-02 fix 후 true 명시)
+      5. §6.7 implementer checklist 6 step 유지 (변경 ❌)
+
+      [chunked write — D-16]
+      - chunk 1: §2.2 SP-02 regex 수정 + §5.1 30+ TC scaffold (edit / append)
+      - chunk 2: §0.6 + §6.3 step 1 (self-check 보강)
+      - total 50~150 lines diff. 단일 Write 1,500줄+ ❌
+
+      [early signal]
+      - chunk 1 직후 docs/team/deliverable_dd4fix.md 작성 (status=in_progress + 1줄 summary)
+      - 최종 docs/team/deliverable_dd4fix.md (status=done + VERDICT)
+
+      [품질 바]
+      - 모든 § 에 CONCEPT.md / REVIEW.md cross-ref 유지
+      - 9 pattern (SP-01~SP-09) 정합 (SP-02 만 수정, 나머지 8 pattern 변경 ❌)
+      - 27 → 30+ TC scaffold 정합 (positive/negative/edge 분포 명확)
+      - D-16 chunked write 2 chunk + early signal + minimal board noise
+      - 표준 6 원칙 (D-26): 한국어 / 결론 위주 / 상태값 done / 이벤트 소싱 / 비참조 / handoff
+      - D-06 메커니즘만 (env var name 만, 실제 토큰 값 ❌)
+      - 안티 6 미반영
+      - 분량 diff 50~150 lines (전체 857 lines → ~907-1007 lines, over-shoot 600 target +50~67%, DD-1 +58% / DD-2 +60% precedent 정합)
+
+      [산출물 경로]
+      - docs/specs/security-patterns.md (수정, edit append)
+      - docs/team/deliverable_dd4fix.md (early signal + final status)
+      - /Users/yklee/.mavis/plans/<plan_id>/outputs/dd-4-fix/deliverable.md (engine)
+    assigned_to: coder
+    verified_by: verifier
+    verify_prompt: |
+      [독립 cross-check] verifier 가 발견한 SP-02 결함 + regex 보강 검증.
+
+      체크리스트:
+      1. SP-02 regex 가 implementer perspective 에서 robust:
+         - `git push -f origin main` → match
+         - `git push --force origin main` → match
+         - `git push --force-with-lease=origin/main origin main` → match
+         - `git push --force-if-includes origin main` → match
+         - `git push origin feature-branch` → no match
+         - `git push origin dev` → no match (trunk 아닌)
+         - `git push --mirror origin main` → match
+      2. 30+ TC scaffold 정합 (positive 3+ / negative 2+ / edge 2+ for SP-02)
+      3. SP-01, SP-03~SP-09 regex 변경 ❌
+      4. §0.6 self-check 표 정합
+      5. §6.3 step 1 보강
+      6. cross-ref 무결 (CONCEPT.md §5.4 + REVIEW.md §3.2 MINOR-5)
+      7. D-16 chunked write 2 chunk + early signal
+      8. 표준 6 원칙
+      9. 분량 diff 50~150 lines
+      10. D-06 / 안티 6 미반영
+      PASS / FAIL + 각 항목 evidence + 7개 regex test case 결과.
+    timeout_ms: 1800000
+
+  - id: dd-3
+    title: 'DD-3: DETAILED_DESIGN_SUBAGENTS.md — 15 sub-agent Output type + system_prompt + allowed_tools spec'
+    prompt: |
+      [목표]
+      docs/architecture/DETAILED_DESIGN_SUBAGENTS.md 작성 — 1,500~2,000 lines (가장 큰 task).
+      TASK-005-1 의 myharness-agents crate 15 sub-agent 구현 입력.
+
+      [입력 SSOT]
+      - docs/architecture/INITIAL_DESIGN.md §3.7 (15 sub-agent list)
+      - docs/team/REVIEW.md §3.1 MAJOR-3 (sealed trait SubAgentOutput + ToolId enum + 15 SYSTEM.md draft)
+      - docs/CONCEPT.md §5.11 (15 sub-agent list) + §5.10 (3 mode) + §5.4 (permission scope)
+      - docs/USE_CASES.md §5 (sub-agent dispatch 매트릭스) + §3 (5 detailed UC)
+      - docs/architecture/INITIAL_DESIGN.md §5 (CLI 표면) + §3.7 permission_scope.rs
+      - docs/architecture/DETAILED_DESIGN_TOOL.md §1-§2 (trait 결정 + 5-필드) — DD-1 done (927 lines, VERDICT PASS)
+
+      [산출 구조 (9 sections)]
+      1. §0 메타 + VERDICT (D-16 + D-26 + 표준 6 원칙)
+      2. §1 sub-agent trait spec — sealed trait SubAgentOutput: serde::Serialize, ToolId enum, pub trait SubAgent final
+      3. §2 15 sub-agent master table — id / output type / allowed_tools (3 cols × 15 rows)
+      4. §3 code 5 sub-agents (reviewer/implementer/tester/refactorer/searcher) — 각 sub-agent 별 5 sections
+         - §3.X.1 system_prompt (마크다운 200~400 tokens)
+         - §3.X.2 Output struct (Rust 필드)
+         - §3.X.3 allowed_tools (ToolId list)
+         - §3.X.4 dispatch context (UC 매핑)
+         - §3.X.5 TC scaffold (L1 Unit 3~5)
+      5. §4 server 4 sub-agents (status/log_analyzer/deployer/config_manager) — 동일 5-sections × 4
+      6. §5 env 4 sub-agents (setup/installer/shell/diagnose) — 동일 5-sections × 4
+      7. §6 utility 2 sub-agents (git_operator/file_searcher) — 동일 5-sections × 2
+      8. §7 3 mode dispatch logic (orchestrator/single/loop, D-29) — orchestrator.rs 의사코드
+      9. §8 permission_scope matrix (15 sub-agent × tool list)
+      10. §9 handoff
+
+      [반드시 준수 — D-16 패턴]
+      - chunked write 6 chunk (250+350+350+300+250+150 등)
+      - early signal docs/team/deliverable_dd3.md (§1-§3 직후)
+      - minimal board noise
+      - **VERDICT marker 명시**: top-level markdown heading (`### VERDICT: PASS`) line 3, closing line 모두 (verifier grep 용이, DD-1 lesson 적용)
+
+      [품질 바]
+      - 15 sub-agent 모두 system_prompt (마크다운 200~400 tokens) + Output struct + allowed_tools 4 섹션 완성
+      - sealed trait SubAgentOutput 정의 + 15개 output struct 모두 명세
+      - 3 mode dispatch logic 명확 (D-29)
+      - permission_scope matrix 15×N table
+      - L1 Unit TC 총 ~60 (15 × 4) scaffold
+      - cross-ref 무결 (CONCEPT.md §5.11 + USE_CASES.md §5 + INITIAL_DESIGN.md §3.7)
+      - 표준 6 원칙
+      - D-06 / 안티 6 미반영
+      - **분량 1,500~2,000 lines (D-16 over-shoot 인지, USE_CASES 1,134 / INITIAL_DESIGN 2,056 precedent 정합)**
+      - DD-1 §1-§2 (trait 결정 + 5-필드) 재참조 — sub-agent `allowed_tools: &[&str]` = `name()`
+
+      [산출물 경로]
+      - docs/architecture/DETAILED_DESIGN_SUBAGENTS.md (메인)
+      - docs/team/deliverable_dd3.md (early signal + final status)
+    assigned_to: coder
+    verified_by: verifier
+    verify_prompt: |
+      [독립 cross-check] INITIAL_DESIGN.md §3.7 + REVIEW.md §3.1 MAJOR-3 + CONCEPT.md §5.11 + USE_CASES.md §5 + DD-1 §1-§2.
+
+      체크리스트:
+      1. sealed trait SubAgentOutput + ToolId enum 정의
+      2. 15 sub-agent 모두 system_prompt + Output struct + allowed_tools 4 sections 완성
+      3. 3 mode dispatch logic (orchestrator/single/loop) 명확
+      4. permission_scope matrix 15×N 명세
+      5. L1 Unit TC ~60 scaffold (15 × 4)
+      6. CONCEPT.md §5.11 의 15 sub-agent list 100% 매핑
+      7. USE_CASES.md §5 dispatch matrix 100% 매핑
+      8. INITIAL_DESIGN.md §3.7 모듈 tree 정합
+      9. DD-1 §1-§2 trait 결정 (rig-core ToolDefinition + serde_json::Value) 정합 — `allowed_tools: &[&str]` = `name()`
+      10. cross-ref 무결
+      11. 표준 6 원칙
+      12. **VERDICT marker top-level heading (DD-1 lesson 적용)** — line 3 + closing
+      13. 분량 1,500~2,000 lines (D-16 over-shoot 인지, INITIAL_DESIGN 2,056 precedent 정합)
+      14. D-06 / 안티 6 미반영
+      PASS / FAIL + evidence.
+    timeout_ms: 1800000

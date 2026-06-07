@@ -1,0 +1,321 @@
+version: 1
+plan:
+  name: 'my_harness v1 상세 설계 (REVIEW.md §3.1 3 MAJOR + §3.2 15 MINOR 해결)'
+  max_concurrency: 4
+  max_consecutive_failures: 2
+  max_cycles: 10
+  auto_reject_retries: 1
+  verifier_config:
+    default_verifiers: [verifier]
+    audit_sample_rate: 0.0
+tasks:
+  - id: dd-1
+    title: 'DD-1: DETAILED_DESIGN_TOOL.md — trait Tool::Schema (rig-core ToolDefinition + serde_json::Value)'
+    prompt: |
+      [목표]
+      docs/architecture/DETAILED_DESIGN_TOOL.md 작성 — 600~900 lines.
+      TASK-005-1 (v1 Rust MVP 구현) 의 myharness-tools crate 구현 입력.
+
+      [입력 SSOT]
+      - docs/architecture/INITIAL_DESIGN.md §3.3 (line 324-339, myharness-tools crate)
+      - docs/team/REVIEW.md §3.1 MAJOR-1 (trait Tool::Schema 권장 = rig-core ToolDefinition)
+      - docs/CONCEPT.md §5.5 (LLM 통합 4 subsections, D-28 6 provider)
+      - docs/REQUIREMENTS.md §2 (FR/NFR), §4 제약 (Rust 1안 D-36)
+      - docs/architecture/INITIAL_DESIGN.md §3.2 (3rd-party crate 선정 — rig-core)
+
+      [산출 구조 (8 sections)]
+      1. §0 메타 + VERDICT (D-16 + D-26 + 표준 6 원칙)
+      2. §1 trait Tool::Schema 결정 (rig-core ToolDefinition + serde_json::Value args) — 권장 + 대안 + trade-off 표
+      3. §2 pub trait Tool final spec (Rust code snippet 의사코드 — full impl ❌) — name / definition / call signature
+      4. §3 6 builtin tools spec (Read/Write/Edit/Bash/Grep/Glob) — 각 tool 별 definition JSON, args schema, result schema, error
+      5. §4 permission check layer (INITIAL_DESIGN.md §3.3 permission/ sub-module) — 4 mode + hook eval hookchain
+      6. §5 ToolRegistry spec — registration, lookup, dispatch (sync/async), concurrent safety
+      7. §6 error type — ToolError enum (PermissionDenied / FileNotFound / Timeout / InvalidArgs / SubprocessFailed / NetworkError / HookBlocked / Unknown) + recovery pattern
+      8. §7 TC scaffold (L1 Unit TC 6 tool × 5 scenario = 30 TC, RED-GREEN-REFACTOR 진입점)
+      9. §8 handoff (D-26 4-필드)
+
+      [반드시 준수 — D-16 패턴]
+      - chunked write 4 chunk (150+200+200+150 lines 등)
+      - early deliverable signal: docs/team/deliverable_dd1.md (status=in_progress + 1줄 summary) §1-§3 직후
+      - minimal board noise: start + end 만
+      - handoff 형식 (D-26)
+
+      [품질 바]
+      - 모든 § 에 CONCEPT.md / INITIAL_DESIGN.md / REVIEW.md cross-ref
+      - Rust code snippet = 의사코드 수준 (full impl ❌, type signature + 핵심 method 만)
+      - 표준 6 원칙 형식 (한국어 / 결론 위주 / 상태값 / 이벤트 소싱 / 비참조 / handoff)
+      - D-06 토큰/시크릿 절대 ❌
+      - 안티 6 미반영
+      - 분량 600~900 lines (over-shoot 1,000+ ❌)
+
+      [산출물 경로]
+      - docs/architecture/DETAILED_DESIGN_TOOL.md (메인)
+      - docs/team/deliverable_dd1.md (early signal + final status)
+    assigned_to: coder
+    verified_by: verifier
+    verify_prompt: |
+      [독립 cross-check] INITIAL_DESIGN.md §3.3 + REVIEW.md §3.1 MAJOR-1 직접 인용.
+
+      체크리스트:
+      1. trait Tool::Schema 결정 = rig-core ToolDefinition + serde_json::Value args 권장
+      2. 6 builtin tools (Read/Write/Edit/Bash/Grep/Glob) 모두 spec 존재
+      3. permission check layer 의 4 mode + hook eval 명시
+      4. ToolRegistry spec 동시성 safety (Arc<dyn Tool> + HashMap) 검증
+      5. ToolError enum 8 variant + recovery pattern 명시
+      6. L1 Unit TC 30 scaffold (6 tool × 5 scenario) 명시
+      7. INITIAL_DESIGN.md §3.3 + REVIEW.md §3.1 MAJOR-1 cross-ref 무결
+      8. 표준 6 원칙 형식
+      9. 분량 600~900 lines
+      10. D-06 / 안티 6 미반영
+      PASS / FAIL + 각 항목 evidence (INITIAL_DESIGN.md / REVIEW.md §X.Y 인용).
+    timeout_ms: 1800000
+
+  - id: dd-2
+    title: 'DD-2: DETAILED_DESIGN_BUDGET.md — BudgetTracker 80% threshold (input+output / model_length 동적)'
+    prompt: |
+      [목표]
+      docs/architecture/DETAILED_DESIGN_BUDGET.md 작성 — 500~800 lines.
+      TASK-005-1 의 myharness-context crate BudgetTracker + CompressionPipeline 구현 입력.
+
+      [입력 SSOT]
+      - docs/architecture/INITIAL_DESIGN.md §3.4 + §7 (Context 2-계층)
+      - docs/team/REVIEW.md §3.1 MAJOR-2 (input+output / model_length 동적 권장)
+      - docs/CONCEPT.md §5.6 (D-27 + D-30 2-계층)
+      - docs/REQUIREMENTS.md §3 NFR (성능) + §4 제약 (2-계층)
+
+      [산출 구조 (7 sections)]
+      1. §0 메타 + VERDICT
+      2. §1 BudgetTracker 결정 — input+output 누적 / provider model_length 동적 / system prompt 별도 budget
+      3. §2 pub struct BudgetTracker spec — model_length 동적 조회 + AtomicU32 + 80% threshold
+      4. §3 6 provider 별 model_length 표 (claude/codex/gemini/deepseek/minimax/local, D-28)
+      5. §4 Layer 1 (always-on) spec — truncate / summarize / hybrid + trigger
+      6. §5 Layer 2 (opt-in) spec — CacheAligner + ContentRouter + SmartCrusher + CodeCompressor 알고리즘 의사코드
+      7. §6 TC scaffold (L1 Unit TC 8 — threshold/truncate/summarize/compact)
+      8. §7 handoff
+
+      [반드시 준수 — D-16 패턴]
+      - chunked write 4 chunk
+      - early signal docs/team/deliverable_dd2.md
+      - minimal board noise
+
+      [품질 바]
+      - 모든 § 에 CONCEPT.md §5.6 / INITIAL_DESIGN.md §3.4+§7 / REVIEW.md §3.1 MAJOR-2 cross-ref
+      - Rust code snippet = 의사코드
+      - 6 provider model_length 표 정확 (정확한 number 인용)
+      - 표준 6 원칙
+      - D-06 / 안티 6 미반영
+      - 분량 500~800 lines
+
+      [산출물 경로]
+      - docs/architecture/DETAILED_DESIGN_BUDGET.md
+      - docs/team/deliverable_dd2.md
+    assigned_to: coder
+    verified_by: verifier
+    verify_prompt: |
+      [독립 cross-check] INITIAL_DESIGN.md §3.4+§7 + REVIEW.md §3.1 MAJOR-2 + CONCEPT.md §5.6.
+
+      체크리스트:
+      1. BudgetTracker threshold = input+output 누적 / model_length 동적
+      2. 6 provider model_length 표 정확 (claude 200K, gpt-4 128K, gemini 1M 등)
+      3. AtomicU32 동시성 + threshold 80% trigger 알고리즘 명확
+      4. Layer 1 (truncate/summarize/hybrid) + Layer 2 (4 algo) spec 별도 섹션
+      5. /compact slash command handler spec
+      6. L1 Unit TC 8 scaffold
+      7. cross-ref 무결
+      8. 표준 6 원칙
+      9. 분량 500~800 lines
+      10. D-06 / 안티 6 미반영
+      PASS / FAIL.
+    timeout_ms: 1800000
+
+  - id: dd-4
+    title: 'DD-4: security-patterns.md — 9 builtin security patterns regex 명세 + test corpus'
+    prompt: |
+      [목표]
+      docs/specs/security-patterns.md 작성 — 400~600 lines.
+      TASK-005-1 의 myharness-plugins crate builtin_hooks sub-module 구현 입력.
+
+      [입력 SSOT]
+      - docs/architecture/INITIAL_DESIGN.md §3.6 myharness-plugins/hooks/builtin_hooks.rs
+      - docs/team/REVIEW.md §3.2 MINOR-5 (9 patterns regex 명세)
+      - docs/CONCEPT.md §5.4 (Hook system, claude-code 13.4 hookify)
+
+      [산출 구조 (6 sections)]
+      1. §0 메타 + VERDICT
+      2. §1 hook format spec — markdown frontmatter (name/trigger/severity) + body (regex + message)
+      3. §2 9 builtin security patterns — 각 pattern 별 (id / severity / regex / description / test case × 3)
+         - SP-01: rm -rf / (high)
+         - SP-02: force push to main/master (high)
+         - SP-03: DROP DATABASE / TABLE (critical)
+         - SP-04: secret leak (API key prefix) (critical)
+         - SP-05: sudo without password (high)
+         - SP-06: chmod 777 (medium)
+         - SP-07: curl | bash (high)
+         - SP-08: eval() with user input (high)
+         - SP-09: hardcoded localhost (low, warn only)
+      4. §3 hook severity → action 매핑 (critical=block / high=confirm / medium=warn / low=log)
+      5. §4 hook eval engine 의사코드 (markdown parse + regex compile + match)
+      6. §5 TC scaffold (L1 Unit TC 9 pattern × 3 case = 27 TC)
+      7. §6 handoff
+
+      [반드시 준수 — D-16 패턴]
+      - chunked write 3 chunk
+      - early signal docs/team/deliverable_dd4.md
+      - minimal board noise
+
+      [품질 바]
+      - 9 pattern 모두 regex + test case 3개씩 (positive/negative/edge)
+      - severity 4 단계 (critical/high/medium/low) 일관
+      - 표준 6 원칙
+      - D-06 / 안티 6 미반영
+      - 분량 400~600 lines
+
+      [산출물 경로]
+      - docs/specs/security-patterns.md
+      - docs/team/deliverable_dd4.md
+    assigned_to: coder
+    verified_by: verifier
+    verify_prompt: |
+      [독립 cross-check] INITIAL_DESIGN.md §3.6 + REVIEW.md §3.2 MINOR-5.
+
+      체크리스트:
+      1. 9 builtin security patterns 모두 regex 명시 (SP-01~SP-09)
+      2. 각 pattern 별 test case 3개 (positive/negative/edge) 27 TC
+      3. severity 4 단계 (critical/high/medium/low) 일관 + action 매핑
+      4. hook eval engine 의사코드 명확
+      5. markdown frontmatter (name/trigger/severity) 형식 명세
+      6. L1 Unit TC 27 scaffold
+      7. cross-ref 무결
+      8. 표준 6 원칙
+      9. 분량 400~600 lines
+      10. D-06 / 안티 6 미반영
+      PASS / FAIL.
+    timeout_ms: 1800000
+
+  - id: dd-5
+    title: 'DD-5: DETAILED_DESIGN_RETRY.md — retry backoff + circuit breaker + exit code 표준'
+    prompt: |
+      [목표]
+      docs/architecture/DETAILED_DESIGN_RETRY.md 작성 — 400~600 lines.
+      TASK-005-1 의 myharness-llm + myharness-cli 구현 입력.
+
+      [입력 SSOT]
+      - docs/architecture/INITIAL_DESIGN.md §6.3 fallback chain + §3.8 myharness-llm (retry policy D-15)
+      - docs/team/REVIEW.md §3.2 MINOR-7 (retry backoff jitter + circuit breaker) + MINOR-11 (exit code 0/1/2)
+      - docs/CONCEPT.md §5.5.3 (dynamic fallback) + D-15 (3 fallback)
+
+      [산출 구조 (6 sections)]
+      1. §0 메타 + VERDICT
+      2. §1 retry policy 의사코드 — backoff = base * 2^attempt + jitter(0~base/2), max 3 retry, exponential
+      3. §2 circuit breaker 의사코드 — closed → open (3 consecutive error) → half-open (5min cool-down) → closed
+      4. §3 exit code 표준 — 0=success / 1=user error (invalid args, permission denied, file not found) / 2=system error (subprocess failed, network, provider unavailable) / 3=internal error (bug)
+      5. §4 error categorization (CONCEPT.md §5.5.3 D-15) — immediate surface (auth, rate_limit, request_size, transport) vs retry-able (overloaded, timeout, transient) vs non-retry (validation, format)
+      6. §5 TC scaffold (L1 Unit TC 6 — retry/backoff/jitter/circuit-breaker/exit-code/categorization)
+      7. §6 handoff
+
+      [반드시 준수 — D-16 패턴]
+      - chunked write 3 chunk
+      - early signal docs/team/deliverable_dd5.md
+      - minimal board noise
+
+      [품질 바]
+      - retry/backoff 의사코드 명확
+      - circuit breaker 3-state 전이 (closed/open/half-open) 명확
+      - exit code 4 단계 일관
+      - D-15 error categorization 명시
+      - 표준 6 원칙
+      - D-06 / 안티 6 미반영
+      - 분량 400~600 lines
+
+      [산출물 경로]
+      - docs/architecture/DETAILED_DESIGN_RETRY.md
+      - docs/team/deliverable_dd5.md
+    assigned_to: coder
+    verified_by: verifier
+    verify_prompt: |
+      [독립 cross-check] INITIAL_DESIGN.md §6.3 + REVIEW.md §3.2 MINOR-7+11 + CONCEPT.md §5.5.3 D-15.
+
+      체크리스트:
+      1. retry policy backoff = base * 2^attempt + jitter 의사코드
+      2. circuit breaker 3-state (closed/open/half-open) 전이 명시
+      3. exit code 4 단계 (0/1/2/3) 일관
+      4. D-15 error categorization (immediate surface vs retry-able vs non-retry)
+      5. L1 Unit TC 6 scaffold
+      6. cross-ref 무결
+      7. 표준 6 원칙
+      8. 분량 400~600 lines
+      9. D-06 / 안티 6 미반영
+      PASS / FAIL.
+    timeout_ms: 1800000
+
+  - id: dd-3
+    title: 'DD-3: DETAILED_DESIGN_SUBAGENTS.md — 15 sub-agent Output type + system_prompt + allowed_tools spec'
+    prompt: |
+      [목표]
+      docs/architecture/DETAILED_DESIGN_SUBAGENTS.md 작성 — 1,500~2,000 lines (가장 큰 task).
+      TASK-005-1 의 myharness-agents crate 15 sub-agent 구현 입력.
+
+      [입력 SSOT]
+      - docs/architecture/INITIAL_DESIGN.md §3.7 (15 sub-agent list)
+      - docs/team/REVIEW.md §3.1 MAJOR-3 (sealed trait SubAgentOutput + ToolId enum + 15 SYSTEM.md draft)
+      - docs/CONCEPT.md §5.11 (15 sub-agent list) + §5.10 (3 mode) + §5.4 (permission scope)
+      - docs/USE_CASES.md §5 (sub-agent dispatch 매트릭스) + §3 (5 detailed UC)
+      - docs/architecture/INITIAL_DESIGN.md §5 (CLI 표면) + §3.7 permission_scope.rs
+
+      [산출 구조 (9 sections)]
+      1. §0 메타 + VERDICT (D-16 + D-26 + 표준 6 원칙)
+      2. §1 sub-agent trait spec — sealed trait SubAgentOutput: serde::Serialize, ToolId enum, pub trait SubAgent final
+      3. §2 15 sub-agent master table — id / output type / allowed_tools (3 cols × 15 rows)
+      4. §3 code 5 sub-agents (reviewer/implementer/tester/refactorer/searcher) — 각 sub-agent 별 5 sections
+         - §3.X.1 system_prompt (마크다운 200~400 tokens)
+         - §3.X.2 Output struct (Rust 필드)
+         - §3.X.3 allowed_tools (ToolId list)
+         - §3.X.4 dispatch context (UC 매핑)
+         - §3.X.5 TC scaffold (L1 Unit 3~5)
+      5. §4 server 4 sub-agents (status/log_analyzer/deployer/config_manager) — 동일 5-sections × 4
+      6. §5 env 4 sub-agents (setup/installer/shell/diagnose) — 동일 5-sections × 4
+      7. §6 utility 2 sub-agents (git_operator/file_searcher) — 동일 5-sections × 2
+      8. §7 3 mode dispatch logic (orchestrator/single/loop, D-29) — orchestrator.rs 의사코드
+      9. §8 permission_scope matrix (15 sub-agent × tool list)
+      10. §9 handoff
+
+      [반드시 준수 — D-16 패턴]
+      - chunked write 6 chunk (250+350+350+300+250+150 등)
+      - early signal docs/team/deliverable_dd3.md (§1-§3 직후)
+      - minimal board noise
+
+      [품질 바]
+      - 15 sub-agent 모두 system_prompt (마크다운 200~400 tokens) + Output struct + allowed_tools 4 섹션 완성
+      - sealed trait SubAgentOutput 정의 + 15개 output struct 모두 명세
+      - 3 mode dispatch logic 명확 (D-29)
+      - permission_scope matrix 15×N table
+      - L1 Unit TC 총 ~60 (15 × 4) scaffold
+      - cross-ref 무결 (CONCEPT.md §5.11 + USE_CASES.md §5 + INITIAL_DESIGN.md §3.7)
+      - 표준 6 원칙
+      - D-06 / 안티 6 미반영
+      - **분량 1,500~2,000 lines (D-16 over-shoot 인지, USE_CASES 1,134 / Design 2,056 precedent 정합)**
+
+      [산출물 경로]
+      - docs/architecture/DETAILED_DESIGN_SUBAGENTS.md
+      - docs/team/deliverable_dd3.md
+    assigned_to: coder
+    depends_on: [dd-1]
+    verified_by: verifier
+    verify_prompt: |
+      [독립 cross-check] INITIAL_DESIGN.md §3.7 + REVIEW.md §3.1 MAJOR-3 + CONCEPT.md §5.11 + USE_CASES.md §5.
+
+      체크리스트:
+      1. sealed trait SubAgentOutput + ToolId enum 정의
+      2. 15 sub-agent 모두 system_prompt + Output struct + allowed_tools 4 sections 완성
+      3. 3 mode dispatch logic (orchestrator/single/loop) 명확
+      4. permission_scope matrix 15×N (어떤 sub-agent 가 어떤 tool 사용?) 명세
+      5. L1 Unit TC ~60 scaffold (15 × 4)
+      6. CONCEPT.md §5.11 의 15 sub-agent list 100% 매핑
+      7. USE_CASES.md §5 dispatch matrix 100% 매핑
+      8. INITIAL_DESIGN.md §3.7 모듈 tree 정합
+      9. cross-ref 무결
+      10. 표준 6 원칙
+      11. 분량 1,500~2,000 lines (D-16 over-shoot 인지, USE_CASES 1,134 / Design 2,056 precedent 정합)
+      12. D-06 / 안티 6 미반영
+      PASS / FAIL + evidence.
+    timeout_ms: 1800000
