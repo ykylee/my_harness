@@ -80,8 +80,11 @@
 ### 3.2 **Provider 비종속** (aider/opencode/goose 13.2 + claude-code 13.15)
 12+ (Rust 1안 `rig-core`) 또는 15+ (TS 2안 `Vercel AI SDK`) provider + **3 fallback model** (claude-code 패턴). 어떤 provider 든 my_harness 가 직접 통신 — 외부 orchestrator 불필요.
 
-### 3.3 **3-도메인 동시 + 선택적 built-in 압축** (headroom 13.3, D-27)
-코드/서버/환경 3-도메인 모두 통합. **headroom 의 6 압축 알고리즘** (CacheAligner, ContentRouter, CCR, SmartCrusher, CodeCompressor, Kompress-base) 을 **우리 Context component 에 built-in** — 외부 proxy 의존 X. `~/.myharness/config.yaml` 에서 `builtin.enabled: true|false`. 기본값은 `false` (사용자가 켜야 동작). 토큰 한계는 native cache 만으로도 v1 가능.
+### 3.3 **3-도메인 동시 + 2-계층 Context 압축** (D-27 + D-30)
+
+코드/서버/환경 3-도메인 모두 통합. **Context 압축은 2 계층**:
+- **Layer 1 (필수, D-30)** — model length 한계 대응. **always-on 자동 압축**: token budget 추적 → 한계 근접 시 auto truncate/summarize → /compact (manual). opt-out 불가 (model 자체가 길이 제한 있으므로).
+- **Layer 2 (선택, D-27)** — 비용 최적화. **opt-in advanced 압축**: headroom 의 6 알고리즘 (CacheAligner, ContentRouter, CCR, SmartCrusher, CodeCompressor, Kompress-base) 을 우리 Context component 에 built-in. `~/.myharness/config.yaml` 에서 `builtin.enabled: true|false`. 기본 `false`.
 
 ---
 
@@ -343,15 +346,31 @@ ollama/qwen2.5-coder:32b
 
 → unified identifier 로 config / log / cache key 모두 일관.
 
-### 5.6 Context 관리 (claude-code 13.6 + built-in headroom 13.3, D-27)
+### 5.6 Context 관리 (claude-code 13.6 + 2-계층 압축, D-27 + D-30)
 
-**3 계층 + built-in compression**:
+**3 계층 + 2-계층 압축 (D-30)**:
+
 1. **`CLAUDE.md` (project root)** — yklee 의 프로젝트별 규칙, 5 surface 공유.
 2. **Auto memory** — yklee 의 작업 패턴 자동 학습. `~/.myharness/memory/auto/`
-3. **`/compact` slash command** — context 압축. **built-in compression 알고리즘** 호출.
-4. **Built-in compression (D-27, 선택적, 기본 off)** — headroom 의 6 알고리즘을 **우리 Context component 에 내장**. 외부 proxy/MCP 의존 X.
+3. **`/compact` slash command** — context 압축. **Layer 1 (필수) + Layer 2 (선택)** 호출.
 
-**Built-in compression 설계 (D-27, headroom.md §7.4 6 알고리즘 참고)**:
+**2-계층 압축 (D-30)**:
+
+| 계층 | 목적 | always-on? | 비고 |
+| --- | --- | --- | --- |
+| **Layer 1 (필수)** | model length 한계 대응 | ✅ always-on (opt-out 불가) | token budget 추적 → 한계 근접 시 auto truncate/summarize → /compact (manual) |
+| **Layer 2 (선택)** | 비용 최적화 | 🟡 opt-in (`builtin.enabled: true\|false`) | headroom 의 6 알고리즘 (CacheAligner, ContentRouter, CCR, SmartCrusher, CodeCompressor, Kompress-base) 을 우리 Context component 에 built-in |
+
+**Layer 1 (필수, D-30) — 자동 압축 메커니즘**:
+- **token budget 추적** — 매 message 마다 현재 사용량 추적
+- **한계 근접 시 auto 압축** — 한계 80% 도달 시 자동 trigger
+  - truncate: 오래된 message 일부 제거 (keep recent N=5)
+  - summarize: 오래된 message 들을 LLM 으로 요약
+  - hybrid: 둘 다
+- **`/compact` slash command** — user-callable 수동 압축
+- **opt-out 불가** — model 자체가 길이 제한 있으므로
+
+**Layer 2 (선택, D-27) — headroom 알고리즘 built-in**:
 
 ```yaml
 # ~/.myharness/config.yaml
@@ -557,15 +576,17 @@ produced_artifacts:
 
 ---
 
-## 6. v2+ 로드맵
+## 6. v2+ 로드맵 (TASK-005-N 형식)
 
-| milestone | 핵심 | 채택 패턴 |
+> **TASK-005 (스택 결정) 후속 마일스톤** 들. 각 TASK-005-N = v1 MVP 이후 순차 milestone.
+
+| task_id (TASK-005-N) | 핵심 | 채택 패턴 |
 | --- | --- | --- |
-| **v1.0** (MVP) | CLI + TUI, 3-도메인, single binary | 1차 8개 adopt |
-| **v1.5** | Plugin 4-계층, marketplace beta, auto memory | 2차 7개 adopt |
-| **v2.0** | TUI/IDE/Web hand-off (5 surfaces), Routines | claude-code 13.2 + 13.17 |
-| **v2.5** | Multi-agent parallel + confidence scoring | claude-code 13.11 (code-review) |
-| **v3.0** | Computer Use, Multi-user, RBAC | claude-code 13.23 + 13.34 |
+| **TASK-005-1** (v1.0 MVP) | CLI + TUI, 3-도메인, single binary | 1차 8개 adopt |
+| **TASK-005-2** (v1.5) | Plugin 4-계층, marketplace beta, auto memory | 2차 7개 adopt |
+| **TASK-005-3** (v2.0) | TUI/IDE/Web hand-off (5 surfaces), Routines | claude-code 13.2 + 13.17 |
+| **TASK-005-4** (v2.5) | Multi-agent parallel + confidence scoring | claude-code 13.11 (code-review) |
+| **TASK-005-5** (v3.0) | Computer Use, Multi-user, RBAC | claude-code 13.23 + 13.34 |
 
 ---
 
@@ -643,13 +664,32 @@ produced_artifacts:
 
 ## 11. 결정 보류 (Open Decisions)
 
-| 결정 | 보류 이유 | 결정 시점 |
-| --- | --- | --- |
-| **TASK-005 스택** (Rust 1안 vs TS 2안) | yklee 의 desktop 우선순위 | 즉시 결정 가능 (입력 다 갖춤) |
-| **TASK-002 도메인별 명령** | yklee 인프라 정보 필요 | yklee 인프라 정보 수령 후 |
-| **TASK-007 headroom built-in 알고리즘 구현 우선순위** | CacheAligner/ContentRouter/CCR/SmartCrusher/CodeCompressor/Kompress-base 중 v1 우선 3개 | yklee 가 v1 우선순위 결정 후 |
-| **TUI 라이브러리** (ratatui vs React/Ink) | 스택 결정 의존 | TASK-005 결정 후 |
-| **Provider fallback list** (3 모델) | yklee 의 LLM 선호/비용 | yklee 결정 후 |
+### 11.1 결정 보류 표
+
+| task_id | 결정 | 보류 이유 | 결정 시점 |
+| --- | --- | --- | --- |
+| **TASK-002** | 도메인별 명령 | yklee 인프라 정보 필요 | yklee 인프라 정보 수령 후 |
+| **TASK-005** | 스택 (Rust 1안 vs TS 2안) | yklee 의 desktop 우선순위 | 즉시 결정 가능 (입력 다 갖춤) |
+| **TASK-006** | TUI 라이브러리 (ratatui vs React/Ink) | 스택 결정 의존 | TASK-005 결정 후 |
+| **TASK-007** | headroom built-in 알고리즘 구현 우선순위 | CacheAligner/ContentRouter/CCR/SmartCrusher/CodeCompressor/Kompress-base 중 v1 우선 3개 | yklee 가 v1 우선순위 결정 후 |
+| **TASK-008** | Provider fallback list (3 모델) | yklee 의 LLM 선호/비용 | yklee 결정 후 |
+
+### 11.2 외부 의존성 pending 결정 (claude-code 2.1.169 changelog 대기)
+
+> **claude-code 2.1.169** (Anthropic, 2026-06) 의 changelog 에 다음 변경 예정 (사용자 제보, 공개 소스 미확인):
+> - **context var/cache** — 우리 §5.6 Context 관리 (D-30 Layer 1+2 압축, CacheAligner 패턴) 영향 가능
+> - **MCP** — 우리 §5.14 Skill/MCP first-class (D-33) 영향 가능
+> - **permission** — 우리 §5.4 4 permission mode (D-13.8) 영향 가능
+>
+> 공개 채널 (GitHub release, feed.xml, CHANGELOG.md) 모두 v2.1.168 까지만 노출. 2.1.169 changelog 가 공개되면 아래 결정들 검증 후 v1 spec 잠금.
+
+| 영향 받는 우리 결정 | 의존 § | 영향 가능성 | 검증 시점 |
+| --- | --- | --- | --- |
+| **TASK-007** (headroom built-in 알고리즘 우선순위) | §5.6 Layer 2 | context var/cache 변경 시 CacheAligner/CCR 설계 재검토 | 2.1.169 공개 후 |
+| **D-32** (LLM Wiki memory) | §5.13 (v2+ vision) | context var 변경 시 wiki 스키마 영향 | 2.1.169 공개 후 |
+| **D-33** (MCP first-class) | §5.14 | MCP 변경 시 우리 MCP client/서버 구현 재검토 | 2.1.169 공개 후 |
+| **§5.4** (4 permission mode) | §5.4 | permission 변경 시 우리 permission 시스템 정합 검증 | 2.1.169 공개 후 |
+| **D-15** (3 fallback model) | §5.5 | Anthropic fallback 동작 변경 가능 | 2.1.169 공개 후 |
 
 ---
 
