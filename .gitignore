@@ -39,6 +39,7 @@ scratch/
 # Mavis local config (secrets live here)
 .MiniMax/config.json
 .MiniMax/config.local.json
+.mavis/
 
 # Codex local config (in case the user enables codex harness later)
 .codex/config.toml
