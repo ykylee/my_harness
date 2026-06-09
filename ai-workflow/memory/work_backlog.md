@@ -70,6 +70,13 @@
 - [x] W11.3 MockClient FIFO + Orchestrator fatal_llm_error (D-49) ✅
 - [x] W11.4 cli subcommand task start|end + handoff (D-49) ✅
 - [x] W11 5 commit dual push (D-49) ✅
+- [x] W12.1 KeyringAuthStore in-memory cache (D-50) ✅
+- [x] W12.2 ProviderMetadata::builtin_minimax 갱신 (api.minimax.io/v1 + MiniMax-M3) (D-50) ✅
+- [x] W12.3 MiniMax OpenAI-compat tests + real-api smoke ignored (D-50) ✅
+- [x] W12.4 discover smoke test (D-50) ✅
+- [x] W12.5 cli default LLM = MINIMAX (D-50) ✅
+- [x] W12 5 commit dual push (D-50) ✅
+- [ ] yklee MINIMAX_API_KEY env 주입 후 real network test (다음 세션 또는 shell)
 - [ ] **TASK-005-2** (v1.5) — Plugin 4-계층 + marketplace + auto memory + provider-auto-config skill 정식 구현 + CCR/Kompress-base
 - [ ] **TASK-005-3** (v2.0) — TUI/IDE/Web hand-off (5 surfaces) + Routines + OAuth + MCP-based discover
 - [ ] **TASK-005-4** (v2.5) — Multi-agent parallel + confidence scoring
