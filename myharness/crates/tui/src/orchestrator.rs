@@ -31,6 +31,8 @@ pub struct DispatchDecision {
 pub struct Orchestrator {
     pub tool_registry: Option<Arc<ToolRegistry>>,
     pub llm_client: Option<Arc<dyn LLMClient>>,
+    /// W11.3 (D-49) — LLM err 를 fatal 로 처리. false (default) 면 [LLM-error] 로 wrap 후 Ok.
+    pub fatal_llm_error: bool,
 }
 
 impl Default for Orchestrator {
@@ -41,7 +43,7 @@ impl Default for Orchestrator {
 
 impl Orchestrator {
     pub fn new() -> Self {
-        Self { tool_registry: None, llm_client: None }
+        Self { tool_registry: None, llm_client: None, fatal_llm_error: false }
     }
 
     pub fn with_tools(mut self, registry: Arc<ToolRegistry>) -> Self {
@@ -51,6 +53,12 @@ impl Orchestrator {
 
     pub fn with_llm(mut self, client: Arc<dyn LLMClient>) -> Self {
         self.llm_client = Some(client);
+        self
+    }
+
+    /// W11.3 (D-49) — LLM err 를 fatal 로 처리. true 면 err 그대로 surface.
+    pub fn with_fatal_llm_error(mut self, fatal: bool) -> Self {
+        self.fatal_llm_error = fatal;
         self
     }
 
@@ -156,6 +164,9 @@ impl Orchestrator {
                 }
                 Ok(_) => {}
                 Err(e) => {
+                    if self.fatal_llm_error {
+                        return Err(SubAgentError::Llm(e));
+                    }
                     response.push_str(&format!("\n\n[LLM-error] {e}"));
                 }
             }
@@ -266,6 +277,16 @@ mod tests {
         let o = Orchestrator::new().with_llm(c);
         let out = o.run("code review").await.unwrap();
         assert!(out.contains("[LLM-error]"));
+    }
+
+    #[tokio::test]
+    async fn run_with_fatal_llm_error_returns_err() {
+        let c = Arc::new(MockClient::new(ProviderId::Claude, "claude-sonnet-4-6"));
+        c.push(MockResponse::Error("401".into()));
+        let o = Orchestrator::new().with_llm(c).with_fatal_llm_error(true);
+        let r = o.run("code review").await;
+        assert!(r.is_err());
+        assert!(matches!(r.unwrap_err(), SubAgentError::Llm(_)));
     }
 
     #[tokio::test]

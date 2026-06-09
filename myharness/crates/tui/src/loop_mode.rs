@@ -147,10 +147,8 @@ mod tests {
 
     fn orch_with_mock(responses: Vec<&'static str>) -> Orchestrator {
         let c = Arc::new(MockClient::new(ProviderId::Claude, "claude-sonnet-4-6"));
-        // MockClient 는 LIFO (마지막 push 가 먼저 pop). FIFO 순서로 push 하기 위해 reverse.
-        for r in responses.into_iter().rev() {
-            c.push(MockResponse::Text(r.into()));
-        }
+        // MockClient 는 FIFO (push_back + pop_front). W11.3 push_fifo_many 으로 명시적 FIFO.
+        c.push_fifo_many(responses.into_iter().map(|r| MockResponse::Text(r.into())));
         Orchestrator::new().with_llm(c as Arc<dyn LLMClient>)
     }
 
