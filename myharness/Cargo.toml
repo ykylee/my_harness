@@ -43,6 +43,8 @@ clap = { version = "4", features = ["derive"] }
 # Logging
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter", "fmt"] }
+# Schema / Validation
+schemars = "1.2"
 # Misc
 dirs = "5"
 
