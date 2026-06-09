@@ -21,14 +21,14 @@
     "quick_tests": null,
     "isolated_tests": null,
     "runtime_checks": null,
-    "v1_mvp_build": "TASK-005-1 (W0 환경 검증 완료 D-41, 진행 중): prerequisite 5건 설치 → cargo workspace init → ratatui shell → rig-core Anthropic → basic tools → /compact → standard_ai_workflow output"
+    "v1_mvp_build": "TASK-005-1 (W3~W6.5 tools crate 완료 D-43, Gitea+GitHub dual push D-44): W7 = llm crate 진입 (rig-core 0.38 + Anthropic provider) → ANTHROPIC_API_KEY 주입 시 E2E."
   },
   "session": {
-    "current_baseline": "**v1 컨셉 Phase 종료 (2026-06-07, D-22~D-38)** — my_harness SSOT (CONCEPT.md) 확립. 5/5 결정 검토 완료 (4 ✅, 1 ⏸).",
-    "current_axis": "**TASK-005-1 진행 중 (D-41)** — W0-1/W0-2 환경 검증 완료. Prerequisite 5건 설치 → cargo workspace init → ratatui shell → rig-core Anthropic → basic tools → /compact → standard_ai_workflow output.",
-    "current_focus": "TASK-005-1 (v1 MVP Rust 빌드) — 환경 검증 단계 (D-41), Prerequisite 5개 진행 중",
+    "current_baseline": "**v1 컨셉 Phase 종료 (2026-06-07, D-22~D-38)** — my_harness SSOT (CONCEPT.md) 확립. 5/5 결정 검토 완료 (4 ✅, 1 ⏸). TASK-005-1 W3~W6.5 완료 (D-43). tools crate 63 tests passed. Gitea + GitHub dual push 완료 (D-44).",
+    "current_axis": "**TASK-005-1 W7 대기** — W3~W6.5 (tools crate 5 tool + 4 permission + 9 sanitizer + JSON schema + 5 provider wire format) 완료. 9 commit dual push (Gitea origin + GitHub upstream). ANTHROPIC_API_KEY absent → mock test. W7 = llm crate 진입 (rig-core 0.38 + Anthropic provider).",
+    "current_focus": "TASK-005-1 — W3~W6.5 완료 + dual-remote push (D-44) 완료. 다음 세션 시작점 = W7 (llm crate 진입)",
     "in_progress_items": [
-      "TASK-005-1: v1 MVP Rust 빌드 (W0-1/W0-2 환경 검증 완료, W0-3 문서 갱신 중)"
+      "TASK-005-1: v1 MVP Rust 빌드 (W3~W6.5 tools crate 완료 + dual-remote push D-44, W7 llm crate 진입 대기)"
     ],
     "blocked_items": [
       "TASK-002: 도메인별 명령 가이드 (yklee 인프라 정보 의존)"
@@ -50,7 +50,8 @@
       "TASK-007 결정: headroom v1 1안 유지 (D-37)",
       "TASK-008 결정: provider-auto-config skill (D-38)",
       "D-41 TASK-005-1 환경 검증 완료 (2026-06-09)",
-      "D-42 config 포맷 TOML 통일 (2026-06-09)"
+      "D-43 TASK-005-1 W3~W6.5 (tools crate 63 tests) + Gitea push (2026-06-09)",
+      "D-44 dual-remote (D-20) 적용: Gitea origin + GitHub upstream + Gitea PAT myharness-cli (2026-06-09)"
     ],
     "environment_constraints": [
       "Mavis zero coupling (D-25): my_harness 자체는 Mavis/Mavis 와 무관",
@@ -60,7 +61,7 @@
       "Provider fallback 동적 발견 (D-38): provider-auto-config skill, 하드코딩 폐기",
       "W0-1/W0-2 환경 검증 (D-41): Linux x86_64 / Rust 1.94.1 / 12+ crate 가용",
       "Prerequisite 설치 5건: libsecret-1-dev + gnome-keyring, 5 cross target, cargo-dist+binstall, ANTHROPIC_API_KEY, serde_yml",
-      "D-42: v1 config/state = TOML. JSON 유지 (auth snapshot/metrics/mcp.json/log.jsonl/state.json). serde_yaml/serde_yml 의존 회피"
+      "D-44 dual-remote: origin=https://homelab.ddn777.synology.me/gitea/yklee/my_harness + upstream=https://github.com/ykylee/my_harness. Gitea PAT (myharness-cli, scopes: write:repository/write:user) in ~/.git-credentials (chmod 600). GitHub auth via gh CLI (ykylee, scopes: repo/workflow/gist/read:org)."
     ]
   },
   "decisions": {
@@ -79,7 +80,7 @@
     "latest_backlog_path": "ai-workflow/memory/backlog/2026-06-09.md",
     "task_count": 9,
     "in_progress_items": [
-      "TASK-005-1: v1 MVP Rust 빌드 (in_progress)"
+      "TASK-005-1: v1 MVP Rust 빌드 (in_progress, W3~W6.5 완료, W7 대기)"
     ],
     "blocked_items": [
       "TASK-002: 도메인별 명령 가이드 (yklee 인프라 정보 의존)"
@@ -107,12 +108,13 @@
     "ai-workflow/memory/backlog/2026-06-09.md"
   ],
   "next_actions": [
-    "TASK-005-1 W0 검증 ✅ → prerequisite 5건 설치 (libsecret-1-dev + 5 rustup target + cargo-dist/binstall + ANTHROPIC_API_KEY + serde_yml 전환) → cargo workspace init",
+    "TASK-005-1 W7 시작 — llm crate 진입 (rig-core 0.38 + Anthropic provider, W6.5 wire format 활용)",
+    "ANTHROPIC_API_KEY 주입 시 LLM E2E 테스트 (W7 결과 검증)",
     "§5.6 Layer 1 구현 (필수 자동 압축): token budget 추적 + auto truncate/summarize + /compact",
     "§5.12 디렉토리 자동 생성 (v1 first run 시)",
     "Phase 1 of provider-auto-config: 6 provider 정적 + Anthropic + Ollama + hardcoded fallback",
-    "claude-code 2.1.169 changelog 공개 시 §11.2 검증 (Anthropic fallback / context var / MCP)",
-    "TASK-002 (도메인별 명령): yklee 인프라 정보 (SSH/Brewfile/dotfiles/asdf) 수령 시 진행"
+    "TASK-002 (도메인별 명령): yklee 인프라 정보 (SSH/Brewfile/dotfiles/asdf) 수령 시 진행",
+    "Security: W7+ 시작 전 gh CLI 의 GitHub token 회전 (의도치 않은 노출 — 본 세션)"
   ],
   "repository_assessment": {
     "path": null,

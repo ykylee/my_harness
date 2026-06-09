@@ -93,7 +93,11 @@ yklee 가 판단: 외부 워커 컨슈밍만으로는 **yklee 만이 진화 가�
 | D-39 | 2026-06-07 | **세션 마무리 (v1 컨셉 Phase 종료)** — `session_handoff.md` / `work_backlog.md` / `state.json` 갱신. **5/5 결정 검토 완료** (TASK-002 ⏸ 보류 + TASK-005/006/007/008 ✅). 8 done tasks. 다음 세션 시작점 = **TASK-005-1 (v1 MVP Rust 빌드)**. backlog 3 files 갱신, state.json 에 decisions 섹션 신설 (decided 4 / deferred 1). | yklee 가 "세션 마무리 준비하자" — standard_ai_workflow 운영 원칙 (handoff / state / backlog 갱신). | 다음 세션 TASK-005-1 시작. v1 Rust 구현 시점에 TASK-002 (도메인별 명령) 자연 도출 가능. |
 | D-40 | 2026-06-07 | **§11.2 (claude-code 2.1.169 pending 검증) 취소** — yklee 결정. 2.1.169 changelog 공개 시 검증 안 함, **v1 spec 잠금 (Rust 1안 / ratatui / headroom 3 algo / provider-auto-config)**. §11.2 섹션 완전 제거. §11.3 TASK-008 의 "D-34 (2.1.169 영향) — Anthropic fallback 동작 검증 후 Phase 2 에 반영" → "**D-40 으로 취소, 검증 미진행** (v1 spec 잠금)" 으로 갱신. | yklee 가 "claude-code 2.1.169 검증 안할거야 11.2 내용 확인하고 취소해" — 2.1.169 영향 미검증 결정. 공개 채널 (GitHub release, feed.xml, CHANGELOG.md) 모두 v2.1.168 까지만 노출 + 검증 부담 회피 + v1 spec 의존성 제거. | 향후 2.1.169 이상 변경 시점에 v1 spec 영향 별도 평가 (현재 v1.5+ 에서 처리). |
 | D-41 | 2026-06-09 | **TASK-005-1 환경 검증 완료** — Linux x86_64 / Rust 1.94.1 / 12+ crate 가용. Prerequisite 5건 (libsecret-1-dev, 5 cross target, cargo-dist/binstall, ANTHROPIC_API_KEY, serde_yml) 설치 후 cargo workspace init 진입 | 환경 검증 단계라 blocker 없음. API key 미설정으로 LLM E2E 는 키 주입 후. | (없음) |
+| D-42 | 2026-06-09 | **config 포맷 = TOML 통일** — v1 의 모든 사용자 편집 config / state / provider registry 를 TOML 로 통일. `serde_yaml` 0.9.34-deprecated + `serde_yml` 0.0.13-deprecated 회피. JSON 파일 (auth snapshot / metrics / mcp.json / log.jsonl / state.json) 은 유지. CONCEPT.md §5.12 / §5.5 / §5.6 19곳 갱신. | yklee 가 (a) TOML 만 결정 — single-user + TUI config 충분 + Cargo 표준 TOML 안정성. | CONCEPT.md 표면 일관성 ↑ / 1개 crate 의존성 (`toml`) 추가. |
+| D-43 | 2026-06-09 | **TASK-005-1 W3~W6.5 완료 + Gitea push** — myharness-tools crate 1차 완성: 5 tool (Read/Write/Edit/Bash/Grep/Glob) + 4 permission mode (default/acceptEdits/plan/bypassPermissions) + 9 위험 패턴 sanitizer (Strict/Permissive/Off) + JSON Schema (schemars 1.2) + 5 provider wire format (Anthropic/OpenAI/DeepSeek/Ollama/llama.cpp/litellm). 9 commit (3f0c9cb~dfc9d93) Gitea push. 63 tests passed. | yklee 결정 — (a) 5 tool foundation, (b) 4 permission mode 적용, (c) Bash sanitization, (d) JSON schema + dispatch, (a) full OpenAI 호환 검증 + 보강. librarian 조사 결과로 W6.5 의 3건 사실 정정 (DeepSeek Beta URL, $schema draft-07, Response side). | tool_use 호환성 ↑, 5 provider 모두 wire format 지원. Gitea 단일 remote (D-20 미적용) 한계. |
+| D-44 | 2026-06-09 | **dual-remote (D-20) 적용** — `origin=https://homelab.ddn777.synology.me/gitea/yklee/my_harness` (Gitea, private) + `upstream=https://github.com/ykylee/my_harness` (GitHub, public). Gitea PAT `myharness-cli` 발급 (scopes: write:repository, write:user) in `~/.git-credentials` (chmod 600). GitHub auth via gh CLI (ykylee, scopes: repo/workflow/gist/read:org). 9 commit 양쪽 push 완료. | yklee 가 Gitea password 제공 + GitHub 인증 확인 요청. D-20 정책 (2026-06-07 수립, 그 동안 미적용) 완전 이행. | GitHub public 노출은 의도된 외부 미러링 (D-20). gh CLI `--show-token` 으로 GitHub PAT 가 stdout 노출됨 — 회전 권고. |
 | D-42 | 2026-06-09 | **config 포맷 = TOML 통일** (D-42) — v1 의 모든 사용자 편집 config / state / provider registry 를 TOML 로 통일. `serde_yaml` 0.9.34-deprecated + `serde_yml` 0.0.13-deprecated 회피. JSON 파일 (auth state / metrics / mcp.json / log.jsonl / state.json) 은 유지. CONCEPT.md §5.12 / §5.5 / §5.6 19곳 갱신. | yklee 가 (a) TOML 만 결정 — single-user + TUI config 충분 + Cargo 표준 TOML 안정성. | CONCEPT.md 표면 일관성 ↑ / 1개 crate 의존성 (`toml`) 추가. |
+| D-43 | 2026-06-09 | **TASK-005-1 W3~W6.5 완료 + Gitea push** (D-43) — myharness-tools crate: 5 tool (Read/Write/Edit/Bash/Grep/Glob) + 4 permission mode (default/acceptEdits/plan/bypassPermissions) + 9 위험 패턴 sanitizer (Strict/Permissive/Off) + JSON Schema (schemars 1.2) + 5 provider wire format (Anthropic/OpenAI/DeepSeek/Ollama/llama.cpp/litellm). 9 commit (3f0c9cb~dfc9d93) Gitea push. 63 tests passed. Gitea PAT 설정은 다음 세션 보류. | yklee 결정 (a) full 검증 + 보강 (OpenAI 호환 wire format librarian 조사 결과 반영). | tools crate 1차 완성. 다음: W7 (llm crate 진입, rig-core 0.38 + Anthropic provider). |
 
 ---
 
@@ -165,12 +169,32 @@ yklee 가 판단: 외부 워커 컨슈밍만으로는 **yklee 만이 진화 가�
 - 영향: CONCEPT.md 19곳 .yaml → .toml syntax 변환 + SKILL.md YAML 예시 TOML 변환 + README.md / state.json / development_log.md 결정 기록 반영
 - `serde_yaml` / `serde_yml` crate 의존 회피 → W2 (cargo workspace init) 시 `toml` crate 만 의존성 추가
 
+### 2026-06-09 — TASK-005-1 W3~W6.5 (D-43) + Gitea push
+- W2: cargo workspace init — myharness-tools crate 구조 확립 (`crates/myharness-tools/`)
+- W3: basic Tools (Read/Write/Edit/Bash/Grep/Glob) + cli 인수 (tool + provider + profile + timeout)
+- W4: 4 permission mode (default/acceptEdits/plan/bypassPermissions) + permission_denied.rb integration test
+- W5: Bash sanitization — 9 위험 패턴 (strict/off/permissive) + sanitizer integration test
+- W6: JSON Schema (schemars 1.2) — ToolCall 구조 schema + auto-generate
+- W6.5: 5 provider wire format (Anthropic/OpenAI/DeepSeek/Ollama/llama.cpp/litellm) — ToolRequest/ToolResponse 구조 통일
+- 테스트 총 63 passed (51 unit + 4 schema integration + 3 permission + 3 sanitizer + 2 compat)
+- 9 commit (3f0c9cb d8e68e1 a6a014c d371586 ec1f704 daf566f d5264b6 25a60e0 dfc9d93) → Gitea origin push
+- Gitea PAT 미설정 — push 시 credential helper 가 gh-cli 또는 ssh fallback 으로 처리된 것으로 추정
+- 다음: W7 (llm crate 진입, rig-core 0.38 + Anthropic provider) — ANTHROPIC_API_KEY absent 이므로 mock test 위주
+
+### 2026-06-09 — dual-remote 적용 (D-44)
+- D-20 dual-remote 정책 (2026-06-07 수립) 을 본 세션에서 완전 이행
+- Gitea PAT `myharness-cli` 직접 발급 (Gitea web Basic auth + API POST `/api/v1/users/yklee/tokens`, scopes: write:repository, write:user) — `~/.git-credentials` 에 저장 (chmod 600)
+- `git remote add upstream https://github.com/ykylee/my_harness.git` — GitHub public repo 추가
+- GitHub 인증: gh CLI 사용 (ykylee account, scopes: repo/workflow/gist/read:org) — PAT 직접 보관 불필요
+- 9 commit (`3f0c9cb`..`dfc9d93`) → Gitea origin + GitHub upstream 양쪽 push 완료
+- 보안 주의: gh CLI `--show-token` 옵션 사용 시 GitHub PAT 가 stdout 노출됨 — W7+ 시작 전 회전 권고
+
 ---
 
 ## 4. 진행 중 / 미해결 (In Progress / Open)
 
 ### In Progress
-- **TASK-005-1 (in_progress, D-41 환경 검증 완료)** — W0-1/W0-2 검증 ✅. Prerequisite 5건 설치 후 cargo workspace init → ratatui shell → rig-core Anthropic → basic tools → /compact → standard_ai_workflow output
+- **TASK-005-1 (in_progress, D-43 W3~W6.5 완료, D-44 dual-remote 적용)** — tools crate: 5 tool + 4 permission + 9 sanitizer + JSON schema + 5 provider wire format. 9 commit dual push (Gitea + GitHub). W7 (llm crate 진입, rig-core 0.38 + Anthropic provider) 대기. ANTHROPIC_API_KEY 주입 시 E2E.
 - 6개 심층분석 + claude-code + PROVIDERS.md 의 통합 인덱스 (`docs/references/README.md`) — 미작성
 
 ### Open
@@ -209,6 +233,7 @@ yklee 가 판단: 외부 워커 컨슈밍만으로는 **yklee 만이 진화 가�
 - `docs/development_log.md` — **본 문서**
 - `ai-workflow/memory/{state.json,session_handoff.md,work_backlog.md,backlog/}` — 워크플로우 상태
 - (v1 추가 예정) `Cargo.toml` / `myharness/` source tree — v1 MVP Rust 빌드 (TASK-005-1) 산출물
+- (v1 W3~W6.5) `crates/myharness-tools/` — 5 tool + 4 permission + 9 sanitizer + JSON schema + 5 provider wire format. 11 file + `Cargo.toml` + `SKILL.md`
 
 ### 5.4 mavis 인프라 메모
 - agent memory: `~/.mavis/agents/mavis/memory/MEMORY.md` — worker long Write call 죽음 패턴 (D-16)
