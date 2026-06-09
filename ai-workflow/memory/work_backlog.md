@@ -76,7 +76,12 @@
 - [x] W12.4 discover smoke test (D-50) ✅
 - [x] W12.5 cli default LLM = MINIMAX (D-50) ✅
 - [x] W12 5 commit dual push (D-50) ✅
-- [ ] yklee MINIMAX_API_KEY env 주입 후 real network test (다음 세션 또는 shell)
+- [x] W13.1 OAuth 2.0 + PKCE + local callback + browser + token store (D-51) ✅
+- [x] W13.2 3 provider (MiniMax / OpenAI / Google) (D-51) ✅
+- [x] W13.3 AuthManager (login + refresh + status + logout) (D-51) ✅
+- [x] W13.4 cli auth subcommand (D-51) ✅
+- [x] W13 3 commit dual push (D-51) ✅
+- [ ] yklee OAuth client ID 등록 후 real OAuth flow 검증 (다음 세션)
 - [ ] **TASK-005-2** (v1.5) — Plugin 4-계층 + marketplace + auto memory + provider-auto-config skill 정식 구현 + CCR/Kompress-base
 - [ ] **TASK-005-3** (v2.0) — TUI/IDE/Web hand-off (5 surfaces) + Routines + OAuth + MCP-based discover
 - [ ] **TASK-005-4** (v2.5) — Multi-agent parallel + confidence scoring
