@@ -261,33 +261,6 @@ pub(crate) fn atomic_write(path: &Path, content: &str) -> std::io::Result<()> {
     Ok(())
 }
 
-/// W17 (v1.5 OI-1) — `register_local_provider` 의 비대화형 변형.
-///
-/// `probe_local_models` 호출 없이 (HTTP round-trip 생략) `register_local_provider` 를 직접 호출.
-/// CI/스크립트 환경 (stdin/stdout non-tty) 에서 사용.
-///
-/// # 인자
-/// - `base_url`: OpenAI 호환 endpoint (e.g., `http://localhost:11434/v1`)
-/// - `token`: API token (optional)
-/// - `model_id`: 사용자가 직접 지정한 모델 id (probe 없음 → 모델 검증 ❌, user 책임)
-///
-/// # 비고
-/// - `available_models = vec![model_id]` 1개로 hardcode (probe 없으므로)
-/// - `selected_model.owned_by = None` (probe 안 했으니 서버 메타 모름)
-/// - URL 검증 + KeyringAuthStore set + ProviderRegistry 갱신 + atomic write = interactive 와 동일
-pub async fn register_local_provider_non_interactive(
-    base_url: String,
-    token: Option<String>,
-    model_id: String,
-) -> Result<RegisterReport, RegisterError> {
-    let selected = ModelInfo {
-        id: model_id.clone(),
-        owned_by: None,
-    };
-    let available = vec![selected.clone()];
-    register_local_provider(base_url, token, selected, available).await
-}
-
 /// W18 (v1.5 R-4 대응) — providers.toml 덮어쓰기 직전 자동 backup.
 ///
 /// # 동작
@@ -661,26 +634,6 @@ mod tests {
         .unwrap_err();
         assert!(matches!(err, RegisterError::InvalidUrl(_)));
         assert!(err.to_string().contains("invalid URL"));
-    }
-
-    #[tokio::test]
-    #[serial_test::serial(env)]
-    async fn tc_w17_004_non_interactive_empty_model_id() {
-        let tmp = tempfile::tempdir().unwrap();
-        unsafe { std::env::set_var("MYHARNESS_HOME", tmp.path()); }
-
-        // 빈 model_id 도 register 자체는 성공 (사용자 책임) — 단 available_models 에 빈 string 1개
-        let report = register_local_provider_non_interactive(
-            "http://localhost:11434/v1".into(),
-            None,
-            "".into(),
-        )
-        .await
-        .unwrap();
-
-        assert_eq!(report.model_id, "");
-        assert_eq!(report.available_models, vec!["".to_string()]);
-        unsafe { std::env::remove_var("MYHARNESS_HOME"); }
     }
 }
 
