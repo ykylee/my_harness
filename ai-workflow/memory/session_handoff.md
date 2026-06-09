@@ -4,7 +4,7 @@
 - Scope: current focus, task status, key changes, next actions, risks
 - Audience: yklee, Mavis orchestrator, .MiniMax 워커 에이전트
 - Status: active
-- Updated: 2026-06-09 (D-60 + **TASK-005-2 v1.5 W17 완료** — `auth add-local` 비대화형 모드 --url/--model/--token/--probe-skip. 4 commit dual-push, 410 tests pass. 다음: TASK-005-2 v1.5 후속 결정 대기)
+- Updated: 2026-06-09 (D-61 + **TASK-005-2 v1.5 W18 완료 (R-4 직접 차단)** — `auth add-local` 자동 backup + Confirm prompt + --yes flag. 4 commit dual-push, 406 tests pass. 다음: W17 PR main merge + W19+ 결정 대기)
 - Related docs: [Project Profile](../../docs/PROJECT_PROFILE.md), [Work Backlog](./work_backlog.md), [State Cache](./state.json), [CONCEPT.md](../../docs/CONCEPT.md) (SSOT)
 
 ## Current Focus
@@ -22,7 +22,7 @@
   - 9 L1 + 3 L2 + 4 scenario TC = 16/16 PASS, 388+ tests workspace PASS, dual-push 완료
   - feature/w16-add-local 브랜치 local/origin/upstream 모두 삭제, main = 140acf9
   - 보존: `local/d-43-47-tc-scaffold` (이전 세션 TC scaffold 보존 브랜치) 그대로
-- **다음 (선택)**: TASK-005-2 v1.5 W18+ 결정 대기 — yklee 결정. v1.5 후보: OI-2 Ollama native /api/tags / F-1 providers.toml 자동 backup (R-4 대응) / F-2 --yes flag / Plugin 4-계층 (W19+ 큰 사이클) / CCR + Kompress-base ONNX
+- **다음 (선택)**: TASK-005-2 (v1.5) 진입 대기 — yklee 결정. v1.5 후보: Plugin 4-계층 + marketplace + auto memory + provider-auto-config skill 정식 + CCR/Kompress-base ONNX + 비대화형 add-local (`--url/--token/--model` flags, W16 OI-1)
 - **W12 산출물 (D-50)**: librarian 조사 (api.minimax.io/v1, MiniMax-M3, OpenAI-호환 Bearer, tool_use 지원). `ProviderMetadata::builtin_minimax()` 갱신. `KeyringAuthStore` in-memory cache + env hint. cli default LLM = `MINIMAX_API_KEY` env 자동 detect → `OpenAiCompatProvider`
 - **W13 산출물 (D-51)**: `myharness-auth` crate v1 (7 모듈: `pkce` RFC 7636 S256 + `flow` OAuth 2.0 Authorization Code with PKCE + `callback` loopback HTTP server 5min timeout + `browser` xdg-open/open/start + `store` `~/.myharness/oauth/{provider}.toml` chmod 600 + `provider` MiniMax/OpenAI/Google 3 provider + `manager` AuthManager login/refresh/status/logout). 38 tests
 - **W13.5 산출물 (D-52)**: `OAUTH_PROVIDERS` static LazyLock 제거 → `oauth_providers()` 매번 새 instance. `MinimaxOAuth::from_env()` / `OpenAiOAuth::from_env()` / `GoogleOAuth::from_env()`. `MYHARNESS_OAUTH_CLIENT_ID_{MINIMAX,OPENAI,GOOGLE}` env override
