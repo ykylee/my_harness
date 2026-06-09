@@ -259,3 +259,20 @@ async fn discover_ollama(p: &ProviderConfig) -> ProviderState {
 - D-36: 스택 = Rust 1안 (rig-core + rmcp + keyring)
 - D-34: 2.1.169 영향 pending 표 (Anthropic fallback 동작 검증 대기)
 - D-38: 본 스킬 (provider-auto-config 동적 발견 + per-provider auth)
+
+## Appendix: Wire Format Compat Matrix (TASK-005-1 W6.5)
+
+5+1 provider 의 tool calling wire format (request side) 호환성.
+OpenAI 호환 4 provider (OpenAI / DeepSeek / Ollama / llama.cpp / LiteLlm) + Anthropic.
+
+| Feature | Anthropic | OpenAI strict | DeepSeek | Ollama | llama.cpp | LiteLlm |
+|---|---|---|---|---|---|---|
+| tool `name` | ✅ top-level | ✅ `function.name` | ✅ `function.name` | ✅ `function.name` | ✅ `function.name` | ✅ `function.name` |
+| tool `description` | ✅ top-level | ✅ `function.description` | ✅ `function.description` | ✅ `function.description` | ✅ `function.description` | ✅ `function.description` |
+| `parameters` | ✅ `input_schema` (JSON Schema) | ✅ `function.parameters` | ✅ `function.parameters` | ✅ `function.parameters` | ✅ `function.parameters` | ✅ `function.parameters` |
+| `strict: true` | ❌ | ✅ | ❌ | ❌ | ❌ | ✅ |
+| `parameters.additionalProperties: false` | ❌ | ✅ | ❌ | ❌ | ❌ | ✅ |
+| `parameters.required` (auto from struct) | ❌ (in `input_schema`) | ✅ (in `parameters`) | ✅ (in `parameters` from schemars) | ✅ (in `parameters` from schemars) | ✅ (in `parameters` from schemars) | ✅ (in `parameters` from schemars) |
+| `parameters.$schema` | ❌ | ✅ `draft/2020-12` | ❌ (`draft-07` in schemars output) | ❌ (stripped) | ❌ (stripped) | ✅ `draft/2020-12` |
+
+출처: librarian 조사 (5 provider 공식 docs, 2026-06 시점) + OpenAI strict mode spec (2025-10)
