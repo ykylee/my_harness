@@ -4,7 +4,7 @@
 - Scope: current focus, task status, key changes, next actions, risks
 - Audience: yklee, Mavis orchestrator, .MiniMax 워커 에이전트
 - Status: active
-- Updated: 2026-06-09 (D-59 + **TASK-005-1 v1 MVP 종료 선언**, yklee 결정. W16 add-local follow-up 으로 main 머지 완료 → feature/w16 브랜치 정리 + origin/upstream 양쪽 삭제)
+- Updated: 2026-06-09 (D-61 + **TASK-005-2 v1.5 W18 완료 (R-4 직접 차단)** — `auth add-local` 자동 backup + Confirm prompt + --yes flag. 4 commit dual-push, 406 tests pass. 다음: W17 PR main merge + W19+ 결정 대기)
 - Related docs: [Project Profile](../../docs/PROJECT_PROFILE.md), [Work Backlog](./work_backlog.md), [State Cache](./state.json), [CONCEPT.md](../../docs/CONCEPT.md) (SSOT)
 
 ## Current Focus
