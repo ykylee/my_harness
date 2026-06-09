@@ -2113,6 +2113,41 @@ async fn tc_w16_i03_register_writes_providers_toml_end_to_end() {
 - **sibling**: TC_COMPONENT.md §W16-AddLocal (1 TC: cli dispatch), TC_E2E.md §W16-AddLocal (1 TC manual: real Ollama)
 - **mock crate**: `wiremock` (workspace dev-dep 추가 — `wiremock = "0.6"`)
 
+### §W17-AddLocal-NonInteractive — `auth add-local` 비대화형 L2 Integration TC (D-60, 2026-06-09)
+
+> **본 § 추가 이유**: TASK-005-2 v1.5 W17 의 L2 Integration TC. DD-AddLocal §9.6 와 1:1 매핑. W16 의 3 L2 TC + W17 의 +2 = 5 L2 TC.
+
+#### §W17.0 메타
+
+- **시점**: 2026-06-09 (TASK-005-2 v1.5 W17, D-60)
+- **대상 독자**: TASK-005-2 W17 의 coder worker + verifier
+- **SSOT**: `docs/architecture/DETAILED_DESIGN_ADD_LOCAL.md` §9.6 + `docs/specs/TC_UNIT.md` §W17
+- **구현 파일**: `myharness/crates/llm/tests/w16_add_local.rs` (W17 TC 2개 추가 — 같은 파일에 W16 + W17 통합)
+
+#### §W17.1 TC 정의 (2 신규)
+
+| TC ID | 시나리오 | 검증 | mock |
+| --- | --- | --- | --- |
+| **TC-W17-I01** | `register_local_provider_non_interactive` 호출 시 wiremock 에 mount 없음 → probe 호출 ❌ (= probe skip 증명) | `Ok(RegisterReport)`, `available_models = [model_id]` 1개, `providers.toml` 갱신 (default_model = model_id) | wiremock `MockServer::start()` + 0 routes mount |
+| **TC-W17-I02** | `register_local_provider_non_interactive` with token | `token_saved = true`, `providers.toml` 갱신, keyring in-memory cache 또는 real backend (CI env) | tempfile + `MYHARNESS_HOME` env override |
+
+#### §W17.2 mock strategy 명시
+
+- **TC-W17-I01** 핵심: `wiremock::MockServer::start().await` 만 호출하고 `Mock::given(...)...mount(&server).await` 안 함. → 어떤 HTTP 요청이 와도 404. 본 TC 가 성공 = probe 가 호출되지 않음의 증거. (만약 probe 가 호출됐다면 `ConnectionRefused` 또는 `HttpError { status: 404 }` 받았을 것.)
+- **TC-W17-I02** mock 없음. tempfile + env mutation 만. CI 환경에서 안전.
+
+#### §W17.3 TDD chapter 4 (W17)
+
+본 §W17 (L1 §W17 + L2 §W17) 가 chapter 4 의 RED 진입점. **`cargo test --workspace` 시 4 L1 + 2 L2 = 6 fail (RED) → 6 pass (GREEN)**. wiremock dev-dep 이미 W16 에서 추가됨 — 추가 의존성 ❌.
+
+#### §W17.4 cross-references
+
+- **입력 SSOT**:
+  - `docs/architecture/DETAILED_DESIGN_ADD_LOCAL.md` §9.6 (L2 Integration 2)
+  - `docs/specs/TC_UNIT.md` §W17-AddLocal-NonInteractive (L1 4)
+- **sibling**: 없음 (W17 cli 분기 테스트는 L3 Component TC 범위, v1.5+ OOS)
+- **mock crate**: `wiremock` (W16 에서 추가됨)
+
 ---
 
 ## VERDICT (final, post-handoff)

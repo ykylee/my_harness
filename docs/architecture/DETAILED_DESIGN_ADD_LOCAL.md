@@ -433,7 +433,7 @@ if !base_url.ends_with("/v1") && !base_url.ends_with("/v1/") {
 
 ### §6.3 open issues (v1.5+ 후보)
 
-- (OI-1) 비대화형 `--url/--token/--model` 플래그
+- ✅ (OI-1) 비대화형 `--url/--token/--model` 플래그 — **v1.5 W17 에서 해소** (본 §9)
 - (OI-2) Ollama native `/api/tags` 지원 (OpenAI 호환 미활성 시)
 - (OI-3) 다중 모델 1회 등록 (`--all-models` 또는 `auth add-local --interactive-model-select`)
 - (OI-4) 등록 후 자동 fallback chain 갱신 (`active-providers.yaml` 자동 write, D-38 Phase 2 영역)
@@ -476,6 +476,132 @@ if !base_url.ends_with("/v1") && !base_url.ends_with("/v1/") {
 - **chapter 4** (TC-W16-I01~I03): wiremock integration + E2E
 
 → **4 chapter × 1 session = 1~2 시간 작업**. (D-47 chapter 1~3-B 패턴 27.5% 1-session 사이클)
+
+---
+
+## §9. v1.5 W17 — 비대화형 모드 (CI/스크립트)
+
+> **시점**: 2026-06-09 (TASK-005-2 v1.5 진입, OI-1 해소)
+> **트리거**: DD §6.3 OI-1 + W16 handoff F-1
+> **목적**: CI/스크립트 환경에서 stdin/stdout non-tty 라도 `auth add-local` 사용 가능
+
+### §9.1 clap flags 추가
+
+`AuthAction::AddLocal` 에 4개 flag 추가:
+
+| Flag | Type | Default | Required (non-interactive)? | 의미 |
+| --- | --- | --- | --- | --- |
+| `--url` | `Option<String>` | `None` | ✅ (`--model` 와 pair) | OpenAI 호환 endpoint |
+| `--token` | `Option<String>` | `None` | ❌ (optional) | API token |
+| `--model` | `Option<String>` | `None` | ✅ (`--url` 와 pair) | 모델 id |
+| `--probe-skip` | `bool` | `false` | ❌ (default: probe 함) | 비대화형에서도 probe 안 함 |
+
+### §9.2 분기 로직
+
+```
+handle_auth_add_local(url, token, model, probe_skip)
+  ├─ non_interactive_requested = url.is_some() || model.is_some()
+  │
+  ├─ if non_interactive_requested:
+  │   ├─ if url.is_none() || model.is_none() → ERROR (partial flag ❌)
+  │   └─ handle_add_local_non_interactive(url, token, model, probe_skip)
+  │       ├─ if probe_skip:
+  │       │   └─ register_local_provider_non_interactive(url, token, model)  # probe 완전 스킵
+  │       └─ else:
+  │           ├─ probe_local_models(url, token) → models
+  │           ├─ models 에서 model_id 찾기 → selected (없으면 ERROR)
+  │           └─ register_local_provider(url, token, selected, models)  # 검증 + 채움
+  │
+  └─ else (interactive):
+      ├─ if !is_terminal() → ERROR (CI 환경에서 --url/--model 없이 호출)
+      └─ handle_add_local_interactive()  # inquire wizard (W16 동일)
+```
+
+### §9.3 register_local_provider_non_interactive API
+
+```rust
+/// W17 — 비대화형 모드 (CI/스크립트, --url + --model flag 필수)
+/// probe_local_models 호출 안 함 → HTTP round-trip 생략
+/// available_models = [model_id] 1개 hardcode
+pub async fn register_local_provider_non_interactive(
+    base_url: String,
+    token: Option<String>,
+    model_id: String,
+) -> Result<RegisterReport, RegisterError>;
+```
+
+**WHY 별도 함수**: register_local_provider 와 signature 가 다름 (probe 결과 Vec<ModelInfo> vs 사용자 지정 model_id). 내부적으로 `register_local_provider(url, token, ModelInfo { id: model_id, owned_by: None }, vec![ModelInfo { id: model_id, owned_by: None }])` 호출 (DRY, **regression 시 한 곳만 fix**).
+
+### §9.4 trade-off (3개)
+
+1. **--probe-skip default = false** — 비대화형 모드에서도 기본적으로 probe 실행. **이유**: available_models 자동 채움 + --model 검증. `--probe-skip` 는 명시적 opt-in.
+2. **partial flag = ERROR** (silently interactive fallback ❌) — CI 환경에서 사용자가 flag 빠뜨리면 즉시 명확한 에러.
+3. **clap `--url` `--model` 둘 다 required (non-interactive 시)** — rust clap 의 `required = true` attribute 안 쓰고 runtime 에 검증 (interactive 모드에서는 None OK). **이유**: 2-mode 분기를 단순화, error 메시지 한국어로 통일.
+
+### §9.5 risks (1개)
+
+- **R-4 (사용자 home providers.toml 덮어쓰기)**: `register_local_provider` 가 `paths::providers_toml()` → `~/.myharness/providers.toml` 에 직접 write. **MYHARNESS_HOME env override 안 쓰면 진짜 사용자 설정 손실 위험**. **대응**:
+  - non-interactive 모드 호출 전 stderr 에 "→ 덮어쓰기 알림" 출력 (선택)
+  - 향후 W17+ 에서 `~/.myharness/providers.toml.backup` timestamp 백업 (v1.5+ OOS)
+
+### §9.6 L1 Unit 4개 + L2 Integration 2개 (W17 TC scaffold)
+
+| TC ID | 시나리오 | 검증 |
+| --- | --- | --- |
+| **TC-W17-001** | `register_local_provider_non_interactive` valid no token | `Ok(RegisterReport)`, `available_models = [model_id]`, providers.toml 갱신 |
+| **TC-W17-002** | `register_local_provider_non_interactive` with token | `token_saved = true`, keyring in-memory cache 확인 (Linux backend=None) |
+| **TC-W17-003** | invalid URL → `RegisterError::InvalidUrl` | url::Url::parse 실패 |
+| **TC-W17-004** | empty model_id → register 성공 (user 책임) | `available_models = [""]` |
+| **TC-W17-I01** | L2: mock server 안 쓰는 비대화형 호출 → providers.toml 갱신 (probe skip 증명) | wiremock 에 mount 없음, 호출 시 404 안 받음 (probe 안 부름) |
+| **TC-W17-I02** | L2: 비대화형 + token → keyring set + providers.toml 갱신 | end-to-end |
+
+### §9.7 cli 변경 (cumulative)
+
+```rust
+// main.rs
+enum AuthAction {
+    // ... 기존 4개 ...
+    AddLocal {
+        #[arg(long)] url: Option<String>,
+        #[arg(long)] token: Option<String>,
+        #[arg(long)] model: Option<String>,
+        #[arg(long)] probe_skip: bool,
+    },
+}
+
+async fn handle_auth_add_local(
+    url: Option<String>,
+    token: Option<String>,
+    model: Option<String>,
+    probe_skip: bool,
+) -> anyhow::Result<()> {
+    // §9.2 분기 로직
+}
+
+async fn handle_add_local_interactive() -> anyhow::Result<()> { /* W16 그대로 */ }
+async fn handle_add_local_non_interactive(...) -> anyhow::Result<()> { /* §9.3 */ }
+fn print_register_report(...) { /* W16 + 공통 */ }
+```
+
+### §9.8 사용 예시 (4 시나리오)
+
+```bash
+# 1) Interactive (default) — W16 동일
+myharness auth add-local
+
+# 2) Non-interactive, probe 자동
+myharness auth add-local --url http://localhost:11434/v1 --model llama3.1:8b
+# → probe → /v1/models 에서 llama3.1:8b 찾기 → register
+# → 실패 시: 사용 가능 모델 목록 + clear error
+
+# 3) Non-interactive, probe skip
+myharness auth add-local --url http://gpu-host:8000/v1 --model custom-model --probe-skip
+# → probe 안 함 → 바로 register (CI 빠르고 결정적)
+
+# 4) Non-interactive, with token
+myharness auth add-local --url http://localhost:8000/v1 --token xyz --model qwen2.5:14b
+# → probe → keyring set → register
+```
 
 ---
 

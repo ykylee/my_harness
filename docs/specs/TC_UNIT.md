@@ -2952,7 +2952,7 @@ fn tc_w16_008_probe_url_trim_trailing_slash() {
 
 ### §W16.5 v1.5+ 후보 (claim-only 회피)
 
-- (OI-1) 비대화형 `--url/--token/--model` 플래그 — L1 + 1 (TC-W16-009)
+- ✅ (OI-1) 비대화형 `--url/--token/--model` 플래그 — **v1.5 W17 에서 해소** (본 §W17)
 - (OI-2) Ollama native `/api/tags` 지원 — L1 + 2 (TC-W16-010, 011)
 - (OI-3) 다중 모델 1회 등록 — L1 + 1 (TC-W16-012)
 - (OI-4) `register_local_provider` 의 keyring backend 분기 (Apple/Win/Linux 별) — L1 + 3 (TC-W16-013, 014, 015) — 현재는 W12 의 in-memory fallback 으로 통합 처리
@@ -2971,6 +2971,58 @@ fn tc_w16_008_probe_url_trim_trailing_slash() {
 | `deliverable_tc1.md` (early signal) | `docs/team/deliverable_tc1.md` | (prior attempt 1 작성) | status=in_progress → done |
 | engine deliverable | `outputs/tc-1/deliverable.md` | (chunk 1 후 작성, status=in_progress) | chunk 5 후 status=done 갱신 |
 | `board.md` (board) | `~/.mavis/plans/plan_ddcdd2a3/board.md` | start + done 2 entry (D-16 minimal noise) | sibling task 들과 공유 |
+
+## §W17-AddLocal-NonInteractive — `myharness auth add-local --url/--model` L1 Unit TC (D-60, 2026-06-09)
+
+> **본 § 추가 이유**: TASK-005-2 v1.5 진입 (D-59 follow-up TASK-005-1 v1 MVP 종료 선언 직후) 의 첫 W17 작업. DD-AddLocal §6.3 OI-1 해소 + DD-AddLocal §9 신규 spec + UC-AUTH-010 의 CI/스크립트 variant. **W16 의 8+1 = 9 L1 TC + W17 의 +4 = 13 L1 TC** (총 L1 = 168 + 4 = 172).
+
+### §W17.0 메타
+
+- **시점**: 2026-06-09 (TASK-005-2 v1.5 진입, D-60)
+- **대상 독자**: TASK-005-2 W17 의 coder worker + verifier
+- **SSOT**: `docs/architecture/DETAILED_DESIGN_ADD_LOCAL.md` §9 (W17 spec) + 본 §W17
+- **구현 파일**: `myharness/crates/llm/src/add_local.rs` (W17 신규 fn + 4 L1 TC) + `myharness/crates/cli/src/main.rs` (AuthAction::AddLocal flag 확장)
+- **chapter pattern**: D-43~D-47 4-chapter × 1 session (W16 과 동일, 1 session 안에 가능)
+
+### §W17.1 TC 정의 (4 신규, W16 8+1 + W17 4 = 13 L1)
+
+| TC ID | 시나리오 | 검증 | chapter |
+| --- | --- | --- | --- |
+| **TC-W17-001** | `register_local_provider_non_interactive` valid input, no token | `Ok(RegisterReport)`, `available_models = [model_id]` 1개 (probe 안 함의 증거), `providers.toml` 갱신 | ch 1 (RED→GREEN) |
+| **TC-W17-002** | `register_local_provider_non_interactive` with token | `token_saved = true`, keyring in-memory cache 확인 (Linux backend=None 환경) | ch 1 (RED→GREEN) |
+| **TC-W17-003** | invalid URL 입력 | `RegisterError::InvalidUrl("...")` 매칭, `to_string()` 에 "invalid URL" 포함 | ch 2 (RED→GREEN) |
+| **TC-W17-004** | empty `model_id` 입력 | register 성공 (user 책임), `available_models = [""]` 1개 | ch 2 (RED→GREEN) |
+
+### §W17.2 mock strategy 명시 (D-43 honest disclosure)
+
+- **L1 Unit 4개 모두 mock-free** — `tempfile::tempdir()` + `MYHARNESS_HOME` env override + `KeyringAuthStore::probe()` (real backend 또는 in-memory).
+- **L2 Integration 2개** (TC-W17-I01, I02) — `wiremock` 사용. 단, **TC-W17-I01 의 probe skip 증명** = wiremock 에 어떤 route 도 mount 안 함 (probe 호출 시 404 받게 됨 → 비대화형은 404 없이 성공 = probe 안 부름의 증거).
+- **CI 환경 의존** — `KeyringBackend::None` (Linux libsecret 부재) 환경에서 in-memory cache 동작 검증. macOS/Windows 는 `KeyringAuthStore::probe()` 가 real backend 사용 → TC 가 `if store.backend() == KeyringBackend::None` 분기.
+
+### §W17.3 TDD 사이클 (D-43~D-47 4-chapter × 1 session)
+
+- **chapter 1**: `register_local_provider_non_interactive` fn signature + TC-W17-001~002 (RED → GREEN) — impl 35 lines
+- **chapter 2**: error path + edge cases + TC-W17-003~004 (RED → GREEN) — impl 0 lines 추가
+- **chapter 3**: cli patch — `AuthAction::AddLocal { url, token, model, probe_skip }` + `handle_auth_add_local` 3-mode 분기 + `handle_add_local_interactive` / `handle_add_local_non_interactive` 분리
+- **chapter 4**: L2 integration 2개 (TC-W17-I01, I02) — wiremock + end-to-end
+
+→ **4 chapter × 1 session = 1~2 시간 작업** (W16 D-59 의 12 TC / 1 session 패턴과 동일, TC scaffold 4 L1 + 2 L2 = 6 신규).
+
+### §W17.4 검증 reference
+
+- **DD-AddLocal §9.6** (L1 Unit 4 + L2 Integration 2) — 본 §W17 와 1:1 매핑
+- **REVIEW §6.2** — L1 Unit TC 우선순위 가이드 (mock-first, no-IO 원칙) 적용
+- **security-patterns.md** — TC-W17-002 의 `ci-secret-token-abc` / `ci-token-xyz` 는 fixture, 실 token 아님
+
+### §W17.5 cross-references
+
+- **입력 SSOT**:
+  - `docs/architecture/DETAILED_DESIGN_ADD_LOCAL.md` §9 (W17 spec) + §6.3 OI-1 해소
+  - `docs/USE_CASES.md` §3.5 (UC-AUTH-010, CI variant)
+  - `docs/team/handoff_D-60_W17_add_local_non_interactive.md` (W17 handoff)
+- **plan**: W17 (TASK-005-2 v1.5)
+- **sibling**: TC_INTEGRATION.md §W17-AddLocal-NonInteractive (2 TC)
+- **SSOT parent**: `docs/architecture/DETAILED_DESIGN_ADD_LOCAL.md` (D-60, §9)
 
 ## cross-references
 
