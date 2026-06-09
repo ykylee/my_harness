@@ -132,6 +132,8 @@
     "ai-workflow/memory/backlog/2026-06-09.md"
   ],
   "next_actions": [
+    "W16 add-local 후속 (선택, yklee 결정): 비대화형 --url/--token/--model 플래그 (CI/스크립트용, OI-1)",
+    "W16 add-local 후속 (선택): Ollama native /api/tags 지원 (OpenAI 호환 미활성 시, OI-2)",
     "TASK-005-1 v1 MVP 종료 선언 또는 TASK-005-2 (v1.5) 진입 — yklee 결정 대기",
     "MiniMax Device OAuth real flow: yklee 가 MiniMax console 에서 device grant 활성화 후 `myharness auth login minimax --no-browser` 실행 (OpenClaw/Hermes 공통 client_id 78257093-7e40-4613-99e0-527b14b39113, W15.b 자동 refresh 도 real test 가능)",
     "OpenAI/Google 도 동일 패턴 (Authorization Code + PKCE, client_id 등록 후)",

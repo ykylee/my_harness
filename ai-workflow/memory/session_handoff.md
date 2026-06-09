@@ -4,7 +4,7 @@
 - Scope: current focus, task status, key changes, next actions, risks
 - Audience: yklee, Mavis orchestrator, .MiniMax 워커 에이전트
 - Status: active
-- Updated: 2026-06-09 (D-58, TASK-005-1 W12 + W13 + W13.5 + W13.6 + D-52 follow-up 6 작업 완료 — MiniMax Device Authorization Grant + --no-browser 3 모드 + polling output + token 자동 resolve + OAuth 자동 refresh)
+- Updated: 2026-06-09 (D-59, TASK-005-1 W16 완료 — `myharness auth add-local` subcommand: Ollama/vLLM/LM Studio/llama.cpp 로컬 LLM 서버 URL+token(선택)+모델 선택 UI → `~/.myharness/providers.toml` 의 LocalLlm entry 갱신. inquire UI 3단계, atomic write, 12/12 TC PASS, dual-push 완료)
 - Related docs: [Project Profile](../../docs/PROJECT_PROFILE.md), [Work Backlog](./work_backlog.md), [State Cache](./state.json), [CONCEPT.md](../../docs/CONCEPT.md) (SSOT)
 
 ## Current Focus
