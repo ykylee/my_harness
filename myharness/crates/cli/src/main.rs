@@ -134,7 +134,7 @@ enum AuthAction {
     },
     /// 등록된 OAuth provider 목록
     List,
-    /// 로컬 LLM 서버 등록 (D-59 W16) — Ollama / vLLM / LM Studio / llama.cpp
+    /// 로컬 LLM 서버 등록 (D-59 W16 + D-60 W17 + D-61 W18) — Ollama / vLLM / LM Studio / llama.cpp
     ///
     /// Interactive wizard (default):
     ///   1. 서버 URL 입력 (default: http://localhost:11434/v1)
@@ -142,17 +142,18 @@ enum AuthAction {
     ///   3. GET /v1/models 로 모델 목록 probe
     ///   4. arrow-key 로 모델 선택
     ///   5. ~/.myharness/providers.toml 의 LocalLlm entry 갱신
+    ///   6. 덮어쓰기 시 `~/.myharness/providers.toml.backup.<ts>` 자동 생성 (W18 R-4 대응)
     ///
-    /// Non-interactive (CI/스크립트, v1.5 OI-1 W17):
+    /// Non-interactive (CI/스크립트, v1.5 W17):
     ///   --url <URL>        OpenAI 호환 endpoint
     ///   --token <TOKEN>    API token (optional)
     ///   --model <MODEL_ID> 모델 id (probe 스킵 시)
-    ///   --probe-skip       비대화형 모드에서도 /v1/models probe 안 함 (CI 빠르고 결정적)
+    ///   --probe-skip       비대화형 모드에서도 /v1/models probe 안 함
+    ///   --yes              비대화형 모드에서 덮어쓰기 confirm 자동 yes (default: --url/--model set = 자동 yes)
     ///
     /// Examples:
-    ///   myharness auth add-local                                              # interactive wizard
+    ///   myharness auth add-local
     ///   myharness auth add-local --url http://localhost:11434/v1 --model llama3.1:8b
-    ///   myharness auth add-local --url http://localhost:8000/v1 --token xyz --model qwen2.5:14b
     ///   myharness auth add-local --url http://host:8000/v1 --model gpt-oss --probe-skip
     AddLocal {
         /// OpenAI 호환 endpoint (non-interactive 모드 필수)
@@ -161,12 +162,15 @@ enum AuthAction {
         /// API token (선택)
         #[arg(long)]
         token: Option<String>,
-        /// 모델 id (non-interactive 모드 필수, probe-skip 시 미검증)
+        /// 모델 id (non-interactive 모드 필수)
         #[arg(long)]
         model: Option<String>,
-        /// 비대화형 모드에서도 /v1/models probe 안 함 (default: probe 함)
+        /// 비대화형 모드에서도 /v1/models probe 안 함
         #[arg(long)]
         probe_skip: bool,
+        /// 덮어쓰기 confirm 자동 yes (interactive 모드에서도 prompt skip)
+        #[arg(long)]
+        yes: bool,
     },
 }
 
@@ -401,8 +405,8 @@ async fn run_auth(action: AuthAction) -> anyhow::Result<()> {
             let s = mgr.status(&provider).map_err(|e| anyhow::anyhow!("{e}"))?;
             print_auth_status(&s);
         }
-        AuthAction::AddLocal { url, token, model, probe_skip } => {
-            handle_auth_add_local(url, token, model, probe_skip).await?;
+        AuthAction::AddLocal { url, token, model, probe_skip, yes } => {
+            handle_auth_add_local(url, token, model, probe_skip, yes).await?;
         }
     }
     Ok(())
@@ -581,29 +585,31 @@ fn resolve_llm_client() -> Arc<dyn LLMClient> {
     ))
 }
 
-/// W16 (D-59) + W17 (v1.5 OI-1) — `myharness auth add-local` handler.
+/// W16 (D-59) + W17 (D-60) + W18 (D-61) — `myharness auth add-local` handler.
 ///
-/// # 분기 (DD-AddLocal §6.3 OI-1)
+/// # 분기 (DD-AddLocal §6.3 OI-1 + §10 W18)
 /// - **Interactive**: `url == None && model == None` → inquire wizard (TtyGuard 필수)
 /// - **Non-interactive**: `url.is_some() && model.is_some()` → flag 기반 직접 호출
-///   - `probe_skip == false` (default): 비대화형이지만 `probe_local_models` 호출 → available_models 검증 후 register
+///   - `probe_skip == false` (default): 비대화형이지만 `probe_local_models` 호출 → available_models 검증
 ///   - `probe_skip == true`: probe 완전 스킵 → `register_local_provider_non_interactive`
 /// - **혼합 (❌)**: flag 일부만 set → 에러 (CI에서 silent fallback 방지)
 ///
-/// # 인자
-/// - `url`, `token`, `model`, `probe_skip`: `AuthAction::AddLocal` 의 clap flags
+/// # W18 R-4 대응
+/// - `register_local_provider` 내부에서 `~/.myharness/providers.toml.backup.<ts>` 자동 생성
+/// - `max_backups = 5` 개 유지, 초과 시 가장 오래된 것부터 삭제
+/// - backup 실패 시: warn 만, register 계속 (fail-soft)
+/// - `--yes` flag: interactive 모드에서 덮어쓰기 confirm prompt skip (default: prompt 추가)
 async fn handle_auth_add_local(
     url: Option<String>,
     token: Option<String>,
     model: Option<String>,
     probe_skip: bool,
+    yes: bool,
 ) -> anyhow::Result<()> {
     use std::io::IsTerminal;
 
-    // ── 분기 결정 ──────────────────────────────────────────────────────────
     let non_interactive_requested = url.is_some() || model.is_some();
     if non_interactive_requested {
-        // Non-interactive 모드 — 3개 flag 의 partial set 검증
         if url.is_none() || model.is_none() {
             anyhow::bail!(
                 "non-interactive 모드: --url 과 --model 모두 필요 (둘 중 하나만 set ❌). \
@@ -614,20 +620,19 @@ async fn handle_auth_add_local(
         let model = model.unwrap();
         handle_add_local_non_interactive(&url, token, &model, probe_skip).await
     } else {
-        // Interactive 모드 — stdin/stdout TTY 검증 필수
         if !std::io::stdin().is_terminal() || !std::io::stdout().is_terminal() {
             anyhow::bail!(
                 "auth add-local (interactive) 는 tty 필수 — stdin/stdout 이 tty 아님 (CI/pipe 환경 ❌). \
-                 비대화형 사용: --url <URL> --model <MODEL_ID> [--token <TOKEN>] [--probe-skip]"
+                 비대화형 사용: --url <URL> --model <MODEL_ID> [--token <TOKEN>] [--probe-skip] [--yes]"
             );
         }
-        handle_add_local_interactive().await
+        handle_add_local_interactive(yes).await
     }
 }
 
-/// Interactive wizard — inquire 3 단계 + register_local_provider 호출.
-async fn handle_add_local_interactive() -> anyhow::Result<()> {
-    use inquire::{Password, Select, Text};
+/// Interactive wizard — inquire 4 단계 (URL → token → probe → 모델 선택) + 덮어쓰기 confirm (W18).
+async fn handle_add_local_interactive(skip_confirm: bool) -> anyhow::Result<()> {
+    use inquire::{Confirm, Password, Select, Text};
 
     println!("로컬 LLM 서버 등록 (Ollama / vLLM / LM Studio / llama.cpp)");
     println!();
@@ -669,7 +674,22 @@ async fn handle_add_local_interactive() -> anyhow::Result<()> {
         .prompt()
         .map_err(|e| anyhow::anyhow!("inquire model select: {e}"))?;
 
-    // 4. register
+    // 4. W18 R-4: 덮어쓰기 confirm (providers.toml 이미 존재 시)
+    let providers_path = myharness_llm::paths::providers_toml();
+    if providers_path.exists() && !skip_confirm {
+        let confirmed = Confirm::new(&format!(
+            "{} 가 이미 존재합니다. 덮어쓰시겠습니까? (기존 내용은 .backup.<ts> 로 자동 백업)",
+            providers_path.display()
+        ))
+        .with_default(false)
+        .prompt()
+        .map_err(|e| anyhow::anyhow!("inquire confirm prompt: {e}"))?;
+        if !confirmed {
+            anyhow::bail!("덮어쓰기 취소됨 (--yes 로 confirm skip 가능)");
+        }
+    }
+
+    // 5. register
     let report = myharness_llm::register_local_provider(url.clone(), token, selected, models)
         .await
         .map_err(|e| anyhow::anyhow!("{e}"))?;
@@ -690,7 +710,6 @@ async fn handle_add_local_non_interactive(
     }
 
     let report = if probe_skip {
-        // probe 완전 스킵 → 비대화형 helper 직접 호출
         myharness_llm::register_local_provider_non_interactive(
             url.to_string(),
             token,
@@ -699,14 +718,12 @@ async fn handle_add_local_non_interactive(
         .await
         .map_err(|e| anyhow::anyhow!("{e}"))?
     } else {
-        // 비대화형이지만 probe 는 실행 → 모델 검증 + available_models 자동 채움
         eprintln!("→ {url}/models 에 연결 시도 중...");
         let models = myharness_llm::probe_local_models(url, token.as_deref())
             .await
             .map_err(|e| anyhow::anyhow!("{e}"))?;
         eprintln!("✓ {} 개 모델 발견", models.len());
 
-        // --model 이 probe 결과에 있는지 검증
         let selected = models
             .iter()
             .find(|m| m.id == model)
