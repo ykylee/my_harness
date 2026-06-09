@@ -32,8 +32,14 @@
 - [x] **TASK-007**: headroom v1 우선순위 결정 — **3 알고리즘** (D-37). CCR + Kompress-base v1.5+ 로 연기
 - [x] **TASK-008**: Provider fallback 결정 — **`provider-auto-config` skill** (D-38). 하드코딩 fallback 폐기, 동적 discovered list
 
-### In Progress
-- [ ] **TASK-005-1** (v1.0 MVP, Rust 빌드) — W3~W6.5 + W7 + W8 + W9 + W10 완료 (D-43, D-45, D-46, D-47, D-48) + dual-remote push. W11 standard_ai_workflow output + 4 permission 대기.
+### Done (recent)
+- [x] **TASK-005-1** (v1.0 MVP, Rust 빌드) — W3~W6.5 + W7 + W8 + W9 + W10 + W11 완료 (D-43, D-45, D-46, D-47, D-48, D-49) + dual-remote push. **6/8 waves 완료**, v1 MVP 완성.
+
+### Planned
+- [ ] **TASK-005-2** (v1.5) — Plugin 4-계층 + marketplace + auto memory + provider-auto-config skill 정식 + CCR/Kompress-base ONNX
+- [ ] **TASK-005-3** (v2.0) — TUI/IDE/Web hand-off + Routines + OAuth + MCP-based discover
+- [ ] **TASK-005-4** (v2.5) — Multi-agent parallel + confidence scoring
+- [ ] **TASK-005-5** (v3.0) — Computer Use + Multi-user + RBAC
 
 ### Planned (다음 세션)
 - [x] prerequisite 5건 설치
@@ -60,7 +66,10 @@
 - [x] W10 tui crate (ratatui App + 4 SubAgent + Orchestrator + LoopRunner) (D-48) ✅
 - [x] W10.5 cli → tui 통합 (code/env/git/ask subcommand) (D-48) ✅
 - [x] W10 5 commit dual push (D-48) ✅
-- [ ] W11 standard_ai_workflow output + 4 permission 완성
+- [x] W11 core crate v1 (standard_ai_workflow 6 원칙 + 4 permission + tool alias) (D-49) ✅
+- [x] W11.3 MockClient FIFO + Orchestrator fatal_llm_error (D-49) ✅
+- [x] W11.4 cli subcommand task start|end + handoff (D-49) ✅
+- [x] W11 5 commit dual push (D-49) ✅
 - [ ] **TASK-005-2** (v1.5) — Plugin 4-계층 + marketplace + auto memory + provider-auto-config skill 정식 구현 + CCR/Kompress-base
 - [ ] **TASK-005-3** (v2.0) — TUI/IDE/Web hand-off (5 surfaces) + Routines + OAuth + MCP-based discover
 - [ ] **TASK-005-4** (v2.5) — Multi-agent parallel + confidence scoring
@@ -100,6 +109,7 @@
 | **D-46** | **TASK-005-1 W8 완료** (myharness-context crate v1, 54 tests) | §5.6 |
 | **D-47** | **TASK-005-1 W9 완료** (myharness-compression crate v1, 40 tests + context summarize 정식) | §5.6 |
 | **D-48** | **TASK-005-1 W10 완료** (myharness-tui crate v1, 50 tests + cli 통합) | §5.10, §5.11 |
+| **D-49** | **TASK-005-1 W11 완료 (v1 MVP 마지막 wave)** (myharness-core crate v1, 32 tests + standard_ai_workflow 6 원칙 native + 4 permission + tool alias + MockClient FIFO + Orchestrator fatal + cli task/handoff) | §5.4, §5.9 |
 
 ## 5. 관련 문서 (SSOT)
 
