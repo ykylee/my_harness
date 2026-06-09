@@ -75,13 +75,15 @@
 - [x] **W9 (D-47)** — myharness-compression crate v1 (Summarizer + CCR + Kompress-base v1 simple + BuiltinRegistry 6 알고리즘 통합) ✅
 - [x] **W9.2 — context ContextManager Summarize/Hybrid 정식 (LLM-driven summarize)** ✅
 - [x] **W9 dual-remote push (D-47)** ✅
+- [x] **W10 (D-48)** — myharness-tui crate v1 (ratatui App + crossterm + 4 SubAgent + Orchestrator + LoopRunner + cli 통합) ✅
+- [x] **W10 dual-remote push (D-48)** ✅
 - [ ] **Gitea PAT 회전** (이전 세션 노출 회전 권고) — yklee 가 회전 시 통지
-- [ ] **W10 (TUI shell)** — ratatui + crossterm 진입, sub-agent 1-2개
-- [ ] **W11** — standard_ai_workflow output + 4 permission 완성
+- [ ] **W11** — standard_ai_workflow output + 4 permission 완성 (TASK-005-1 마지막 wave)
 - [ ] **ANTHROPIC_API_KEY 주입 시 LLM E2E 테스트** (real-anthropic ignored test 활성화)
 - [ ] **§5.12 디렉토리 자동 생성** (v1 first run 시) — `~/.myharness/{config,state,memory,handoff,compression,sub-agents}/` + `state.json` + `auth/`
 - [ ] **TASK-002 (도메인별 명령)** — yklee 인프라 정보 수령 후 (SSH 별칭 / Brewfile / dotfiles / 런타임 버전) 진행
 - [ ] **헤로쿠 / Synology NAS 인프라 검증** — yklee 가 인프라 정보 입력 시점에 작업
+- [ ] **tool name mismatch**: sub-agent 가 기대하는 도구 이름 (Read/Grep/Glob, 대문자) vs tools crate 의 도구 이름 (read/grep/glob_, 소문자). W11 에서 통일.
 
 ## Risks & Blockers
 
