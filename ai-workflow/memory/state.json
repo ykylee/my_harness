@@ -1,11 +1,11 @@
 {
   "schema_version": "1",
-  "generated_at": "2026-06-07",
+  "generated_at": "2026-06-09",
   "source_of_truth": {
     "project_profile_path": "docs/PROJECT_PROFILE.md",
     "session_handoff_path": "ai-workflow/memory/session_handoff.md",
     "work_backlog_index_path": "ai-workflow/memory/work_backlog.md",
-    "latest_backlog_path": "ai-workflow/memory/backlog/2026-06-07.md",
+    "latest_backlog_path": "ai-workflow/memory/backlog/2026-06-09.md",
     "concept_ssot_path": "docs/CONCEPT.md",
     "repository_assessment_path": null
   },
@@ -21,13 +21,15 @@
     "quick_tests": null,
     "isolated_tests": null,
     "runtime_checks": null,
-    "v1_mvp_build": "TASK-005-1 (planned): cargo workspace init → ratatui shell → rig-core Anthropic → basic tools → /compact → standard_ai_workflow output"
+    "v1_mvp_build": "TASK-005-1 (W0 환경 검증 완료 D-41, 진행 중): prerequisite 5건 설치 → cargo workspace init → ratatui shell → rig-core Anthropic → basic tools → /compact → standard_ai_workflow output"
   },
   "session": {
     "current_baseline": "**v1 컨셉 Phase 종료 (2026-06-07, D-22~D-38)** — my_harness SSOT (CONCEPT.md) 확립. 5/5 결정 검토 완료 (4 ✅, 1 ⏸).",
-    "current_axis": "**TASK-005-1 대기** — Rust 1안 (D-36) 으로 v1 MVP 빌드 시작. cargo workspace init → ratatui shell → rig-core Anthropic → basic tools → /compact → standard_ai_workflow output.",
-    "current_focus": "TASK-005-1 (v1 MVP Rust 빌드) — 다음 세션 시작점",
-    "in_progress_items": [],
+    "current_axis": "**TASK-005-1 진행 중 (D-41)** — W0-1/W0-2 환경 검증 완료. Prerequisite 5건 설치 → cargo workspace init → ratatui shell → rig-core Anthropic → basic tools → /compact → standard_ai_workflow output.",
+    "current_focus": "TASK-005-1 (v1 MVP Rust 빌드) — 환경 검증 단계 (D-41), Prerequisite 5개 진행 중",
+    "in_progress_items": [
+      "TASK-005-1: v1 MVP Rust 빌드 (W0-1/W0-2 환경 검증 완료, W0-3 문서 갱신 중)"
+    ],
     "blocked_items": [
       "TASK-002: 도메인별 명령 가이드 (yklee 인프라 정보 의존)"
     ],
@@ -46,14 +48,19 @@
       "TASK-NNN 형식 통일 + 2.1.169 pending 표 (D-34)",
       "TASK-005 결정: Rust 1안 (D-36)",
       "TASK-007 결정: headroom v1 1안 유지 (D-37)",
-      "TASK-008 결정: provider-auto-config skill (D-38)"
+      "TASK-008 결정: provider-auto-config skill (D-38)",
+      "D-41 TASK-005-1 환경 검증 완료 (2026-06-09)",
+      "D-42 config 포맷 TOML 통일 (2026-06-09)"
     ],
     "environment_constraints": [
       "Mavis zero coupling (D-25): my_harness 자체는 Mavis/Mavis 와 무관",
       "외부 4-워커 sibling (D-24): claude-code/codex/aider/goose/gemini-cli/opencode — 통합/오케스트레이션 아님",
       "Rust 1안 (D-36): ratatui + rig-core + rmcp + keyring + cargo-dist",
       "headroom v1 = 3 알고리즘 (D-37): CacheAligner + ContentRouter + SmartCrusher + CodeCompressor",
-      "Provider fallback 동적 발견 (D-38): provider-auto-config skill, 하드코딩 폐기"
+      "Provider fallback 동적 발견 (D-38): provider-auto-config skill, 하드코딩 폐기",
+      "W0-1/W0-2 환경 검증 (D-41): Linux x86_64 / Rust 1.94.1 / 12+ crate 가용",
+      "Prerequisite 설치 5건: libsecret-1-dev + gnome-keyring, 5 cross target, cargo-dist+binstall, ANTHROPIC_API_KEY, serde_yml",
+      "D-42: v1 config/state = TOML. JSON 유지 (auth snapshot/metrics/mcp.json/log.jsonl/state.json). serde_yaml/serde_yml 의존 회피"
     ]
   },
   "decisions": {
@@ -61,16 +68,19 @@
       {"id": "TASK-005", "decision": "Rust 1안", "ref": "D-36", "section": "§11.3"},
       {"id": "TASK-006", "decision": "ratatui + crossterm", "ref": "D-36 (TASK-005 종속)", "section": "§11.3"},
       {"id": "TASK-007", "decision": "headroom v1 = 3 알고리즘 (CacheAligner + ContentRouter + SmartCrusher + CodeCompressor), CCR + Kompress-base v1.5+", "ref": "D-37", "section": "§5.6"},
-      {"id": "TASK-008", "decision": "provider-auto-config skill (동적 발견 + per-provider auth, 하드코딩 폐기)", "ref": "D-38", "section": "§5.5"}
+      {"id": "TASK-008", "decision": "provider-auto-config skill (동적 발견 + per-provider auth, 하드코딩 폐기)", "ref": "D-38", "section": "§5.5"},
+      {"id": "D-42", "decision": "config 포맷 = TOML 통일 (config.toml, providers.toml, current.toml, auth state toml, active-providers.toml). JSON 유지 (auth state snapshot / metrics / mcp.json / log.jsonl / state.json)", "ref": "D-42", "section": "§5.12, §5.5"}
     ],
     "deferred": [
       {"id": "TASK-002", "decision": "도메인별 명령 가이드", "reason": "yklee 인프라 정보 의존 (SSH 별칭 / Brewfile / dotfiles / asdf 버전)", "resume": "v1 Rust 구현 시점 또는 yklee 인프라 정보 수령 시"}
     ]
   },
   "backlog": {
-    "latest_backlog_path": "ai-workflow/memory/backlog/2026-06-07.md",
-    "task_count": 8,
-    "in_progress_items": [],
+    "latest_backlog_path": "ai-workflow/memory/backlog/2026-06-09.md",
+    "task_count": 9,
+    "in_progress_items": [
+      "TASK-005-1: v1 MVP Rust 빌드 (in_progress)"
+    ],
     "blocked_items": [
       "TASK-002: 도메인별 명령 가이드 (yklee 인프라 정보 의존)"
     ],
@@ -93,10 +103,11 @@
     "ai-workflow/memory/session_handoff.md",
     "ai-workflow/memory/work_backlog.md",
     "ai-workflow/memory/state.json",
-    "ai-workflow/memory/backlog/2026-06-07.md"
+    "ai-workflow/memory/backlog/2026-06-07.md",
+    "ai-workflow/memory/backlog/2026-06-09.md"
   ],
   "next_actions": [
-    "TASK-005-1 시작: v1 MVP Rust 빌드 (cargo workspace init → ratatui shell → rig-core Anthropic → basic tools → /compact → standard_ai_workflow output)",
+    "TASK-005-1 W0 검증 ✅ → prerequisite 5건 설치 (libsecret-1-dev + 5 rustup target + cargo-dist/binstall + ANTHROPIC_API_KEY + serde_yml 전환) → cargo workspace init",
     "§5.6 Layer 1 구현 (필수 자동 압축): token budget 추적 + auto truncate/summarize + /compact",
     "§5.12 디렉토리 자동 생성 (v1 first run 시)",
     "Phase 1 of provider-auto-config: 6 provider 정적 + Anthropic + Ollama + hardcoded fallback",

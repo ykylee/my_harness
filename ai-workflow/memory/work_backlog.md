@@ -4,7 +4,7 @@
 - 범위: 전체 태스크 목록, 우선순위, 진행 상태, 날짜별 기록 연결
 - 대상 독자: 개발자, AI 에이전트, 프로젝트 매니저
 - 상태: stable
-- 최종 수정일: 2026-06-07 (D-39, v1 컨셉 Phase 종료)
+- 최종 수정일: 2026-06-09 (D-41, TASK-005-1 시작)
 - 관련 문서: [세션 인계](./session_handoff.md), [프로젝트 프로필](../../docs/PROJECT_PROFILE.md), [CONCEPT.md](../../docs/CONCEPT.md)
 
 ## 1. 운영 원칙
@@ -16,6 +16,7 @@
 - [2026-06-05](./backlog/2026-06-05.md) — 초기 부트스트랩 + 방향 전환
 - [2026-06-06](./backlog/2026-06-06.md) — 5 reference clone + Gitea + 5-doc 분석
 - [2026-06-07](./backlog/2026-06-07.md) — 7-doc 분석 + CONCEPT.md SSOT + 5 결정 (D-22~D-38)
+- [2026-06-09](./backlog/2026-06-09.md) — TASK-005-1 환경 검증 (D-41)
 
 ## 3. 전체 작업 상태 요약
 
@@ -32,10 +33,18 @@
 - [x] **TASK-008**: Provider fallback 결정 — **`provider-auto-config` skill** (D-38). 하드코딩 fallback 폐기, 동적 discovered list
 
 ### In Progress
-- (없음) — v1 컨셉 Phase 종료, TASK-005-1 (v1 MVP Rust 빌드) 대기
+- [ ] **TASK-005-1** (v1.0 MVP, Rust 빌드) — W0-1/W0-2 환경 검증 완료 (D-41). prerequisite 5건 설치 → cargo workspace init → ratatui shell → rig-core Anthropic → basic tools → /compact → standard_ai_workflow output
 
 ### Planned (다음 세션)
-- [ ] **TASK-005-1** (v1.0 MVP, Rust 빌드) — cargo workspace init → ratatui shell → rig-core Anthropic → basic tools → /compact → standard_ai_workflow output
+- [ ] **TASK-005-1 prerequisite 설치 (5건)**
+- [ ] **TASK-005-1 cargo workspace init**
+- [ ] **TASK-005-1 ratatui shell**
+- [ ] **TASK-005-1 rig-core Anthropic**
+- [ ] **TASK-005-1 basic Tools**
+- [ ] **TASK-005-1 Context (CLAUDE.md + /compact)**
+- [ ] **TASK-005-1 standard_ai_workflow output**
+- [ ] **TASK-005-1 4 permission mode**
+- [ ] **TASK-005-1 1-2 built-in sub-agent**
 - [ ] **TASK-005-2** (v1.5) — Plugin 4-계층 + marketplace + auto memory + provider-auto-config skill 정식 구현 + CCR/Kompress-base
 - [ ] **TASK-005-3** (v2.0) — TUI/IDE/Web hand-off (5 surfaces) + Routines + OAuth + MCP-based discover
 - [ ] **TASK-005-4** (v2.5) — Multi-agent parallel + confidence scoring

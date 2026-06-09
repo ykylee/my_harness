@@ -4,7 +4,7 @@
 - Scope: current focus, task status, key changes, next actions, risks
 - Audience: yklee, Mavis orchestrator, .MiniMax 워커 에이전트
 - Status: active
-- Updated: 2026-06-07 (D-22~D-38, v1 컨셉 Phase 종료)
+- Updated: 2026-06-09 (D-41, TASK-005-1 환경 검증 완료)
 - Related docs: [Project Profile](../../docs/PROJECT_PROFILE.md), [Work Backlog](./work_backlog.md), [State Cache](./state.json), [CONCEPT.md](../../docs/CONCEPT.md) (SSOT)
 
 ## Current Focus
@@ -15,7 +15,8 @@
   - **TASK-007**: headroom v1 = 3 알고리즘 (CacheAligner + ContentRouter + SmartCrusher + CodeCompressor) (D-37). CCR + Kompress-base v1.5+
   - **TASK-008**: provider-auto-config skill (D-38) — 하드코딩 fallback 폐기, 동적 discovered list + per-provider auth
   - **TASK-002**: ⏸ 보류 (yklee 인프라 정보 의존)
-- **다음 단계**: TASK-005-1 (v1 MVP Rust 빌드) — cargo workspace init → ratatui shell → rig-core Anthropic → basic tools → /compact → standard_ai_workflow output
+- **TASK-005-1 진행 중 (D-41)**: W0-1/W0-2 환경 검증 완료 ✅. Linux x86_64 (Ubuntu 25.10) / Rust 1.94.1 / 2024 edition / 12+ crate 가용. Prerequisite 5건 설치 진행 중.
+- **설치 후**: cargo workspace init → ratatui shell → rig-core Anthropic → basic tools → /compact → standard_ai_workflow output
 - **D-34 §11.2 pending**: claude-code 2.1.169 changelog 공개 시 Anthropic fallback / context var / MCP 변경 검증
 
 ## Work Status
@@ -28,7 +29,7 @@
   - 2차 (14섹션 심층분석, 7 reference): done (D-10, D-15, D-21) — `docs/references/{codex,aider,goose,opencode,gemini-cli,claude-code,headroom}.md`
   - 7-doc cross-review: done (D-21) — `docs/references/README.md`
 - TASK-005 my_harness CLI/TUI 전환: **✅ done (스택 결정)** → **🔜 TASK-005-1 (v1 MVP 빌드)**
-  - TASK-005-1 (v1.0 MVP): planned
+  - TASK-005-1 (v1.0 MVP): **in_progress** (D-41 환경 검증 완료)
   - TASK-005-2 (v1.5): planned
   - TASK-005-3 (v2.0): planned
   - TASK-005-4 (v2.5): planned
@@ -54,11 +55,12 @@
 - 2026-06-07 13차 — **첫 push** (D-20): origin=Gitea (private) + upstream=GitHub (public) 듀얼 remote.
 - 2026-06-07 14차 — **관련 문서 align** (D-35): 4 docs 일괄 갱신.
 - 누적 18개 커밋 (D-22~D-38 시점, 782679d~33b590e).
+- 2026-06-09 — **TASK-005-1 환경 검증 (D-41)**: W0-1 (Rust toolchain + crate) ✅ + W0-2 (cross-build + keychain + .myharness) ✅. Linux x86_64 (Ubuntu 25.10) / Rust 1.94.1. 12+ crate 전부 가용. Prerequisite 5건 식별 (libsecret-1-dev + 5 rustup target + cargo-dist/binstall + ANTHROPIC_API_KEY + serde_yml). TASK-005-1 진입 가능.
 
 ## 다음에 할 일 (Next Actions)
 
 - [x] **v1 컨셉 확립** (D-22~D-38) — 5/5 결정 검토 완료 (4 ✅, 1 ⏸)
-- [ ] **TASK-005-1 시작** (v1 MVP Rust 빌드) — cargo workspace init → ratatui shell → rig-core Anthropic → basic tools → /compact → standard_ai_workflow output
+- [x] **TASK-005-1 환경 검증 (D-41)** ✅ / [ ] **Prerequisite 5건 설치** (libsecret-1-dev + 5 rustup target + cargo-dist/binstall + ANTHROPIC_API_KEY + serde_yml) / [ ] **cargo workspace init** → ratatui shell → rig-core Anthropic → basic tools → /compact → standard_ai_workflow output
 - [ ] **§5.6 Layer 1 구현** (필수 자동 압축) — token budget 추적 + auto truncate/summarize + /compact
 - [ ] **§5.12 디렉토리 자동 생성** (v1 first run 시) — `~/.myharness/{config,state,memory,handoff,compression,sub-agents}/` + `state.json` + `auth/`
 - [ ] **Phase 1 of provider-auto-config** — 6 provider 정적 등록 + Anthropic API key (env → keychain) + Ollama local detect
@@ -77,3 +79,4 @@
 - **agent memory**: "Worker 세션 long Write call 죽음 패턴" (D-16) — `~/.mavis/agents/mavis/memory/MEMORY.md` 에 영구 저장. 향후 long Write 시 chunked write + early deliverable signal.
 - **user memory** (yklee 프로필): Gitea 정보, 작업 스타일, PR 작업 패턴, 분석/리서치 작업 스타일 — `~/.mavis/memory/user.md`.
 - **yklee 비밀번호 / 토큰 값**: 메모리/문서/git 저장 금지 (D-06 정책). 회전 시 Mavis 가 매번 새로 전달.
+- **TASK-005-1 Prerequisite 5건 미설치**: libsecret-1-dev + gnome-keyring (Linux keychain backend), 5 cross-compile target (rustup), cargo-dist + cargo-binstall, ANTHROPIC_API_KEY (env or keyring), serde_yaml→serde_yml 전환. 설치 후 cargo init 진행.
