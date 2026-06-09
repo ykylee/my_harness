@@ -35,9 +35,13 @@ pub enum AuthError {
     Device(#[from] DeviceError),
 }
 
-/// `DeviceToken` (W14) → `OAuthToken` (W13). `expired_in` unix timestamp → `expires_at` (DateTime).
+/// `DeviceToken` (W14) → `OAuthToken` (W13). `expired_in` ms unix ts → `expires_at` (DateTime).
+///
+/// mini_max 가 \`expired_in\` 을 **milliseconds 단위 unix timestamp** 로 응답 (D-52 follow-up 확인).
+/// \`from_timestamp\` 는 seconds 단위 unix ts 를 받으므로 ms → s 변환 후 사용.
 fn device_token_to_oauth(t: &DeviceToken) -> OAuthToken {
-    let expires_at = chrono::DateTime::<chrono::Utc>::from_timestamp(t.expired_in as i64, 0);
+    let expires_secs = (t.expired_in / 1000) as i64;
+    let expires_at = chrono::DateTime::<chrono::Utc>::from_timestamp(expires_secs, 0);
     OAuthToken {
         access_token: t.access_token.clone(),
         refresh_token: Some(t.refresh_token.clone()),
@@ -553,7 +557,7 @@ mod tests {
                             .nth(1)
                             .and_then(|s| s.split('&').next().map(|x| x.to_string()))
                             .unwrap_or_else(|| "placeholder".to_string());
-                        let now = chrono::Utc::now().timestamp() as u64;
+                        let now = chrono::Utc::now().timestamp_millis() as u64;
                         let body = format!(
                             r#"{{"user_code":"{}","verification_uri":"https://platform.test/oauth-authorize?user_code={}","interval":1,"expired_in":{},"state":"{}"}}"#,
                             uc, uc, now + 60, state_param
@@ -564,7 +568,7 @@ mod tests {
                         );
                         sock.write_all(resp.as_bytes()).await.unwrap();
                     } else if request_line.contains("POST /oauth/token") {
-                        let now = chrono::Utc::now().timestamp() as u64;
+                        let now = chrono::Utc::now().timestamp_millis() as u64;
                         let body = format!(
                             r#"{{"status":"success","access_token":"{}","refresh_token":"{}","expired_in":{},"token_type":"Bearer"}}"#,
                             at, rt, now + 3600
@@ -613,7 +617,7 @@ mod tests {
             TokenPoll::Success { access_token, refresh_token, expired_in, .. } => {
                 assert_eq!(access_token, access_token_returned);
                 assert_eq!(refresh_token, refresh_token_returned);
-                let now = chrono::Utc::now().timestamp() as u64;
+                let now = chrono::Utc::now().timestamp_millis() as u64;
                 assert!(expired_in > now);
             }
             _ => panic!("expected Success, got {poll:?}"),
@@ -678,7 +682,7 @@ mod tests {
                             .nth(1)
                             .and_then(|s| s.split('&').next().map(|x| x.to_string()))
                             .unwrap_or_else(|| "placeholder".to_string());
-                        let now = chrono::Utc::now().timestamp() as u64;
+                        let now = chrono::Utc::now().timestamp_millis() as u64;
                         let body = format!(
                             r#"{{"user_code":"{}","verification_uri":"https://platform.test/oauth-authorize?user_code={}","interval":1,"expired_in":{},"state":"{}"}}"#,
                             uc, uc, now + 60, state_param
@@ -691,7 +695,7 @@ mod tests {
                         sock.write_all(resp.as_bytes()).await.unwrap();
                     } else if request_line.contains("POST /oauth/token") {
                         // status: success + access_token + refresh_token + expired_in
-                        let now = chrono::Utc::now().timestamp() as u64;
+                        let now = chrono::Utc::now().timestamp_millis() as u64;
                         let body = format!(
                             r#"{{"status":"success","access_token":"{}","refresh_token":"{}","expired_in":{},"token_type":"Bearer"}}"#,
                             at, rt, now + 3600
@@ -745,7 +749,7 @@ mod tests {
             TokenPoll::Success { access_token, refresh_token, expired_in, .. } => {
                 assert_eq!(access_token, access_token_returned);
                 assert_eq!(refresh_token, refresh_token_returned);
-                let now = chrono::Utc::now().timestamp() as u64;
+                let now = chrono::Utc::now().timestamp_millis() as u64;
                 assert!(expired_in > now);
             }
             _ => panic!("expected Success, got {poll:?}"),
