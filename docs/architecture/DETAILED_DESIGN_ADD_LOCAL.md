@@ -477,6 +477,126 @@ if !base_url.ends_with("/v1") && !base_url.ends_with("/v1/") {
 
 → **4 chapter × 1 session = 1~2 시간 작업**. (D-47 chapter 1~3-B 패턴 27.5% 1-session 사이클)
 
+## §10. v1.5 W18 — 자동 backup + Confirm prompt (R-4 대응, D-61)
+
+> **시점**: 2026-06-09 (TASK-005-2 v1.5 W18, D-61)
+> **트리거**: W17 manual test 중 R-4 (사용자 home providers.toml 덮어쓰기) 1회 사고 → mavis agent memory 에 lesson append
+> **목적**: R-4 완전 차단 (silent, 사용자 부담 0) + interactive 모드 confirm
+
+### §10.1 backup_providers_toml API
+
+```rust
+/// W18 (v1.5 R-4 대응) — providers.toml 덮어쓰기 직전 자동 backup
+///
+/// # 동작
+/// 1. path 가 존재하지 않으면 Some(path) (신규 write case)
+/// 2. path 가 존재하면 path.with_extension("toml.backup.<unix_ts>") 으로 copy
+/// 3. 실패 시 None (warn 만, register 계속)
+/// 4. max_backups 개수 초과 시 가장 오래된 것부터 삭제 (default 5)
+///
+/// # Returns
+/// - Some(backup_path): backup 성공
+/// - None: backup 실패 (warn 만)
+pub fn backup_providers_toml(path: &Path, max_backups: usize) -> Option<PathBuf>;
+```
+
+**WHY silent fail**: 사용자가 R-4 사고에도 register 가 성공해야 LLM 사용 가능. backup 실패는 `eprintln!` 로 stderr 알림 + 수동 `cp` 안내.
+
+### §10.2 register_local_provider 호출 흐름 (W18 patch)
+
+```rust
+// 4. atomic write (with auto-backup, W18 R-4 대응)
+let _ = backup_providers_toml(&path, 5);  // W18 신규 — silent, fail-soft
+let toml_str = registry.to_toml()?;
+atomic_write(&path, &toml_str).map_err(RegistryError::from)?;
+```
+
+**WHY `let _ =`**: backup 실패해도 register 계속 (R-4 graceful). atomic_write 의 tmp+rename 으로 corruption 방지는 별도 유지.
+
+### §10.3 backup 파일 형식 + retention
+
+- 파일명: `providers.toml.backup.<unix_ts>` (e.g., `providers.toml.backup.1781016095`)
+- 위치: providers.toml 과 같은 디렉토리 (`~/.myharness/`)
+- retention: `max_backups = 5` — 초과 시 file name 정렬로 가장 오래된 것부터 삭제
+- cleanup 은 `read_dir` + prefix match (`.backup.`)
+
+### §10.4 cli --yes flag (W18 spec)
+
+`AuthAction::AddLocal` 에 flag 1개 추가:
+
+| Flag | Type | Default | 의미 |
+| --- | --- | --- | --- |
+| `--yes` | `bool` | `false` | interactive 모드에서 덮어쓰기 confirm prompt skip |
+
+**동작**:
+- `interactive` 모드 + `providers.toml` 이미 존재 + `!skip_confirm` → `inquire::Confirm` prompt ("덮어쓰시겠습니까?")
+- prompt 거부 → `anyhow::bail!` "덮어쓰기 취소됨 (--yes 로 confirm skip 가능)"
+- `--yes` flag set → prompt skip, 그대로 register
+- `non-interactive` 모드 → `--yes` 불요 (이미 flag 기반 호출 = user 책임 명시)
+
+### §10.5 trade-off (3개)
+
+1. **silent backup** (vs `--backup` flag 명시 요구) — silent 가 R-4 100% 차단, 사용자 부담 0. 단 disk space 약간 사용 (5 × ~400 bytes = 2KB 무시 가능).
+2. **backup 실패 시 fail-soft** (vs panic) — register 성공 우선, backup 실패는 warn. 사용자 LLM 사용에 영향 ❌.
+3. **interactive confirm prompt** (vs 자동 덮어쓰기) — user 가 명시적으로 동의해야 register. `--yes` flag 로 skip 가능. CI 환경은 비대화형 모드 진입 자체가 confirm 역할.
+
+### §10.6 risks (1 신규, R-4 follow-up)
+
+- **R-4 (사용자 home 덮어쓰기, W18 으로 1차 차단)**: W18 으로 backup 자동 생성. **복구 방법**: `cp ~/.myharness/providers.toml.backup.<ts> ~/.myharness/providers.toml`. **남은 위험**: backup 자체가 corruption 되거나 ts 가 동일해 overwrite 되는 경우 (sub-second 연속 register 시 가능) → `monotonic_ts` 도입은 v1.5+ OOS.
+- **R-5 (backup disk 누적)**: 5개 retention 으로 자동 정리되지만, 사용자가 수동으로 `providers.toml.backup.*` 보관 시 누적 가능. v1.5+ OOS.
+
+### §10.7 L1 Unit 4개 + L2 Integration 2개 (W18 TC scaffold)
+
+| TC ID | 시나리오 | 검증 |
+| --- | --- | --- |
+| **TC-W18-001** | register 2회 연속 → 2번째에 backup 1개 생성 | backup 내용 = 1번째 register, current = 2번째 |
+| **TC-W18-002** | register 7회 연속 → backup 6개 → max_retention=5 로 5개 이하 유지 | `assert!(backups.len() <= 5)` |
+| **TC-W18-003** | `backup_providers_toml` 단독 호출, no-file case | `Some(path)` 반환 (신규 write, 실제 파일 생성 ❌) |
+| **TC-W17-004** (재활성화) | W17 helper `register_local_provider_non_interactive` 가 main 에 들어옴 | 빈 model_id → register 성공, `available_models = [""]` |
+| **TC-W18-I01** | L2: 연속 register → mock server 변경으로 다른 endpoint → backup 1개 확인 | wiremock 2 server 사용, ts 차이로 backup 분리 |
+| **TC-W18-I02** | L2: `backup_providers_toml` 단독 max_retention 검증 | 7개 backup → max=3 → ≤3 |
+
+### §10.8 cli 변경 (cumulative)
+
+```rust
+enum AuthAction {
+    // ... 기존 ...
+    AddLocal {
+        #[arg(long)] url: Option<String>,
+        #[arg(long)] token: Option<String>,
+        #[arg(long)] model: Option<String>,
+        #[arg(long)] probe_skip: bool,
+        #[arg(long)] yes: bool,  // W18 신규
+    },
+}
+
+async fn handle_add_local_interactive(skip_confirm: bool) -> anyhow::Result<()> {
+    // 1-3단계 (URL, token, probe, 모델 선택) 동일
+    // 4단계: providers.toml 존재 + !skip_confirm → inquire::Confirm
+    // 5단계: register_local_provider (내부에서 backup 자동 호출)
+}
+```
+
+### §10.9 사용 예시 (cumulative)
+
+```bash
+# 1) Interactive (default, 덮어쓰기 confirm prompt 추가)
+myharness auth add-local
+
+# 2) Interactive with --yes (덮어쓰기 confirm skip)
+myharness auth add-local --yes
+
+# 3) Non-interactive, probe 자동 (CI)
+myharness auth add-local --url http://localhost:11434/v1 --model llama3.1:8b
+
+# 4) Non-interactive, probe skip (CI 빠르고 결정적)
+myharness auth add-local --url http://host:8000/v1 --model custom --probe-skip
+
+# 5) R-4 복구 (실수로 덮어썼다면)
+ls ~/.myharness/providers.toml.backup.*  # 가장 최근 timestamp 확인
+cp ~/.myharness/providers.toml.backup.1781016095 ~/.myharness/providers.toml
+```
+
 ---
 
 ## §8. 산출물 + 다음 단계

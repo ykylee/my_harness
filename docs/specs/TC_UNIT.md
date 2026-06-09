@@ -2952,7 +2952,7 @@ fn tc_w16_008_probe_url_trim_trailing_slash() {
 
 ### §W16.5 v1.5+ 후보 (claim-only 회피)
 
-- (OI-1) 비대화형 `--url/--token/--model` 플래그 — L1 + 1 (TC-W16-009)
+- ✅ (OI-1) 비대화형 `--url/--token/--model` 플래그 — **v1.5 W17 에서 해소** (본 §W17) + **W18 에서 main merge 완료**
 - (OI-2) Ollama native `/api/tags` 지원 — L1 + 2 (TC-W16-010, 011)
 - (OI-3) 다중 모델 1회 등록 — L1 + 1 (TC-W16-012)
 - (OI-4) `register_local_provider` 의 keyring backend 분기 (Apple/Win/Linux 별) — L1 + 3 (TC-W16-013, 014, 015) — 현재는 W12 의 in-memory fallback 으로 통합 처리
@@ -2971,6 +2971,107 @@ fn tc_w16_008_probe_url_trim_trailing_slash() {
 | `deliverable_tc1.md` (early signal) | `docs/team/deliverable_tc1.md` | (prior attempt 1 작성) | status=in_progress → done |
 | engine deliverable | `outputs/tc-1/deliverable.md` | (chunk 1 후 작성, status=in_progress) | chunk 5 후 status=done 갱신 |
 | `board.md` (board) | `~/.mavis/plans/plan_ddcdd2a3/board.md` | start + done 2 entry (D-16 minimal noise) | sibling task 들과 공유 |
+
+## §W17-AddLocal-NonInteractive — `auth add-local` 비대화형 L1 Unit TC (D-60, 2026-06-09)
+
+> **본 § 추가 이유**: TASK-005-2 v1.5 진입 (D-59 follow-up TASK-005-1 v1 MVP 종료 선언 직후) 의 W17 작업. DD-AddLocal §6.3 OI-1 해소 + §9 spec. W18 에서 main merge 완료 (D-61).
+
+### §W17.0 메타
+
+- **시점**: 2026-06-09 (TASK-005-2 v1.5 W17, D-60 → W18 D-61 에서 main merge)
+- **대상 독자**: TASK-005-2 W17 의 coder worker + verifier
+- **SSOT**: `docs/architecture/DETAILED_DESIGN_ADD_LOCAL.md` §9 + 본 §W17
+- **구현 파일**: `myharness/crates/llm/src/add_local.rs` (`register_local_provider_non_interactive` + 4 L1 TC) + `myharness/crates/cli/src/main.rs` (W18 의 3-mode 분기 안에서 통합)
+
+### §W17.1 TC 정의 (4 신규, **W18 에서 TC-W17-001~003 main 누락 확인**)
+
+| TC ID | 시나리오 | 검증 | W18 상태 |
+| --- | --- | --- | --- |
+| **TC-W17-001** | `register_local_provider_non_interactive` valid input, no token | `Ok(RegisterReport)`, `available_models = [model_id]` 1개, providers.toml 갱신 | ⚠️ **W17 PR 누락 (W18 에서 미재추가)** |
+| **TC-W17-002** | `register_local_provider_non_interactive` with token | `token_saved = true`, keyring in-memory cache | ⚠️ W17 PR 누락 |
+| **TC-W17-003** | invalid URL → `RegisterError::InvalidUrl` | url::Url::parse 실패 | ⚠️ W17 PR 누락 |
+| **TC-W17-004** | empty `model_id` 입력 | `available_models = [""]` 1개 | ✅ W18 에서 main 재활성화 |
+
+**W18 follow-up**: TC-W17-001~003 는 W18 PR 과 별개로 W19+ 에서 main 재추가 권고 (PR merge 시점 검증 부재 lesson).
+
+### §W17.2 mock strategy 명시
+
+- **L1 Unit 4개 모두 mock-free** — `tempfile::tempdir()` + `MYHARNESS_HOME` env override + `KeyringAuthStore::probe()`.
+- **L2 Integration 2개** (W18 에서 main 누락) — `wiremock` 사용. TC-W17-I01 의 probe skip 증명 = wiremock 에 어떤 route 도 mount 안 함.
+
+### §W17.3 TDD 사이클 (D-43~D-47 4-chapter × 1 session)
+
+- **chapter 1**: `register_local_provider_non_interactive` fn + TC-W17-001~002 (RED → GREEN)
+- **chapter 2**: error path + TC-W17-003~004 (RED → GREEN)
+- **chapter 3**: cli patch — W18 에서 3-mode 분기 안에서 통합
+- **chapter 4**: L2 integration 2개 (W18 에서 미반영)
+
+### §W17.4 cross-references
+
+- **입력 SSOT**:
+  - `docs/architecture/DETAILED_DESIGN_ADD_LOCAL.md` §9 (W17 spec) + §10 (W18 spec, R-4 대응)
+  - `docs/team/handoff_D-60_W17_add_local_non_interactive.md` (W17 handoff)
+  - `docs/team/handoff_D-61_W18_add_local_backup.md` (W18 handoff, 본 작업)
+- **plan**: W17+W18 (TASK-005-2 v1.5)
+- **sibling**: TC_INTEGRATION.md §W17-AddLocal-NonInteractive (2 L2, W18 에서 미반영) + §W18-AddLocal-Backup (2 L2)
+
+## §W18-AddLocal-Backup — 자동 backup + Confirm prompt (R-4 대응) L1 Unit TC (D-61, 2026-06-09)
+
+> **본 § 추가 이유**: TASK-005-2 v1.5 W18 = R-4 (사용자 home providers.toml 덮어쓰기) 직접 차단. DD-AddLocal §10 spec. W17 manual test 중 1회 사고 → mavis agent memory 에 lesson append 후 즉시 W18 진입.
+
+### §W18.0 메타
+
+- **시점**: 2026-06-09 (TASK-005-2 v1.5 W18, D-61)
+- **대상 독자**: TASK-005-2 W18 의 coder worker + verifier
+- **SSOT**: `docs/architecture/DETAILED_DESIGN_ADD_LOCAL.md` §10 + 본 §W18
+- **구현 파일**: `myharness/crates/llm/src/add_local.rs` (`backup_providers_toml` + 3 L1 TC) + `myharness/crates/cli/src/main.rs` (AuthAction::AddLocal 에 `--yes` flag 추가 + `handle_add_local_interactive` 의 Confirm prompt)
+
+### §W18.1 TC 정의 (4 신규: L1 3 + L2 2 + W17-004 재활성화 1)
+
+| TC ID | 시나리오 | 검증 | chapter |
+| --- | --- | --- | --- |
+| **TC-W18-001** | `register_local_provider` 2회 연속 → 2번째에 backup 1개 생성 | backup 내용 = 1번째 register, current = 2번째 | ch 1 (RED→GREEN) |
+| **TC-W18-002** | register 7회 연속 → backup 6개 → max_retention=5 로 ≤5개 유지 | `assert!(backups.len() <= 5)` | ch 2 (RED→GREEN) |
+| **TC-W18-003** | `backup_providers_toml` 단독, no-file case | `Some(path)` 반환 (신규 write, 실제 파일 생성 ❌) | ch 1 (RED→GREEN) |
+| **TC-W17-004** (재활성화) | W17 helper `register_local_provider_non_interactive` 가 main 에 들어옴 | 빈 model_id → register 성공, `available_models = [""]` | ch 2 (RED→GREEN) |
+| **TC-W18-I01** | L2: 연속 register + mock server 변경 → backup 1개 확인 | wiremock 2 server 사용, ts 차이로 backup 분리 | ch 4 (L2) |
+| **TC-W18-I02** | L2: `backup_providers_toml` 단독 max_retention 검증 | 7개 backup → max=3 → ≤3 | ch 4 (L2) |
+
+### §W18.2 mock strategy 명시
+
+- **L1 Unit 4개 모두 mock-free** — `tempfile::tempdir()` + `MYHARNESS_HOME` env override.
+- **L2 Integration 2개** — `tempfile` + (I01 은 wiremock 2 server, I02 는 file system only).
+
+### §W18.3 TDD 사이클 (D-43~D-47 4-chapter × 1 session)
+
+- **chapter 1**: `backup_providers_toml` fn + TC-W18-001, 003 (RED → GREEN) — impl 50 lines
+- **chapter 2**: retention logic + TC-W18-002 + TC-W17-004 재활성화 (RED → GREEN)
+- **chapter 3**: cli patch — `AuthAction::AddLocal { url, token, model, probe_skip, yes }` + `handle_add_local_interactive(skip_confirm)` 의 `inquire::Confirm` prompt
+- **chapter 4**: L2 integration 2개 (TC-W18-I01, I02)
+
+### §W18.4 검증 reference
+
+- **DD-AddLocal §10.7** (L1 Unit 3 + L2 Integration 2 + W17-004) — 본 §W18 와 1:1 매핑
+- **REVIEW §6.2** — L1 Unit TC 우선순위 가이드
+- **mavis agent memory** — `### myharness v1.5 W17 — R-4 사용자 home 덮어쓰기` lesson (cross-project, W18 직접 트리거)
+
+### §W18.5 risks / follow-up
+
+- **R-4 (사용자 home 덮어쓰기)**: W18 으로 1차 차단 (silent backup + Confirm prompt). **남은 위험**: backup 자체 corruption, sub-second ts 충돌. v1.5+ OOS.
+- **R-5 (backup disk 누적)**: 5개 retention 자동 정리. 수동 보관 시 누적 가능. v1.5+ OOS.
+- **F-1 (W19+ 후보)**: `monotonic_ts` 도입 (sub-second 충돌 방지)
+- **F-2 (W19+ 후보)**: backup → git-style versioning (TS + content hash)
+- **F-3 (W19+ 후보, D-60 handoff F-2 와 동일)**: Ollama native `/api/tags` 지원
+
+### §W18.6 cross-references
+
+- **입력 SSOT**:
+  - `docs/architecture/DETAILED_DESIGN_ADD_LOCAL.md` §10 (W18 spec)
+  - `docs/team/handoff_D-61_W18_add_local_backup.md` (본 작업 handoff)
+  - mavis agent memory `R-4 사용자 home 덮어쓰기` (cross-project lesson)
+- **plan**: W18 (TASK-005-2 v1.5)
+- **sibling**: TC_INTEGRATION.md §W18-AddLocal-Backup (2 L2)
+- **SSOT parent**: `docs/architecture/DETAILED_DESIGN_ADD_LOCAL.md` (D-61, §10)
 
 ## cross-references
 

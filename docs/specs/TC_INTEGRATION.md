@@ -2113,6 +2113,55 @@ async fn tc_w16_i03_register_writes_providers_toml_end_to_end() {
 - **sibling**: TC_COMPONENT.md §W16-AddLocal (1 TC: cli dispatch), TC_E2E.md §W16-AddLocal (1 TC manual: real Ollama)
 - **mock crate**: `wiremock` (workspace dev-dep 추가 — `wiremock = "0.6"`)
 
+### §W17-AddLocal-NonInteractive — `auth add-local` 비대화형 L2 Integration TC (D-60, W18 main merge D-61)
+
+> **본 § 추가 이유**: TASK-005-2 v1.5 W17 의 L2 Integration TC. DD-AddLocal §9.6 와 1:1 매핑. W18 에서 main merge 시 W17 L2 (TC-W17-I01, I02) 누락 (W18 PR 의 정합성 cross-check 에서 발견).
+
+#### §W17.0 메타
+
+- **시점**: 2026-06-09 (TASK-005-2 v1.5 W17, D-60 → W18 D-61 main merge)
+- **SSOT**: `docs/architecture/DETAILED_DESIGN_ADD_LOCAL.md` §9 + `docs/specs/TC_UNIT.md` §W17
+
+#### §W17.1 TC 정의 (2 신규, **W18 에서 main 누락**)
+
+| TC ID | 시나리오 | W18 상태 |
+| --- | --- | --- |
+| **TC-W17-I01** | wiremock 0 routes mount → probe skip 증명 (ConnectionRefused 안 받음) | ⚠️ **W18 에서 미재추가 — W19+ 에서 추가** |
+| **TC-W17-I02** | 비대화형 + token → keyring set + providers.toml 갱신 | ⚠️ W18 에서 미재추가 |
+
+### §W18-AddLocal-Backup — 자동 backup L2 Integration TC (D-61, 2026-06-09)
+
+> **본 § 추가 이유**: TASK-005-2 v1.5 W18 의 L2 Integration TC. DD-AddLocal §10.7 와 1:1 매핑. R-4 (사용자 home 덮어쓰기) 직접 차단 검증.
+
+#### §W18.0 메타
+
+- **시점**: 2026-06-09 (TASK-005-2 v1.5 W18, D-61)
+- **SSOT**: `docs/architecture/DETAILED_DESIGN_ADD_LOCAL.md` §10 + `docs/specs/TC_UNIT.md` §W18
+
+#### §W18.1 TC 정의 (2 신규)
+
+| TC ID | 시나리오 | 검증 | mock |
+| --- | --- | --- | --- |
+| **TC-W18-I01** | register 2회 연속 → backup 1개 생성 | wiremock 2 server (다른 port), backup 내용 = 1번째, current = 2번째 | wiremock 2 server + ts sleep |
+| **TC-W18-I02** | `backup_providers_toml` 단독 max_retention 검증 | 7개 backup 생성 → max=3 → ≤3 | file system only (no wiremock) |
+
+#### §W18.2 mock strategy
+
+- **TC-W18-I01**: 2개의 `wiremock::MockServer::start().await` 사용. ts 가 동일하면 filename 충돌 → `std::thread::sleep(1.1s)` 로 분기. backup 내용 = 1번째 register (이전 값 보존), current = 2번째 (새 값).
+- **TC-W18-I02**: `std::fs::write` + `backup_providers_toml` 7회 호출. mock 없음 (filesystem only).
+
+#### §W18.3 TDD chapter 4
+
+W18 L2 2개 모두 chapter 4 의 RED 진입점. `cargo test --workspace` 시 2 L2 fail (RED) → 2 L2 pass (GREEN). wiremock dev-dep W16 에서 추가됨, 추가 의존성 ❌.
+
+#### §W18.4 cross-references
+
+- **입력 SSOT**:
+  - `docs/architecture/DETAILED_DESIGN_ADD_LOCAL.md` §10.7 (L2 Integration 2)
+  - `docs/specs/TC_UNIT.md` §W18-AddLocal-Backup (L1 3)
+- **sibling**: 없음 (W18 cli 분기 테스트는 L3 Component TC 범위, v1.5+ OOS)
+- **mock crate**: `wiremock` (W16 에서 추가됨, W18 재사용)
+
 ---
 
 ## VERDICT (final, post-handoff)
