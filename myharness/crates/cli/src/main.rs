@@ -508,7 +508,40 @@ fn resolve_llm_client() -> Arc<dyn LLMClient> {
         );
     }
 
-    // 3) ANTHROPIC_API_KEY env var.
+    // 3) Local LLM (W16 follow-up) — `~/.myharness/providers.toml` 의 LocalLlm entry.
+    //    Opt-in: `MYHARNESS_USE_LOCAL_LLM=1` env 가 명시적으로 set 된 경우만 사용 (다른 provider 와 충돌 방지).
+    //    사용자가 `myharness auth add-local` 로 등록한 base_url + default_model 자동 사용.
+    if std::env::var("MYHARNESS_USE_LOCAL_LLM").as_deref() == Ok("1") {
+        use myharness_llm::registry::ProviderRegistry;
+        let local = ProviderRegistry::load_from_path(&myharness_llm::paths::providers_toml())
+            .ok()
+            .and_then(|r| {
+                let id = myharness_llm::provider::ProviderId::LocalLlm;
+                r.get(id).cloned()
+            })
+            .unwrap_or_else(|| myharness_llm::metadata::ProviderMetadata::builtin(myharness_llm::provider::ProviderId::LocalLlm));
+
+        let base_url = std::env::var("LOCAL_LLM_BASE_URL")
+            .unwrap_or_else(|_| local.base_url.clone());
+        let model = std::env::var("LOCAL_LLM_MODEL")
+            .unwrap_or_else(|_| local.default_model.clone());
+        let api_key = std::env::var("MYHARNESS_LOCAL_LLM_KEY")
+            .or_else(|_| std::env::var("LOCAL_LLM_API_KEY"))
+            .ok();
+
+        tracing::info!("using Local LLM (base_url={}, model={}, has_key={})", base_url, model, api_key.is_some());
+        return Arc::new(
+            myharness_llm::OpenAiCompatProvider::new(
+                &base_url,
+                api_key.as_deref().unwrap_or(""),
+                &model,
+                myharness_llm::provider::ProviderId::LocalLlm,
+            )
+            .expect("failed to init Local LLM OpenAI-compat client"),
+        );
+    }
+
+    // 4) ANTHROPIC_API_KEY env var.
     if let Ok(api_key) = std::env::var("ANTHROPIC_API_KEY") {
         let model = std::env::var("ANTHROPIC_MODEL").unwrap_or_else(|_| "claude-sonnet-4-6".into());
         tracing::info!("using Anthropic env var (model={})", model);
@@ -518,7 +551,7 @@ fn resolve_llm_client() -> Arc<dyn LLMClient> {
         );
     }
 
-    // 4) MockClient fallback.
+    // 5) MockClient fallback.
     tracing::warn!("no LLM credential found; falling back to MockClient");
     Arc::new(myharness_llm::client_mock::MockClient::new(
         myharness_llm::provider::ProviderId::Claude,
