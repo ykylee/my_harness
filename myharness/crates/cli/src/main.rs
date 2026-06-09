@@ -1,13 +1,15 @@
 //! myharness — yklee 의 개인 코딩 에이전트 CLI/TUI
 //!
-//! v1 MVP (TASK-005-1 W10):
-//! - subcommand: code <action>, env <action>, git <action>, ask (single mode), loop (loop mode)
-//! - 3-모드: orchestrator (default) | single | loop (CONCEPT.md §5.10)
-//! - sub-agent registry: code-reviewer, code-implementer, env-diagnose, git-operator (CONCEPT.md §5.11)
+//! v1 MVP (TASK-005-1 W11):
+//! - subcommand: code <action>, env <action>, git <action>, ask, loop, task <start|end>
 
 use std::sync::Arc;
 
 use clap::{Parser, Subcommand};
+use myharness_core::{
+    EventLog, HandoffDoc, PermissionMode, PermissionPolicy, RiskKind, TaskEndReport,
+    TaskStartReport, TaskStatus,
+};
 use myharness_llm::LLMClient;
 use myharness_tools::ToolRegistry;
 use myharness_tui::{App, AppKey, LoopConfig, LoopRunner, MessageRole, Orchestrator, TtyGuard};
@@ -47,6 +49,15 @@ enum Cmd {
     Env { #[command(subcommand)] action: EnvAction },
     Git { #[command(subcommand)] action: GitAction },
     Ask { question: String },
+    /// standard_ai_workflow 호환 task 관리
+    Task { #[command(subcommand)] action: TaskAction },
+    /// handoff 생성 (다음 세션/agent 전달용)
+    Handoff {
+        #[arg(long)]
+        from: String,
+        #[arg(long)]
+        to: String,
+    },
 }
 
 #[derive(Subcommand, Debug)]
@@ -65,6 +76,30 @@ enum GitAction {
     Commit { message: String },
 }
 
+#[derive(Subcommand, Debug)]
+enum TaskAction {
+    Start {
+        #[arg(long)]
+        id: String,
+        #[arg(long)]
+        title: String,
+        #[arg(long)]
+        intent: String,
+    },
+    End {
+        #[arg(long)]
+        id: String,
+        #[arg(long)]
+        title: String,
+        #[arg(long)]
+        summary: String,
+        #[arg(long, value_delimiter = ',')]
+        risks: Vec<String>,
+        #[arg(long, value_delimiter = ',')]
+        follow_up: Vec<String>,
+    },
+}
+
 fn main() -> anyhow::Result<()> {
     tracing_subscriber::fmt()
         .with_env_filter(
@@ -74,10 +109,25 @@ fn main() -> anyhow::Result<()> {
         .init();
 
     let args = Args::parse();
-    tracing::info!(mode = %args.mode, "myharness v0.1.0 (W10)");
+    let mode = args.mode.as_str();
+    let _safe_mode = args.safe_mode.as_str();
+    let policy = PermissionPolicy::new(parse_permission_mode(&args.mode))
+        .with_auto_approve(args.yes);
+
+    tracing::info!(mode = %mode, policy = ?policy.mode, "myharness v0.1.0 (W11)");
 
     let rt = tokio::runtime::Runtime::new()?;
     let _guard = rt.enter();
+
+    match args.cmd {
+        Some(Cmd::Task { action }) => {
+            return run_task(action);
+        }
+        Some(Cmd::Handoff { from, to }) => {
+            return run_handoff(from, to);
+        }
+        _ => {}
+    }
 
     let orch = Orchestrator::new()
         .with_tools(Arc::new(ToolRegistry::default_tools()));
@@ -117,7 +167,8 @@ fn main() -> anyhow::Result<()> {
             let out = rt.block_on(orch.run(&question))?;
             println!("{out}");
         }
-        None => match args.mode.as_str() {
+        Some(Cmd::Task { .. }) | Some(Cmd::Handoff { .. }) => unreachable!(),
+        None => match mode {
             "loop" => {
                 let goal = args.goal.unwrap_or_else(|| {
                     eprintln!("--goal required for loop mode");
@@ -134,10 +185,9 @@ fn main() -> anyhow::Result<()> {
             }
             "orchestrator" | "single" => {
                 let _tty = TtyGuard::enter()?;
-                let mut app = App::new("myharness", &args.mode);
+                let mut app = App::new("myharness", mode);
                 app.push_message(myharness_tui::AppMessage::system(format!(
-                    "Mode: {} (type a message, Ctrl+C to quit)",
-                    args.mode
+                    "Mode: {mode} (type a message, Ctrl+C to quit)"
                 )));
                 let backend = ratatui::backend::CrosstermBackend::new(std::io::stdout());
                 let mut terminal = ratatui::Terminal::new(backend)?;
@@ -159,7 +209,7 @@ fn main() -> anyhow::Result<()> {
                         MessageRole::Tool => "tool",
                         MessageRole::Error => "err",
                     };
-                    println!("[{}] {}", prefix, m.content);
+                    println!("[{prefix}] {}", m.content);
                 }
             }
             other => {
@@ -169,5 +219,83 @@ fn main() -> anyhow::Result<()> {
         },
     }
 
+    Ok(())
+}
+
+fn parse_permission_mode(s: &str) -> PermissionMode {
+    match s {
+        "accept-edits" | "acceptEdits" => PermissionMode::AcceptEdits,
+        "plan" => PermissionMode::Plan,
+        "bypass-permissions" | "bypassPermissions" => PermissionMode::BypassPermissions,
+        _ => PermissionMode::Default,
+    }
+}
+
+fn run_task(action: TaskAction) -> anyhow::Result<()> {
+    match action {
+        TaskAction::Start { id, title, intent } => {
+            let log = EventLog::new();
+            run_task_start(&id, &title, &intent, log)?;
+        }
+        TaskAction::End { id, title, summary, risks, follow_up } => {
+            let log = EventLog::new();
+            run_task_end(&id, &title, &summary, &risks, &follow_up, log)?;
+        }
+    }
+    Ok(())
+}
+
+fn run_task_start(id: &str, title: &str, intent: &str, mut log: EventLog) -> anyhow::Result<()> {
+    log.info(format!("task start: {id}"));
+    let report = TaskStartReport::new(id, title, intent);
+    println!("{}", report.to_korean());
+    Ok(())
+}
+
+fn run_task_end(
+    id: &str,
+    title: &str,
+    summary: &str,
+    risks: &[String],
+    follow_up: &[String],
+    mut log: EventLog,
+) -> anyhow::Result<()> {
+    log.info(format!("task end: {id}"));
+    let mut report = TaskEndReport::new(id, title, summary).with_status(TaskStatus::Done);
+    for r in risks {
+        // risk format: "kind:description" (kind=environment|context|dependency|general)
+        if let Some((kind, desc)) = r.split_once(':') {
+            let rk = match kind {
+                "environment" => RiskKind::Environment,
+                "context" => RiskKind::Context,
+                "dependency" => RiskKind::Dependency,
+                _ => RiskKind::General,
+            };
+            report.add_risk(rk, desc.trim().to_string());
+        } else {
+            report.add_risk(RiskKind::General, r.clone());
+        }
+    }
+    for f in follow_up {
+        // follow_up format: "id|title|description" (| 가독성 ↑). 또는 "id:title:description"
+        // | 가 있으면 splitn(3, '|'), 아니면 ':' 로 시도
+        let (id, title, desc) = if f.contains('|') {
+            let parts: Vec<&str> = f.splitn(3, '|').collect();
+            (parts[0].to_string(), parts[1].to_string(), parts.get(2).unwrap_or(&"").to_string())
+        } else if f.matches(':').count() >= 2 {
+            let parts: Vec<&str> = f.splitn(3, ':').collect();
+            (parts[0].to_string(), parts[1].to_string(), parts[2].to_string())
+        } else {
+            ("FOLLOWUP".to_string(), "follow-up".to_string(), f.clone())
+        };
+        report.add_follow_up(id, title, desc);
+    }
+    println!("{}", report.to_korean());
+    Ok(())
+}
+
+fn run_handoff(from: String, to: String) -> anyhow::Result<()> {
+    let h = HandoffDoc::new(from, to);
+    println!("{}", h.to_korean());
     Ok(())
 }
