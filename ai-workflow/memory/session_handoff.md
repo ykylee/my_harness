@@ -72,11 +72,14 @@
 - [x] **W7 dual-remote push (D-45)** ✅
 - [x] **W8 (D-46)** — myharness-context crate v1 (CLAUDE.md + auto memory + ContextManager + Layer 2 4 알고리즘 + ContextConfig + ContextOrchestrator) ✅
 - [x] **W8 dual-remote push (D-46)** ✅
+- [x] **W9 (D-47)** — myharness-compression crate v1 (Summarizer + CCR + Kompress-base v1 simple + BuiltinRegistry 6 알고리즘 통합) ✅
+- [x] **W9.2 — context ContextManager Summarize/Hybrid 정식 (LLM-driven summarize)** ✅
+- [x] **W9 dual-remote push (D-47)** ✅
 - [ ] **Gitea PAT 회전** (이전 세션 노출 회전 권고) — yklee 가 회전 시 통지
-- [ ] **W9 (compression crate)** — §5.6 Layer 1 정식 (LLM-driven summarize) + Layer 2 (CCR + Kompress-base) 또는 W10 (TUI shell) 우선
+- [ ] **W10 (TUI shell)** — ratatui + crossterm 진입, sub-agent 1-2개
+- [ ] **W11** — standard_ai_workflow output + 4 permission 완성
 - [ ] **ANTHROPIC_API_KEY 주입 시 LLM E2E 테스트** (real-anthropic ignored test 활성화)
 - [ ] **§5.12 디렉토리 자동 생성** (v1 first run 시) — `~/.myharness/{config,state,memory,handoff,compression,sub-agents}/` + `state.json` + `auth/`
-- [ ] **Phase 1 of provider-auto-config** — D-45 W7 에서 v1 simple 구현. v1.5+ 에서 정식 + marketplace.
 - [ ] **TASK-002 (도메인별 명령)** — yklee 인프라 정보 수령 후 (SSH 별칭 / Brewfile / dotfiles / 런타임 버전) 진행
 - [ ] **헤로쿠 / Synology NAS 인프라 검증** — yklee 가 인프라 정보 입력 시점에 작업
 
