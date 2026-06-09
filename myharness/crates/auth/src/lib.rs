@@ -11,6 +11,7 @@
 
 pub mod browser;
 pub mod callback;
+pub mod device_flow;
 pub mod flow;
 pub mod manager;
 pub mod pkce;
@@ -19,12 +20,19 @@ pub mod store;
 
 pub use browser::{open as open_browser, BrowserError};
 pub use callback::CallbackServer;
+pub use device_flow::{
+    poll_token, poll_until_success, request_code, DeviceAuthorization, DeviceCodeProvider, DeviceError,
+    DeviceRequest, DeviceToken, TokenPoll,
+};
 pub use flow::{
     build_authorize_url, exchange_code, refresh_token, AuthorizeRequest, CallbackParams, OAuthError,
     OAuthProvider, OAuthToken,
 };
 pub use manager::{AuthManager, AuthStatus, LoginOutcome};
-pub use provider::{find_provider, GoogleOAuth, MinimaxOAuth, OpenAiOAuth, OAUTH_PROVIDERS};
+pub use provider::{
+    find_device_provider, find_provider, GoogleOAuth, MinimaxDeviceOAuth, MinimaxOAuth, OpenAiOAuth,
+    OAUTH_PROVIDERS,
+};
 pub use pkce::{generate_pkce, generate_state, PkceMethod, PkcePair};
 pub use store::{StoreError, StoredToken, TokenStore};
 

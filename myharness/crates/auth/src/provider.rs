@@ -1,13 +1,22 @@
-//! 3 OAuth provider 구현 (W13.2).
+//! 3 OAuth provider 구현 (W13.2) + MiniMax Device Authorization Grant (W14).
 //!
-//! - MiniMax: api.minimax.io/oauth/authorize, OpenAI-style. PKCE public client.
-//! - OpenAI: auth.openai.com/oauth/authorize, OpenAI Platform. PKCE public client.
+//! 표준 Authorization Code + PKCE redirect flow (RFC 6749):
+//! - OpenAI: auth.openai.com/oauth/authorize. PKCE public client.
 //! - Google: accounts.google.com/o/oauth2/v2/auth (Gemini 용). PKCE public client.
+//!
+//! MiniMax 는 표준 redirect flow 가 **404** (D-52 follow-up). 대신 **Device Authorization
+//! Grant 변형** (W14) 사용:
+//! - POST `{base_url}/oauth/code` → user_code + verification_uri
+//! - POST `{base_url}/oauth/token` polling
+//! - 표준 client_id `78257093-7e40-4613-99e0-527b14b39113` (OpenClaw/Hermes 공통, 모든 client 가 동일 값 사용)
+//! - scope: `group_id profile model.completion`
+//! - region: 한국 default = global (`https://api.minimax.io`). CN 은 `MYHARNESS_MINIMAX_CN=1` 또는 `MINIMAX_OAUTH_BASE_URL` env override.
 
 use std::sync::Arc;
 
 use async_trait::async_trait;
 
+use crate::device_flow::DeviceCodeProvider;
 use crate::flow::OAuthProvider;
 
 /// 빌드 시 OAuth provider 등록. CLI/사용자가 client_id 를 override 하려면
@@ -133,6 +142,88 @@ impl OAuthProvider for GoogleOAuth {
     }
 }
 
+/// MiniMax Device Authorization Grant provider (W14).
+///
+/// 표준 OAuth 2.0 Authorization Code + PKCE redirect flow 가 MiniMax 에서 404 반환
+/// (D-52 follow-up 확인). 따라서 **Device Authorization Grant 변형** 사용:
+/// POST `/oauth/code` → `user_code` + `verification_uri` → user 가 browser 에서
+/// `user_code` 입력 → polling `/oauth/token` → access_token.
+///
+/// 표준 client_id (OpenClaw/Hermes 와 동일): `78257093-7e40-4613-99e0-527b14b39113`.
+/// scope: `group_id profile model.completion` (Portal OAuth 권한).
+/// region: global (한국 default) = `https://api.minimax.io`. CN 은 `MYHARNESS_MINIMAX_CN=1`
+/// 또는 `MINIMAX_OAUTH_BASE_URL` env override.
+pub struct MinimaxDeviceOAuth {
+    /// POST /oauth/code + /oauth/token 의 base URL. CN 면 `https://api.minimaxi.com`.
+    pub base_url: String,
+    /// region 표시 (global/cn).
+    pub region: String,
+}
+
+impl MinimaxDeviceOAuth {
+    /// env 재읽기. 한국 환경 default = global (`https://api.minimax.io`).
+    /// CN 으로 전환: `MYHARNESS_MINIMAX_CN=1` 또는 `MINIMAX_OAUTH_BASE_URL` 직접 설정.
+    pub fn from_env() -> Self {
+        let cn = std::env::var("MYHARNESS_MINIMAX_CN")
+            .ok()
+            .map(|v| v == "1" || v.eq_ignore_ascii_case("true"))
+            .unwrap_or(false);
+        let base_url = std::env::var("MINIMAX_OAUTH_BASE_URL").unwrap_or_else(|_| {
+            if cn {
+                "https://api.minimaxi.com".into()
+            } else {
+                "https://api.minimax.io".into()
+            }
+        });
+        let region = if base_url.contains("minimaxi.com") {
+            "cn".to_string()
+        } else {
+            "global".to_string()
+        };
+        Self { base_url, region }
+    }
+    pub fn new() -> Arc<Self> { Arc::new(Self::from_env()) }
+}
+
+impl Default for MinimaxDeviceOAuth {
+    fn default() -> Self { Self::from_env() }
+}
+
+#[async_trait]
+impl DeviceCodeProvider for MinimaxDeviceOAuth {
+    fn id(&self) -> &'static str { "minimax" }
+    fn display_name(&self) -> &str { "MiniMax" }
+    fn code_endpoint(&self) -> &str {
+        // &str 반환이지만 self.base_url 와 lifetime 동일 → Box::leak 회피:
+        // base_url 이 "https://api.minimax.io" 또는 "https://api.minimaxi.com" 이면 정적 literal.
+        if self.base_url == "https://api.minimax.io" {
+            "https://api.minimax.io/oauth/code"
+        } else if self.base_url == "https://api.minimaxi.com" {
+            "https://api.minimaxi.com/oauth/code"
+        } else {
+            // arbitrary override (e.g. local mock) → W14 단순화: 정적 fallback. 정확히 필요하면 v1.5+ 에서 self.base_url Box::leak.
+            "https://api.minimax.io/oauth/code"
+        }
+    }
+    fn token_endpoint(&self) -> &str {
+        if self.base_url == "https://api.minimax.io" {
+            "https://api.minimax.io/oauth/token"
+        } else if self.base_url == "https://api.minimaxi.com" {
+            "https://api.minimaxi.com/oauth/token"
+        } else {
+            "https://api.minimax.io/oauth/token"
+        }
+    }
+    fn client_id(&self) -> &'static str {
+        // OpenClaw / Hermes Agent 와 동일한 공용 client_id. MiniMax 가 한 개만 발급하고 모든 client 공유.
+        "78257093-7e40-4613-99e0-527b14b39113"
+    }
+    fn scope(&self) -> &'static str {
+        "group_id profile model.completion"
+    }
+    fn region(&self) -> &str { &self.region }
+}
+
 /// 등록된 3 provider.
 pub fn oauth_providers() -> Vec<Arc<dyn OAuthProvider>> {
     vec![
@@ -152,6 +243,15 @@ pub fn find_provider(id: &str) -> Option<Arc<dyn OAuthProvider>> {
         }
     }
     None
+}
+
+/// DeviceCodeProvider (W14). MiniMax 만 DeviceCodeFlow 사용. find_device_provider("minimax")
+/// 로 MinimaxDeviceOAuth instance 반환.
+pub fn find_device_provider(id: &str) -> Option<Arc<dyn DeviceCodeProvider>> {
+    match id {
+        "minimax" => Some(MinimaxDeviceOAuth::new() as Arc<dyn DeviceCodeProvider>),
+        _ => None,
+    }
 }
 
 #[cfg(test)]

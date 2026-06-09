@@ -8,11 +8,13 @@ use std::sync::Arc;
 
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
-use tokio::io::{AsyncReadExt, AsyncWriteExt};
+use tokio::io::AsyncWriteExt;
 
 use crate::browser;
 use crate::callback::CallbackServer;
+use crate::device_flow::{self, DeviceAuthorization, DeviceCodeProvider, DeviceError, DeviceToken, TokenPoll};
 use crate::flow::{build_authorize_url, exchange_code, refresh_token, OAuthError, OAuthProvider, OAuthToken};
+use crate::provider::MinimaxDeviceOAuth;
 use crate::store::{StoreError, TokenStore};
 
 #[derive(Debug, Error)]
@@ -29,6 +31,20 @@ pub enum AuthError {
     NoToken,
     #[error("browser: {0}")]
     Browser(#[from] browser::BrowserError),
+    #[error("device: {0}")]
+    Device(#[from] DeviceError),
+}
+
+/// `DeviceToken` (W14) → `OAuthToken` (W13). `expired_in` unix timestamp → `expires_at` (DateTime).
+fn device_token_to_oauth(t: &DeviceToken) -> OAuthToken {
+    let expires_at = chrono::DateTime::<chrono::Utc>::from_timestamp(t.expired_in as i64, 0);
+    OAuthToken {
+        access_token: t.access_token.clone(),
+        refresh_token: Some(t.refresh_token.clone()),
+        expires_at: expires_at,
+        scope: None,
+        token_type: t.token_type.clone(),
+    }
 }
 
 impl AuthError {
@@ -135,6 +151,68 @@ impl AuthManager {
         Ok(stored.token)
     }
 
+    /// MiniMax Device Authorization Grant flow (W14).
+    ///
+    /// 표준 Authorization Code + PKCE redirect flow 는 MiniMax 에서 404 (D-52 follow-up).
+    /// 따라서 DeviceCodeFlow 사용:
+    /// 1) POST /oauth/code → user_code + verification_uri
+    /// 2) `interactive=true` 면 browser open
+    /// 3) user 가 verification_uri 에서 user_code 입력
+    /// 4) polling /oauth/token → access_token
+    /// 5) TokenStore::save
+    ///
+    /// `interactive=false` 면 browser open 안 하고 verification_uri + user_code + expired_in
+    /// 만 return. polling/저장 안 함 (CI/스크립트용).
+    pub async fn login_minimax_device(
+        &self,
+        interactive: bool,
+    ) -> Result<LoginOutcome, AuthError> {
+        let provider = MinimaxDeviceOAuth::from_env();
+        let provider_arc: Arc<dyn DeviceCodeProvider> = Arc::new(provider);
+        let req = device_flow::request_code(&*provider_arc).await?;
+        let verification_url = req.authorization.verification_uri.clone();
+        let user_code = req.authorization.user_code.clone();
+        let interval = req.authorization.interval;
+        let expired_in = req.authorization.expired_in;
+
+        if !interactive {
+            return Ok(LoginOutcome {
+                provider: "minimax".to_string(),
+                token: OAuthToken {
+                    access_token: String::new(),
+                    refresh_token: None,
+                    expires_at: None,
+                    scope: None,
+                    token_type: "Bearer".into(),
+                },
+                auth_url: format!("{verification_url} (user_code={user_code}, interval={interval}s, expired_in={expired_in})"),
+                user_pasted_code: Some(user_code),
+            });
+        }
+
+        // 1) browser 자동 open
+        let _ = browser::open(&verification_url);
+        // 2) expired_in 까지 polling
+        let device_token = device_flow::poll_until_success(
+            &*provider_arc,
+            &user_code,
+            &req.pkce.verifier,
+            interval,
+            expired_in,
+        )
+        .await?;
+        // 3) OAuthToken 변환
+        let oauth_token = device_token_to_oauth(&device_token);
+        // 4) save
+        self.store.save("minimax", &oauth_token)?;
+        Ok(LoginOutcome {
+            provider: "minimax".to_string(),
+            token: oauth_token,
+            auth_url: verification_url,
+            user_pasted_code: Some(user_code),
+        })
+    }
+
     /// expired 면 refresh, 안되면 None. token 자동 save.
     pub async fn ensure_fresh(
         &self,
@@ -201,6 +279,7 @@ mod tests {
     use super::*;
     use crate::store::TokenStore;
     use chrono::Utc;
+    use tokio::io::AsyncReadExt;
 
     fn make_token() -> OAuthToken {
         OAuthToken {
@@ -420,5 +499,137 @@ mod tests {
         mgr.store.save("mock-mini", &token).unwrap();
         let loaded = mgr.current_token("mock-mini").unwrap();
         assert_eq!(loaded.access_token, access_token_returned);
+    }
+
+    /// W14 — mock MiniMax Device Authorization Grant + AuthManager end-to-end.
+    /// real network 없이 DeviceCodeFlow 전체 검증: POST /oauth/code → user_code →
+    /// POST /oauth/token (polling) → TokenStore save.
+    #[tokio::test]
+    async fn login_minimax_device_with_mock_server() {
+        use crate::device_flow::{DeviceCodeProvider, poll_token, request_code};
+        use async_trait::async_trait;
+
+        let mock_server = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let mock_addr = mock_server.local_addr().unwrap();
+        let mock_base = format!("http://{mock_addr}");
+
+        let user_code_returned = "DM83-JJXC";
+        let access_token_returned = "at-mock-device-12345";
+        let refresh_token_returned = "rt-mock-device-67890";
+
+        let uc = user_code_returned.to_string();
+        let at = access_token_returned.to_string();
+        let rt = refresh_token_returned.to_string();
+        let mock_task = tokio::spawn(async move {
+            for _ in 0..3 {
+                if let Ok((mut sock, _)) = mock_server.accept().await {
+                    let mut buf = vec![0u8; 8192];
+                    let n = sock.read(&mut buf).await.unwrap();
+                    let req = String::from_utf8_lossy(&buf[..n]).to_string();
+                    let request_line = req.lines().next().unwrap_or("");
+
+                    if request_line.contains("POST /oauth/code") {
+                        // state echo + user_code + verification_uri + interval + expired_in
+                        // mock 은 request body 의 state= 값을 그대로 echo (실제 MiniMax 와 동일)
+                        let state_param = req
+                            .split("state=")
+                            .nth(1)
+                            .and_then(|s| s.split('&').next().map(|x| x.to_string()))
+                            .unwrap_or_else(|| "placeholder".to_string());
+                        let now = chrono::Utc::now().timestamp() as u64;
+                        let body = format!(
+                            r#"{{"user_code":"{}","verification_uri":"https://platform.test/oauth-authorize?user_code={}","interval":1,"expired_in":{},"state":"{}"}}"#,
+                            uc, uc, now + 60, state_param
+                        );
+                        let resp = format!(
+                            "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{}",
+                            body.len(),
+                            body
+                        );
+                        sock.write_all(resp.as_bytes()).await.unwrap();
+                    } else if request_line.contains("POST /oauth/token") {
+                        // status: success + access_token + refresh_token + expired_in
+                        let now = chrono::Utc::now().timestamp() as u64;
+                        let body = format!(
+                            r#"{{"status":"success","access_token":"{}","refresh_token":"{}","expired_in":{},"token_type":"Bearer"}}"#,
+                            at, rt, now + 3600
+                        );
+                        let resp = format!(
+                            "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{}",
+                            body.len(),
+                            body
+                        );
+                        sock.write_all(resp.as_bytes()).await.unwrap();
+                    } else {
+                        let resp = "HTTP/1.1 404 Not Found\r\nContent-Length: 0\r\nConnection: close\r\n\r\n";
+                        sock.write_all(resp.as_bytes()).await.unwrap();
+                    }
+                    sock.shutdown().await.ok();
+                }
+            }
+        });
+
+        // 1) MockDeviceProvider — code_endpoint + token_endpoint 가 mock server
+        struct MockDeviceProvider {
+            code_ep: String,
+            token_ep: String,
+        }
+        #[async_trait]
+        impl DeviceCodeProvider for MockDeviceProvider {
+            fn id(&self) -> &'static str { "minimax" }
+            fn display_name(&self) -> &str { "Mock MiniMax" }
+            fn code_endpoint(&self) -> &str { &self.code_ep }
+            fn token_endpoint(&self) -> &str { &self.token_ep }
+            fn client_id(&self) -> &str { "mock-client" }
+            fn scope(&self) -> &str { "group_id profile model.completion" }
+            fn region(&self) -> &str { "global" }
+        }
+        let provider = MockDeviceProvider {
+            code_ep: format!("{mock_base}/oauth/code"),
+            token_ep: format!("{mock_base}/oauth/token"),
+        };
+
+        // 2) request_code 호출 — POST /oauth/code
+        let req = request_code(&provider).await.expect("request_code failed");
+        assert_eq!(req.authorization.user_code, user_code_returned);
+        assert!(req.authorization.verification_uri.contains("platform.test/oauth-authorize"));
+        assert_eq!(req.authorization.interval, 1);
+
+        // 3) poll_token 1회 (success 직접 반환)
+        let poll = poll_token(&provider, &req.authorization.user_code, &req.pkce.verifier)
+            .await
+            .expect("poll_token failed");
+        match poll {
+            TokenPoll::Success { access_token, refresh_token, expired_in, .. } => {
+                assert_eq!(access_token, access_token_returned);
+                assert_eq!(refresh_token, refresh_token_returned);
+                let now = chrono::Utc::now().timestamp() as u64;
+                assert!(expired_in > now);
+            }
+            _ => panic!("expected Success, got {poll:?}"),
+        }
+
+        // 4) TokenStore save + load (간접 검증)
+        let dir = tempfile::tempdir().unwrap();
+        let mgr = AuthManager::with_store(TokenStore::with_base(dir.path().to_path_buf()));
+        let token = match poll_token(&provider, &req.authorization.user_code, &req.pkce.verifier).await.unwrap() {
+            TokenPoll::Success { access_token, refresh_token, expired_in, token_type, .. } => {
+                DeviceToken {
+                    access_token,
+                    refresh_token,
+                    expired_in,
+                    token_type: token_type.unwrap_or_else(|| "Bearer".into()),
+                    resource_url: None,
+                }
+            }
+            _ => panic!("expected Success on second poll"),
+        };
+        let oauth = device_token_to_oauth(&token);
+        mgr.store.save("minimax", &oauth).unwrap();
+        let loaded = mgr.current_token("minimax").unwrap();
+        assert_eq!(loaded.access_token, access_token_returned);
+        assert!(!loaded.is_expired());
+
+        let _ = mock_task;
     }
 }

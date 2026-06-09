@@ -355,12 +355,24 @@ async fn run_auth(action: AuthAction) -> anyhow::Result<()> {
             }
         }
         AuthAction::Login { provider, port, no_browser } => {
-            let p = find_provider(&provider)
-                .ok_or_else(|| anyhow::anyhow!("provider '{provider}' not found (try `myharness auth list`)"))?;
-            let mgr = AuthManager::new().map_err(|e| anyhow::anyhow!("{e}"))?;
-            let effective_port = if port == 0 { 0 } else { port };
-            let outcome = mgr.login(p.clone(), !no_browser, effective_port).await.map_err(|e| anyhow::anyhow!("{e}"))?;
-            print_login_outcome(&outcome);
+            // MiniMax 는 W14 부터 Device Authorization Grant (D-52 follow-up) 사용.
+            // 다른 provider (OpenAI, Google) 는 표준 Authorization Code + PKCE redirect flow.
+            if provider == "minimax" {
+                let mgr = AuthManager::new().map_err(|e| anyhow::anyhow!("{e}"))?;
+                let outcome = mgr.login_minimax_device(!no_browser)
+                    .await
+                    .map_err(|e| anyhow::anyhow!("{e}"))?;
+                print_login_outcome(&outcome);
+            } else {
+                let p = find_provider(&provider)
+                    .ok_or_else(|| anyhow::anyhow!("provider '{provider}' not found (try `myharness auth list`)"))?;
+                let mgr = AuthManager::new().map_err(|e| anyhow::anyhow!("{e}"))?;
+                let effective_port = if port == 0 { 0 } else { port };
+                let outcome = mgr.login(p.clone(), !no_browser, effective_port)
+                    .await
+                    .map_err(|e| anyhow::anyhow!("{e}"))?;
+                print_login_outcome(&outcome);
+            }
         }
         AuthAction::Logout { provider } => {
             let mgr = AuthManager::new().map_err(|e| anyhow::anyhow!("{e}"))?;
