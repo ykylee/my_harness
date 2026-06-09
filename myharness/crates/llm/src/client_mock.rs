@@ -38,6 +38,20 @@ impl MockClient {
         self.queue.lock().unwrap().push_back(resp);
     }
 
+    /// `push` 와 동일 (VecDeque::push_back → pop_front = FIFO).
+    /// W11.3 (D-49) 에서 명시적 FIFO 메서드로 추가. push 와 동작이 같아서
+    /// 함수 이름으로 의도만 명시.
+    pub fn push_fifo(&self, resp: MockResponse) {
+        self.queue.lock().unwrap().push_back(resp);
+    }
+
+    /// FIFO 순서로 여러 push.
+    pub fn push_fifo_many(&self, responses: impl IntoIterator<Item = MockResponse>) {
+        for r in responses {
+            self.push_fifo(r);
+        }
+    }
+
     pub fn call_count(&self) -> usize {
         self.calls.lock().unwrap().len()
     }
@@ -167,6 +181,46 @@ mod tests {
 
     #[tokio::test]
     async fn mock_client_multiple_responses_served_in_order() {
+        let c = MockClient::new(ProviderId::Claude, "claude-sonnet-4-6");
+        c.push(MockResponse::Text("first".into()));
+        c.push(MockResponse::Text("second".into()));
+        let r1 = c.complete(CompletionRequest::default()).await.unwrap();
+        let r2 = c.complete(CompletionRequest::default()).await.unwrap();
+        assert_eq!(r1.content, "first");
+        assert_eq!(r2.content, "second");
+    }
+
+    #[tokio::test]
+    async fn mock_client_push_fifo_serves_in_order() {
+        let c = MockClient::new(ProviderId::Claude, "claude-sonnet-4-6");
+        c.push_fifo(MockResponse::Text("first".into()));
+        c.push_fifo(MockResponse::Text("second".into()));
+        c.push_fifo(MockResponse::Text("third".into()));
+        let r1 = c.complete(CompletionRequest::default()).await.unwrap();
+        let r2 = c.complete(CompletionRequest::default()).await.unwrap();
+        let r3 = c.complete(CompletionRequest::default()).await.unwrap();
+        // FIFO: push 한 순서대로 pop
+        assert_eq!(r1.content, "first");
+        assert_eq!(r2.content, "second");
+        assert_eq!(r3.content, "third");
+    }
+
+    #[tokio::test]
+    async fn mock_client_push_fifo_many() {
+        let c = MockClient::new(ProviderId::Claude, "claude-sonnet-4-6");
+        c.push_fifo_many(vec![
+            MockResponse::Text("a".into()),
+            MockResponse::Text("b".into()),
+        ]);
+        let r1 = c.complete(CompletionRequest::default()).await.unwrap();
+        let r2 = c.complete(CompletionRequest::default()).await.unwrap();
+        assert_eq!(r1.content, "a");
+        assert_eq!(r2.content, "b");
+    }
+
+    #[tokio::test]
+    async fn mock_client_default_push_is_fifo() {
+        // 기본 push 는 FIFO (VecDeque push_back + pop_front)
         let c = MockClient::new(ProviderId::Claude, "claude-sonnet-4-6");
         c.push(MockResponse::Text("first".into()));
         c.push(MockResponse::Text("second".into()));
