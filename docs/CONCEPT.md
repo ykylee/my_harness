@@ -84,7 +84,7 @@
 
 코드/서버/환경 3-도메인 모두 통합. **Context 압축은 2 계층**:
 - **Layer 1 (필수, D-30)** — model length 한계 대응. **always-on 자동 압축**: token budget 추적 → 한계 근접 시 auto truncate/summarize → /compact (manual). opt-out 불가 (model 자체가 길이 제한 있으므로).
-- **Layer 2 (선택, D-27)** — 비용 최적화. **opt-in advanced 압축**: headroom 의 6 알고리즘 (CacheAligner, ContentRouter, CCR, SmartCrusher, CodeCompressor, Kompress-base) 을 우리 Context component 에 built-in. `~/.myharness/config.yaml` 에서 `builtin.enabled: true|false`. 기본 `false`.
+- **Layer 2 (선택, D-27)** — 비용 최적화. **opt-in advanced 압축**: headroom 의 6 알고리즘 (CacheAligner, ContentRouter, CCR, SmartCrusher, CodeCompressor, Kompress-base) 을 우리 Context component 에 built-in. `~/.myharness/config.toml` 에서 `builtin.enabled = true|false`. 기본 `false`. [D-42]
 
 ---
 
@@ -239,7 +239,7 @@ myharness env diagnose                 # 환경 진단
 **추상화 전략**:
 - **Premium** (claude/codex/gemini) → **native SDK** (각 vendor 최적 기능: prompt cache, thinking, function calling)
 - **OpenAI 호환** (deepseek/minimax/local) → **공통 OpenAI 호환 client** (1개 구현으로 N개)
-- **Provider registry** (config.yaml) → 사용자 정의 provider 추가 가능 (v1.5+ plugin)
+- **Provider registry** (config.toml) → 사용자 정의 provider 추가 가능 (v1.5+ plugin)
 
 #### 5.5.2 동적 발견 + Per-Provider Auth (D-38, NEW)
 
@@ -252,7 +252,7 @@ myharness env diagnose                 # 환경 진단
   1. **Discover** — env vars (`ANTHROPIC_API_KEY` 등) + OS keychain + local LLM server (Ollama :11434 등) + MCP configured providers
   2. **Auth status** — 각 provider 의 auth state 확인
   3. **Build runtime list** — available providers 의 우선순위 자동 구성
-  4. **Persist** — runtime list 를 `~/.myharness/state/active-providers.yaml` 에 저장
+  4. **Persist** — runtime list 를 `~/.myharness/state/active-providers.toml` 에 저장
   5. **Fallback chain** — discovered list + 도메인별 override 적용
 
 **CLI 인터페이스 (per-provider auth)**:
@@ -272,15 +272,15 @@ myharness auth default <provider>                       # primary 변경
 **Auth state 저장** (`~/.myharness/state/auth/`):
 ```
 ~/.myharness/state/auth/
-├── anthropic.yaml          # status, last_login, default_model, supports
-├── openai.yaml
-├── gemini.yaml
-├── deepseek.yaml
-├── ollama.yaml             # local server status (Ollama 실행 중 여부 + models)
-└── active-providers.yaml   # 현재 discovered list (fallback chain source)
+├── anthropic.toml          # status, last_login, default_model, supports
+├── openai.toml
+├── gemini.toml
+├── deepseek.toml
+├── ollama.toml             # local server status (Ollama 실행 중 여부 + models)
+└── active-providers.toml   # 현재 discovered list (fallback chain source)
 ```
 
-**Provider status 예시** (anthropic.yaml):
+**Provider status 예시** (anthropic.toml):
 ```yaml
 provider: anthropic
 type: native
@@ -298,7 +298,7 @@ test:
   latency_ms: 320
 ```
 
-**Ollama local 예시** (ollama.yaml):
+**Ollama local 예시** (ollama.toml):
 ```yaml
 provider: ollama
 type: openai-compatible
@@ -317,30 +317,27 @@ test:
 #### 5.5.3 Fallback Chain 동적 구성 (D-38)
 
 **하드코딩 `fallback: [A, B]` → 동적 discovered list**:
-```yaml
-# ~/.myharness/config.yaml (D-38 갱신)
-llm:
-  primary: <primary-model>             # primary 는 config (도메인 무관 기본)
-  fallback_strategy: discovered         # discovered (default) | hardcoded (legacy)
-  fallback_order:                      # discovered 의 우선순위 (config)
-    - anthropic
-    - openai
-    - gemini
-    - deepseek
-    - ollama                           # always-on (실행 중일 때)
-  domain_mapping:
-    code: <primary>
-    server: <discovered-cheapest>
-    env: <discovered-local-or-cheapest>
-  thinking:
-    code: enabled
-    server: disabled
-    env: disabled
+```toml
+# ~/.myharness/config.toml (D-38 갱신)
+[llm]
+primary = "<primary-model>"            # primary 는 config (도메인 무관 기본)
+fallback_strategy = "discovered"        # discovered (default) | hardcoded (legacy)
+fallback_order = ["anthropic", "openai", "gemini", "deepseek", "ollama"]  # discovered 의 우선순위
+
+[llm.domain_mapping]
+code = "<primary>"
+server = "<discovered-cheapest>"
+env = "<discovered-local-or-cheapest>"
+
+[llm.thinking]
+code = "enabled"
+server = "disabled"
+env = "disabled"
 ```
 
 **동작 (provider-auto-config skill)**:
-1. **Discover phase** — auth state + local server scan → `active-providers.yaml` 생성
-2. **Per LLM call** — runtime 에서 active-providers.yaml 읽고 fallback chain 구성
+1. **Discover phase** — auth state + local server scan → `active-providers.toml` 생성
+2. **Per LLM call** — runtime 에서 active-providers.toml 읽고 fallback chain 구성
 3. **Failure 시** — 해당 provider status → `error` (재시도 안 함), 다음 fallback 시도
 4. **Recovery** — `myharness auth <provider> test` 또는 startup 시 status 자동 refresh
 
@@ -395,21 +392,23 @@ ollama/qwen2.5-coder:32b
 
 **Layer 2 (선택, D-27) — headroom 알고리즘 built-in**:
 
-```yaml
-# ~/.myharness/config.yaml
-context:
-  compression: native       # native | builtin (D-27)
-  builtin:
-    enabled: false          # ← 기본 OFF. 사용자가 true 로 켜면 동작
-    algorithms:
-      cache_aligner: true   # CacheAligner — prefix 안정화 (KV cache hit)
-      content_router: true  # ContentRouter — content type 감지 → 알고리즘 선택
-      ccr: false            # CCR — reversible + retrieval (round-trip 비용)
-      smart_crusher: true   # SmartCrusher — JSON 구조 보존 압축
-      code_compressor: true # CodeCompressor — AST-aware (tree-sitter)
-      kompress_base: false  # Kompress-base ML — 자유 텍스트 (95% 압축, ONNX)
-    target_ratio: 0.35      # 65% 압축 목표
-    protect_recent: 5       # 최근 N 메시지 보호
+```toml
+# ~/.myharness/config.toml
+[context]
+compression = "native"        # native | builtin (D-27)
+
+[context.builtin]
+enabled = false               # ← 기본 OFF. 사용자가 true 로 켜면 동작
+target_ratio = 0.35           # 65% 압축 목표
+protect_recent = 5            # 최근 N 메시지 보호
+
+[context.builtin.algorithms]
+cache_aligner = true          # CacheAligner — prefix 안정화 (KV cache hit)
+content_router = true         # ContentRouter — content type 감지 → 알고리즘 선택
+ccr = false                   # CCR — reversible + retrieval (round-trip 비용)
+smart_crusher = true          # SmartCrusher — JSON 구조 보존 압축
+code_compressor = true        # CodeCompressor — AST-aware (tree-sitter)
+kompress_base = false         # Kompress-base ML — 자유 텍스트 (95% 압축, ONNX)
 ```
 
 **흐름 (D-27: user → harness → (headroom) → LLM)**:
@@ -503,14 +502,14 @@ my_harness 는 `standard_ai_workflow` (ykylee/standard_ai_workflow) 의 **6 원�
 
 #### 5.9.2 옵션 Mavis 통합 (auto-detect, opt-in)
 
-```yaml
-# ~/.myharness/config.yaml (예시)
-workflow:
-  mode: auto              # auto | none | mavis
-  mavis_root: ~/mavis     # Mavis 디렉토리 위치
-  # auto: Mavis 디렉토리 (`.ai-workflow/` 또는 `ai-workflow/`) 발견 시 자동 통합
-  # none: 항상 my_harness 자체 `.myharness/` 만 사용 (Mavis 무시)
-  # mavis: 명시적 통합 (Mavis 디렉토리 없으면 에러)
+```toml
+# ~/.myharness/config.toml (예시)
+[workflow]
+mode = "auto"               # auto | none | mavis
+mavis_root = "~/mavis"      # Mavis 디렉토리 위치
+# auto: Mavis 디렉토리 (`.ai-workflow/` 또는 `ai-workflow/`) 발견 시 자동 통합
+# none: 항상 my_harness 자체 `.myharness/` 만 사용 (Mavis 무시)
+# mavis: 명시적 통합 (Mavis 디렉토리 없으면 에러)
 ```
 
 **auto mode 동작**:
@@ -660,14 +659,14 @@ yklee 환경 검증: 다른 agent 도구 모두 `~/.<toolname>/` 컨벤션 (clau
 ```
 ~/.myharness/                          # ROOT (XDG-aware)
 ├── config/                           # 사용자 편집 가능 config
-│   ├── config.yaml                   # 메인 설정 (LLM, mode, compression, permission)
-│   ├── providers.yaml                # provider registry (D-28)
+│   ├── config.toml                   # 메인 설정 (LLM, mode, compression, permission) [D-42]
+│   ├── providers.toml                # provider registry (D-28, D-42)
 │   ├── plugins/                      # user plugins (commands/agents/skills/hooks)
 │   ├── skills/                       # user skills (claude-code 13.3)
 │   ├── hooks/                        # global hooks (markdown rules, D-13.4)
 │   └── mcp.json                      # MCP server config (D-33)
 ├── state/                            # workflow state (D-26, standard_ai_workflow)
-│   ├── current.yaml                  # current task
+│   ├── current.toml                  # current task
 │   └── tasks/                        # task history
 ├── memory/                           # auto + manual memory
 │   ├── auto/                         # LLM 자동 축적 (D-26)
@@ -705,7 +704,7 @@ yklee 환경 검증: 다른 agent 도구 모두 `~/.<toolname>/` 컨벤션 (clau
 - 우리 v1 = single root (yklee 환경 검증 결과, sibling tools 와 일치)
 
 **옵션 Mavis 디렉토리 발견 시 sync (D-26)**:
-- `ai-workflow/memory/state.json` 발견 → `~/.myharness/state/current.yaml` 와 sync
+- `ai-workflow/memory/state.json` 발견 → `~/.myharness/state/current.toml` 와 sync
 - `ai-workflow/memory/work_backlog.md` 발견 → task 등록/갱신
 - 미발견 시 → `~/.myharness/` 만 사용 (zero coupling 유지)
 
@@ -984,7 +983,7 @@ Distribution: 5 install paths (install.sh / install.ps1 / brew / winget / apt-dn
 - 코드로 박으면 환경별 config 분기 폭발
 
 **v1 Phase 1 (TASK-005-1, MVP)**:
-- 6 provider 정적 등록 (`config.yaml`)
+- 6 provider 정적 등록 (`config.toml`)
 - `auth list` / `auth <provider>` status 조회
 - Anthropic API key (env → keychain fallback)
 - Ollama local server detect
@@ -993,7 +992,7 @@ Distribution: 5 install paths (install.sh / install.ps1 / brew / winget / apt-dn
 **v1 Phase 2 (TASK-005-2, v1.5)**:
 - `provider-auto-config` skill 정식 구현
 - 모든 provider auth (login/logout/test)
-- `active-providers.yaml` 자동 생성/갱신
+- `active-providers.toml` 자동 생성/갱신
 - **dynamic fallback chain**
 
 **v1 Phase 3 (TASK-005-3, v2.0)**:

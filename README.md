@@ -48,7 +48,7 @@
 ├── docs/
 │   ├── CONCEPT.md                   # ★ v1 컨셉 SSOT (A 의 v1 spec)
 │   ├── PROJECT_PROFILE.md           # 이 하네스 운영 규칙
-│   ├── development_log.md           # 결정 이력 (D-01~D-34)
+│   ├── development_log.md           # 결정 이력 (D-01~D-42)
 │   ├── REFERENCES.md                # 5 reference 1차 비교표 (TASK-004 1차, superseded)
 │   └── references/                  # 7 reference 심층분석 + cross-review
 │       ├── README.md                # 7-doc 통합 인덱스 + 8축 비교 매트릭스
@@ -142,7 +142,7 @@ python3 ./ai-workflow/scripts/bootstrap_workflow_kit.py \
 
 **v1 컨셉 (산출물 spec)**:
 - ★ [`docs/CONCEPT.md`](./docs/CONCEPT.md) — my_harness v1 SSOT (12 sections)
-- [`docs/development_log.md`](./docs/development_log.md) — 결정 이력 (D-01~D-34)
+- [`docs/development_log.md`](./docs/development_log.md) — 결정 이력 (D-01~D-42)
 - [`docs/references/README.md`](./docs/references/README.md) — 7 reference 통합 인덱스
 
 **레퍼런스 분석**:
@@ -170,5 +170,6 @@ python3 ./ai-workflow/scripts/bootstrap_workflow_kit.py \
 | **TASK-006** | TUI 라이브러리 (ratatui vs React/Ink) | TASK-005 결정 의존 |
 | **TASK-007** | headroom built-in 알고리즘 우선순위 | yklee 우선순위 결정 |
 | **TASK-008** | Provider fallback list (3 모델) | yklee 의 LLM 선호/비용 |
+| **D-42** | config 포맷 = TOML | (yklee 결정, 2026-06-09, W1 prerequisite 검증 중) |
 
 `MiniMax.md` 의 TODO 명령 5종 (설치 / 로컬 실행 / 빠른 테스트 / 격리 테스트 / 실행 확인) — 실제 my_harness 운영 명령으로 채우기 (TASK-002 후)
