@@ -244,6 +244,13 @@ pub async fn poll_token(
 }
 
 /// 만료 시각까지 interval 으로 polling. 성공/실패 시 종료.
+///
+/// OpenClaw 와 동일한 backoff 정책 (W14.5): `cur_interval *= 1.5` (cap 10s).
+/// MiniMax 가 `interval=3000` 으로 응답해도 polling 1회 사이가 너무 길지 않도록
+/// 1.5x backoff + cap. 단 MiniMax 가 명시한 interval 보다 작아지지 않음
+/// (서버 권고 존중, 1초 floor).
+///
+/// `expired_in` 은 **milliseconds 단위 unix timestamp** (MiniMax 응답, D-52 follow-up 확인).
 pub async fn poll_until_success(
     provider: &dyn DeviceCodeProvider,
     user_code: &str,
@@ -251,11 +258,19 @@ pub async fn poll_until_success(
     interval: u64,
     expired_in_unix: u64,
 ) -> Result<DeviceToken, DeviceError> {
-    let cur_interval = interval.max(1);
-    while (chrono::Utc::now().timestamp() as u64) < expired_in_unix {
+    let mut cur_interval = interval.max(1).min(10);
+    let floor = 1u64;
+    let cap = 10u64;
+    let mut attempt = 0u32;
+    while (chrono::Utc::now().timestamp_millis() as u64) < expired_in_unix {
+        attempt += 1;
+        tracing::debug!(target: "myharness::auth::device", "poll attempt={attempt} interval={cur_interval}s");
         match poll_token(provider, user_code, verifier).await? {
             TokenPoll::Pending => {
                 tokio::time::sleep(std::time::Duration::from_secs(cur_interval)).await;
+                // 1.5x backoff. cap 10s, floor 1s.
+                let next = (cur_interval * 3 / 2).max(floor).min(cap);
+                cur_interval = next;
                 continue;
             }
             TokenPoll::Success {

@@ -200,6 +200,17 @@ impl AuthManager {
             });
         }
 
+        // URL + user_code 항상 stdout 출력 (browser 자동 open 여부 무관).
+        // yklee 가 --no-browser 로 직접 paste 할 수 있도록 + polling 진행 중에도 정보 표시.
+        tracing::info!(target: "myharness::auth", "MiniMax DeviceCodeFlow — open URL in your browser:");
+        tracing::info!(target: "myharness::auth", "  URL: {verification_url}");
+        tracing::info!(target: "myharness::auth", "  user_code: {user_code}");
+        // mini_max 가 expired_in 을 milliseconds 단위 unix ts 로 응답 (D-52 follow-up 확인).
+        // now 도 ms 로 비교해야 의미있는 차이.
+        let now_ms = chrono::Utc::now().timestamp_millis() as u64;
+        let wait_secs = expired_in.saturating_sub(now_ms) / 1000;
+        tracing::info!(target: "myharness::auth", "  expires_in: {wait_secs}s (interval={interval}s, mini_max ms-unix-ts={expired_in})");
+
         if auto_open_browser {
             let _ = browser::open(&verification_url);
         }
