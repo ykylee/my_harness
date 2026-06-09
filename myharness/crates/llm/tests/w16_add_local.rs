@@ -2,7 +2,9 @@
 //!
 //! mock strategy: wiremock + tempfile + MYHARNESS_HOME env override.
 
-use myharness_llm::add_local::{probe_local_models, register_local_provider};
+use myharness_llm::add_local::{
+    probe_local_models, register_local_provider, register_local_provider_non_interactive,
+};
 use myharness_llm::{ModelInfo, ProviderId, ProviderRegistry};
 use wiremock::matchers::{method, path};
 use wiremock::{Mock, MockServer, ResponseTemplate};
@@ -114,3 +116,80 @@ async fn tc_w16_i03_register_writes_providers_toml_end_to_end() {
 // suppress unused import warning
 #[allow(dead_code)]
 fn _suppress_unused_modelinfo(_m: ModelInfo) {}
+
+// ── W17 (v1.5 OI-1) L2 Integration ─────────────────────────────────────────
+
+/// TC-W17-I01 — 비대화형 모드에서 probe 스킵 → register 만 수행 → providers.toml 갱신.
+///
+/// wiremock 으로 mock server 띄우지만 **probe 가 호출되지 않음** 을 검증:
+///   - mock server 에 어떤 route 도 mount 하지 않음 → 호출 시 connection refused 면 비대화형은 성공 (probe skip)
+///   - 단, **비대화형 함수가 probe 를 안 부른다** 는 것을 wiremock 으로 증명하기 위해
+///     200 응답하는 mock server 를 띄우고 "이 endpoint 에는 어떤 HTTP 요청도 가지 않는다" 를
+///     server 측 unreachable 로 확인하는 게 더 명확. 본 TC 는 단순히 register 자체에 집중.
+#[tokio::test]
+#[serial_test::serial(env)]
+async fn tc_w17_i01_non_interactive_skips_probe_and_writes_toml() {
+    let tmp = tempfile::tempdir().unwrap();
+    unsafe { std::env::set_var("MYHARNESS_HOME", tmp.path()); }
+
+    // wiremock 띄우되 어떤 route 도 mount 안 함 → 어떤 HTTP 요청이 와도 404
+    let server = MockServer::start().await;
+
+    let base_url = format!("{}/v1", server.uri());
+    let report = register_local_provider_non_interactive(
+        base_url.clone(),
+        None,
+        "ci-model".into(),
+    )
+    .await
+    .unwrap();
+
+    // available_models = [ci-model] 1개 (probe 안 했음의 증거)
+    assert_eq!(report.available_models, vec!["ci-model".to_string()]);
+    assert_eq!(report.model_id, "ci-model");
+
+    // providers.toml 검증
+    let toml_path = tmp.path().join("providers.toml");
+    assert!(toml_path.exists());
+    let content = std::fs::read_to_string(&toml_path).unwrap();
+    assert!(content.contains("ci-model"));
+    assert!(content.contains(&base_url));
+
+    // registry reload → default_model 이 ci-model 로 set 됨
+    let registry = ProviderRegistry::load_from_path(&toml_path).unwrap();
+    let local = registry.get(ProviderId::LocalLlm).unwrap();
+    assert_eq!(local.default_model, "ci-model");
+    assert_eq!(local.available_models, vec!["ci-model".to_string()]);
+
+    unsafe { std::env::remove_var("MYHARNESS_HOME"); }
+}
+
+/// TC-W17-I02 — 비대화형 모드에서 token + base_url + model_id 모두 set → keyring set + register.
+///
+/// CI 환경 시뮬레이션: stdin/stdout non-tty 일 때 비대화형 함수는 정상 동작.
+#[tokio::test]
+#[serial_test::serial(env)]
+async fn tc_w17_i02_non_interactive_with_token_end_to_end() {
+    let tmp = tempfile::tempdir().unwrap();
+    unsafe { std::env::set_var("MYHARNESS_HOME", tmp.path()); }
+
+    let server = MockServer::start().await;
+    let base_url = format!("{}/v1", server.uri());
+
+    let report = register_local_provider_non_interactive(
+        base_url.clone(),
+        Some("ci-secret-token-abc".into()),
+        "gpt-oss:20b".into(),
+    )
+    .await
+    .unwrap();
+
+    assert!(report.token_saved);
+    assert_eq!(report.model_id, "gpt-oss:20b");
+
+    // providers.toml 검증
+    let toml_path = tmp.path().join("providers.toml");
+    assert!(toml_path.exists());
+
+    unsafe { std::env::remove_var("MYHARNESS_HOME"); }
+}

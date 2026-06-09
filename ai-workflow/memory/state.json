@@ -24,11 +24,11 @@
     "v1_mvp_build": "TASK-005-1 v1 MVP 8/8 waves 완료 (D-49~D-52) + Device Authorization Grant (D-53) + --no-browser 3 모드 (D-54) + polling output/expired_in 단위 (D-55) + token 단위 변환 (D-56) + OAuth 자동 resolve (D-57) + OAuth 자동 refresh (D-58, W15.b) + W16 auth add-local subcommand (D-59) + W16 follow-up LocalLlm 라우팅 분기. **v1 MVP 종료 선언 (2026-06-09 22:48)**. 40+ commit dual push. 388+ tests pass, 0 fail, 2 ignored."
   },
   "session": {
-    "current_baseline": "**TASK-005-1 v1 MVP 종료 선언 (D-59 follow-up, 2026-06-09)** — W3~W16 완료 (8/8 waves + D-52 follow-up 6 + W16 add-local + W16 follow-up LocalLlm 라우팅 분기). 40+ commit dual-push, 388+ tests pass. v1 컨셉 Phase 종료 (D-22~D-38) + v1 MVP 빌드 종료 (TASK-005-1). 4/5 결정 ✅, 1/5 (TASK-002) ⏸. main = 140acf9. 보존: local/d-43-47-tc-scaffold.",
-    "current_axis": "**TASK-005-2 (v1.5) 진입 대기** — TASK-005-1 종료 선언 후 v1.5 후보 결정. yklee 결정 대기.",
-    "current_focus": "TASK-005-1 종료 선언 완료 → v1.5 후보 (Plugin 4-계층 + marketplace + auto memory + provider-auto-config skill 정식 + CCR/Kompress-base ONNX + 비대화형 add-local 등) 진입 결정 대기.",
+    "current_baseline": "**TASK-005-2 v1.5 진입 + W17 비대화형 add-local 완료 (D-60, 2026-06-09)** — W17 = DD-AddLocal §6.3 OI-1 해소 (v1.5 첫 작업). 4 commit dual-push (feature/v15-add-local-non-interactive, Gitea + GitHub). 410 tests pass / 0 fail / 2 ignored (W16 16 + W17 6 신규, +22 vs v1.0 baseline). main = 140acf9 (W16 follow-up) + W17 4 commit on feature branch (PR 미작성, yklee 결정).",
+    "current_axis": "**TASK-005-2 v1.5 작업 진행 중** — W17 (비대화형 add-local) 완료. 다음 v1.5 작업 결정 대기. 후보: OI-2 Ollama native / F-1 backup / F-2 --yes flag / Plugin 4-계층 (W19+ 큰 사이클).",
+    "current_focus": "TASK-005-2 v1.5 W17 완료 → 다음 v1.5 작업 결정 대기. R-4 (사용자 home providers.toml 덮어쓰기) 대응 검토 — 다음 session 시작점 후보.",
     "in_progress_items": [
-      "TASK-005-1 v1 MVP 종료 선언 (D-59 follow-up, 2026-06-09 22:48) — W3~W16 완료 + dual-push + 브랜치 정리 + main 머지. 388+ tests pass. v1 빌드 phase 완전 종료."
+      "W17 myharness auth add-local 비대화형 모드 (D-60, 2026-06-09) — 4 commit dual-push 완료, PR 미작성 (yklee 결정)"
     ],
     "blocked_items": [
       "TASK-002: 도메인별 명령 가이드 (yklee 인프라 정보 의존)",
@@ -76,14 +76,16 @@
       {"id": "D-55", "decision": "device flow polling output 항상 stdout + 1.5x backoff cap 10s + expired_in ms 단위 unix timestamp", "ref": "D-55 (W14.5)", "section": "§5.5"},
       {"id": "D-57", "decision": "OAuth token 자동 resolve (4 단계 credential chain: ~/.myharness/oauth/<provider>.toml > MINIMAX_API_KEY > ANTHROPIC_API_KEY > MockClient)", "ref": "D-57 (W15.a)", "section": "§5.5"},
       {"id": "D-58", "decision": "OAuth token 자동 refresh (LlmError::ProviderCall msg 401/unauthorized/auth 키워드 감지 → AuthManager::ensure_fresh → store save → 새 OpenAiCompatProvider 빌드 → retry 1회). is_unauthorized_error 가 oauth 키워드 제외 (false 양성 방지)", "ref": "D-58 (W15.b)", "section": "§5.5"},
-      {"id": "D-59", "decision": "W16 add-local: myharness auth add-local subcommand (inquire 3단계 UI: URL → token(선택) → /v1/models probe → 모델 선택 → providers.toml 갱신). OpenAI 호환 (/v1/models) 4 서버 통합 (Ollama/vLLM/LM Studio/llama.cpp). W16 follow-up: resolve_llm_client 에 LocalLlm 분기 추가 (MYHARNESS_USE_LOCAL_LLM=1 opt-in env, providers.toml 의 LocalLlm entry 자동 사용). live LM Studio 검증: gemma-4-12b-qat '2+2 is 4.' 응답.", "ref": "D-59 (W16 + follow-up)", "section": "§5.2 (12 명령어) + §5.5 (LLM auth)"}
+      {"id": "D-59", "decision": "W16 add-local: myharness auth add-local subcommand (inquire 3단계 UI: URL → token(선택) → /v1/models probe → 모델 선택 → providers.toml 갱신). OpenAI 호환 (/v1/models) 4 서버 통합 (Ollama/vLLM/LM Studio/llama.cpp). W16 follow-up: resolve_llm_client 에 LocalLlm 분기 추가 (MYHARNESS_USE_LOCAL_LLM=1 opt-in env, providers.toml 의 LocalLlm entry 자동 사용). live LM Studio 검증: gemma-4-12b-qat '2+2 is 4.' 응답.", "ref": "D-59 (W16 + follow-up)", "section": "§5.2 (12 명령어) + §5.5 (LLM auth)"},
+      {"id": "D-60", "decision": "W17 v1.5 OI-1 해소: myharness auth add-local --url/--model/--token/--probe-skip 비대화형 모드. (1) clap flag 4개 추가, (2) myharness-llm::register_local_provider_non_interactive(url, token, model_id) - probe 완전 스킵 + available_models=[model_id] 1개 hardcode, (3) handle_auth_add_local 3-mode 분기 (non-interactive / interactive / partial flag error), (4) print_register_report 공통 출력. CI/스크립트 환경에서 stdin/stdout non-tty 라도 사용 가능. 4 L1 + 2 L2 TC = 6/6 PASS, 410 workspace tests. R-4 (사용자 home providers.toml 덮어쓰기) v1.5+ OOS 로 follow-up 결정.", "ref": "D-60 (W17 + DD-AddLocal §9)", "section": "§5.2 (12 명령어) + §5.5 (LLM auth) + §6.3 (extension OI-1 ✅)"}
     ],
     "deferred": [
       {"id": "TASK-002", "decision": "도메인별 명령 가이드", "reason": "yklee 인프라 정보 의존", "resume": "v1 Rust 구현 완료 후 yklee 인프라 정보 수령 시"},
       {"id": "MiniMax-Device-OAuth", "decision": "real device grant 검증", "reason": "mock e2e test 로 흐름 검증 완료 (W13.6 + W15.b). real flow 는 yklee 가 MiniMax console 에서 device grant 활성화 후 가능", "resume": "yklee 의 MiniMax device grant 활성화 후 `myharness auth login minimax --no-browser` 실행"},
       {"id": "OpenAI-OAuth", "decision": "real OAuth flow 검증", "reason": "yklee 가 platform.openai.com OAuth Apps 에서 client_id 등록 필요", "resume": "client_id 등록 후"},
       {"id": "Google-OAuth", "decision": "real OAuth flow 검증", "reason": "yklee 가 Google Cloud Console Credentials OAuth 2.0 Client IDs 에서 client_id 등록 필요", "resume": "client_id 등록 후"},
-      {"id": "TASK-005-2", "decision": "v1.5 Plugin 4-계층 + marketplace + auto memory + provider-auto-config 정식 + CCR/Kompress-base ONNX", "reason": "TASK-005-1 종료 선언 후 진입", "resume": "yklee 결정 시"},
+      {"id": "TASK-005-2-W18+", "decision": "v1.5 후속: OI-2 Ollama native / F-1 backup / F-2 --yes flag / Plugin 4-계층 (W19+ 큰 사이클) / CCR + Kompress-base ONNX", "reason": "W17 완료 후 yklee 결정", "resume": "yklee 결정 시"},
+      {"id": "TASK-005-2-R-4", "decision": "register_local_provider 가 사용자 home providers.toml 직접 write → MYHARNESS_HOME env override 안 쓰면 진짜 사용자 설정 손실 위험. F-1 backup / F-2 --yes flag 후보", "reason": "W17 manual test 중 yklee 의 LM Studio 설정 덮어쓰기 1회성 사고 발생 (mavis-trash 로 recovery)", "resume": "W18+ candidates. --yes flag 가 가장 가벼움 (1 session)"},
       {"id": "MYHARNESS_MINIMAX_CN", "decision": "MiniMax CN endpoint override", "reason": "W14 에서 base_host `MINIMAX_OAUTH_BASE_URL` env override 가능. CN 정식 endpoint 는 v1.5+", "resume": "yklee 의 CN endpoint 가용성 확인 후"}
     ]
   },
@@ -135,10 +137,8 @@
     "ai-workflow/memory/backlog/2026-06-09.md"
   ],
   "next_actions": [
-    "**TASK-005-1 v1 MVP 종료 선언 완료 (2026-06-09 22:48)** — W3~W16 + dual-push + 브랜치 정리 + main 머지. 다음 TASK 결정 대기",
-    "TASK-005-2 (v1.5) 진입 결정 — yklee 결정 시. 후보: Plugin 4-계층 + marketplace + auto memory + provider-auto-config skill 정식 + CCR/Kompress-base ONNX",
-    "W16 add-local OI-1 (선택): 비대화형 --url/--token/--model 플래그 (CI/스크립트용)",
-    "W16 add-local OI-2 (선택): Ollama native /api/tags 지원 (OpenAI 호환 미활성 시)",
+    "**TASK-005-2 v1.5 W17 완료 (2026-06-09)** — `auth add-local` 비대화형 모드 --url/--model/--token/--probe-skip. 4 commit dual-push, 410 tests pass, PR 미작성 (yklee 결정)",
+    "TASK-005-2 v1.5 W18+ 결정 — yklee 결정 시. 후보: OI-2 Ollama native /api/tags / F-1 providers.toml 자동 backup (R-4 대응) / F-2 --yes flag (덮어쓰기 confirm) / Plugin 4-계층 (W19+ 큰 사이클)",
     "MiniMax Device OAuth real flow: yklee 가 MiniMax console 에서 device grant 활성화 후 `myharness auth login minimax --no-browser` 실행 (OpenClaw/Hermes 공통 client_id 78257093-7e40-4613-99e0-527b14b39113, W15.b 자동 refresh 도 real test 가능)",
     "OpenAI/Google 도 동일 패턴 (Authorization Code + PKCE, client_id 등록 후)",
     "ANTHROPIC_API_KEY 주입 시 LLM E2E 테스트 (real-anthropic ignored test 활성화)",
