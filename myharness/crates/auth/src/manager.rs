@@ -35,17 +35,37 @@ pub enum AuthError {
     Device(#[from] DeviceError),
 }
 
-/// `DeviceToken` (W14) → `OAuthToken` (W13). `expired_in` ms unix ts → `expires_at` (DateTime).
+/// expired_in 단위 자동 감지 (D-52 follow-up, W14.7).
 ///
-/// mini_max 가 \`expired_in\` 을 **milliseconds 단위 unix timestamp** 로 응답 (D-52 follow-up 확인).
-/// \`from_timestamp\` 는 seconds 단위 unix ts 를 받으므로 ms → s 변환 후 사용.
+/// mini_max 가 호출마다 단위를 다르게 응답: ms (1.78e12) 또는 microseconds (1.81e15) 또는
+/// seconds (1.78e9). 값의 크기로 판별:
+/// - < 1e11: seconds (1.78e9 s = 2026)
+/// - 1e11..1e14: milliseconds (1.78e12 ms = 2026)
+/// - 1e14..1e17: microseconds (1.81e15 μs = 2026 + 57년 — mini_max token 실제 만료)
+/// - >= 1e17: nanoseconds (rare)
+fn expired_in_to_chrono(value: u64) -> chrono::DateTime<chrono::Utc> {
+    let secs = if value >= 1_000_000_000_000_000_000 {
+        value / 1_000_000_000
+    } else if value >= 1_000_000_000_000_000 {
+        value / 1_000_000
+    } else if value >= 100_000_000_000 {
+        value / 1_000
+    } else {
+        value
+    } as i64;
+    chrono::DateTime::<chrono::Utc>::from_timestamp(secs, 0)
+        .unwrap_or_else(|| chrono::DateTime::<chrono::Utc>::from_timestamp(0, 0).unwrap())
+}
+
+/// `DeviceToken` (W14) → `OAuthToken` (W13). `expired_in` → `expires_at` (DateTime).
+///
+/// mini_max 가 응답 단위를 ms/μs/s 중 다양하게 보냄. `expired_in_to_chrono` 가 자동 감지.
 fn device_token_to_oauth(t: &DeviceToken) -> OAuthToken {
-    let expires_secs = (t.expired_in / 1000) as i64;
-    let expires_at = chrono::DateTime::<chrono::Utc>::from_timestamp(expires_secs, 0);
+    let expires_at = expired_in_to_chrono(t.expired_in);
     OAuthToken {
         access_token: t.access_token.clone(),
         refresh_token: Some(t.refresh_token.clone()),
-        expires_at: expires_at,
+        expires_at: Some(expires_at),
         scope: None,
         token_type: t.token_type.clone(),
     }

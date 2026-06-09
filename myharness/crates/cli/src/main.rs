@@ -162,34 +162,7 @@ fn main() -> anyhow::Result<()> {
 
     let orch = Orchestrator::new()
         .with_tools(Arc::new(ToolRegistry::default_tools()));
-    let llm: Arc<dyn LLMClient> = if let Ok(api_key) = std::env::var("MINIMAX_API_KEY") {
-        let base_url = std::env::var("MINIMAX_API_HOST")
-            .unwrap_or_else(|_| "https://api.minimax.io/v1".into());
-        let model = std::env::var("MINIMAX_MODEL").unwrap_or_else(|_| "MiniMax-M3".into());
-        tracing::info!("using MiniMax provider (base_url={}, model={})", base_url, model);
-        Arc::new(
-            myharness_llm::OpenAiCompatProvider::new(
-                &base_url,
-                &api_key,
-                &model,
-                myharness_llm::ProviderId::Minimax,
-            )
-            .expect("failed to init MiniMax OpenAI-compat client"),
-        )
-    } else if let Ok(api_key) = std::env::var("ANTHROPIC_API_KEY") {
-        let model = std::env::var("ANTHROPIC_MODEL").unwrap_or_else(|_| "claude-sonnet-4-6".into());
-        tracing::info!("using Anthropic provider (model={})", model);
-        Arc::new(
-            myharness_llm::AnthropicProvider::new(&api_key)
-                .expect("failed to init Anthropic provider"),
-        )
-    } else {
-        tracing::warn!("no LLM env var set; falling back to MockClient");
-        Arc::new(myharness_llm::client_mock::MockClient::new(
-            myharness_llm::provider::ProviderId::Claude,
-            "claude-sonnet-4-6",
-        ))
-    };
+    let llm: Arc<dyn LLMClient> = resolve_llm_client();
     let orch = orch.with_llm(llm);
 
     match args.cmd {
@@ -432,4 +405,86 @@ fn print_auth_status(s: &AuthStatus) {
         println!("  has_token: false");
         println!("  run `myharness auth {} login` to authenticate", s.provider);
     }
+}
+
+/// W15.a — OAuth token store 우선 + env var fallback (opencode multi-source credential chain).
+///
+/// 우선순위:
+/// 1. `~/.myharness/oauth/minimax.toml` 의 OAuth access_token (env var 보다 우선, opencode 패턴)
+/// 2. `MINIMAX_API_KEY` env var (regular API key)
+/// 3. `ANTHROPIC_API_KEY` env var
+/// 4. MockClient fallback
+///
+/// token 만료 시 (W15.a): WARN + env var fallback. 자동 refresh 는 W15.b 에서 LLM client 레벨로.
+fn resolve_llm_client() -> Arc<dyn LLMClient> {
+    use myharness_auth::TokenStore;
+    use myharness_llm::provider::ProviderId;
+
+    // 1) OAuth token store 우선.
+    if let Ok(store) = TokenStore::new() {
+        if let Ok(stored) = store.load("minimax") {
+            if !stored.token.is_expired() {
+                let base_url = std::env::var("MINIMAX_API_HOST")
+                    .unwrap_or_else(|_| "https://api.minimax.io/v1".into());
+                let model = std::env::var("MINIMAX_MODEL").unwrap_or_else(|_| "MiniMax-M3".into());
+                tracing::info!(
+                    "using MiniMax OAuth token (base_url={}, model={}, expires_at={})",
+                    base_url,
+                    model,
+                    stored
+                        .token
+                        .expires_at
+                        .map(|e| e.format("%Y-%m-%dT%H:%M:%SZ").to_string())
+                        .unwrap_or_else(|| "unknown".into())
+                );
+                return Arc::new(
+                    myharness_llm::OpenAiCompatProvider::new(
+                        &base_url,
+                        &stored.token.access_token,
+                        &model,
+                        ProviderId::Minimax,
+                    )
+                    .expect("failed to init MiniMax OpenAI-compat client"),
+                );
+            }
+            tracing::warn!(
+                "OAuth token for minimax is expired; falling back to env var. \
+                 run `myharness auth minimax login` to refresh."
+            );
+        }
+    }
+
+    // 2) MINIMAX_API_KEY env var.
+    if let Ok(api_key) = std::env::var("MINIMAX_API_KEY") {
+        let base_url = std::env::var("MINIMAX_API_HOST")
+            .unwrap_or_else(|_| "https://api.minimax.io/v1".into());
+        let model = std::env::var("MINIMAX_MODEL").unwrap_or_else(|_| "MiniMax-M3".into());
+        tracing::info!("using MiniMax env var (base_url={}, model={})", base_url, model);
+        return Arc::new(
+            myharness_llm::OpenAiCompatProvider::new(
+                &base_url,
+                &api_key,
+                &model,
+                ProviderId::Minimax,
+            )
+            .expect("failed to init MiniMax OpenAI-compat client"),
+        );
+    }
+
+    // 3) ANTHROPIC_API_KEY env var.
+    if let Ok(api_key) = std::env::var("ANTHROPIC_API_KEY") {
+        let model = std::env::var("ANTHROPIC_MODEL").unwrap_or_else(|_| "claude-sonnet-4-6".into());
+        tracing::info!("using Anthropic env var (model={})", model);
+        return Arc::new(
+            myharness_llm::AnthropicProvider::new(&api_key)
+                .expect("failed to init Anthropic provider"),
+        );
+    }
+
+    // 4) MockClient fallback.
+    tracing::warn!("no LLM credential found; falling back to MockClient");
+    Arc::new(myharness_llm::client_mock::MockClient::new(
+        myharness_llm::provider::ProviderId::Claude,
+        "claude-sonnet-4-6",
+    ))
 }
