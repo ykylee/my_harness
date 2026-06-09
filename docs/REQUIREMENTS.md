@@ -704,6 +704,30 @@ Distribution: 5 install paths (install.sh / install.ps1 / brew / winget / apt-dn
 
 **v1 영향**: ✅ C-LLM-2, FR-0.5, FR-0.4. Phase 1 만 v1, Phase 2+ 는 v1.5+.
 
+#### 5.2.5 W16 결정 — `auth add-local` subcommand (D-59, 2026-06-09)
+
+**결정**: yklee 요청 — TASK-005-1 W11~W15 의 OAuth 기반 3 provider (minimax/openai/google) 인증 흐름 외에, **로컬 LLM 서버 (Ollama/vLLM/LM Studio/llama.cpp) 를 대화형으로 등록**하는 `myharness auth add-local` subcommand 추가.
+
+**선택 근거**:
+1. **CONCEPT.md §5.2 의 12 명령어** 에 `auth` 가 이미 포함 — `Login/Logout/Status/List` 외 `AddLocal` 1개 추가는 자연스러운 확장
+2. **`ProviderId::LocalLlm` (built-in) + `scan_local.rs` (W7.3) + `KeyringAuthStore` (W7.2) 인프라가 이미 존재** — 등록 UI 만 추가하면 됨
+3. **OpenAI 호환** (Ollama/vLLM/LM Studio/llama.cpp 모두 `/v1/models` GET 지원) → 1개 endpoint probe 로 4 서버 통합
+4. **API token 선택** (Ollama 기본은 불요, vLLM/LM Studio 는 선택) → `KeyringAuthStore` 의 in-memory cache + env-first fallback 재사용
+5. **모델 선택 TUI** (`inquire` crate, arrow-key select) → UX 자연스러움. stdin read_line 직접 대비 의존성 +1 만 추가
+
+**v1 영향** (SDLC):
+- ✅ `myharness-llm::register_local_provider(base_url, token, model)` API 추가 (W16) — `ProviderRegistry` 에 `LocalLlm` entry 의 `base_url` + `default_model` + `available_models` 갱신
+- ✅ `myharness auth add-local` clap subcommand 추가 (W16) — `Cmd::Auth::AuthAction::AddLocal`
+- ✅ inquire 의존성 추가 (`myharness-cli/Cargo.toml`)
+- ⏸ 자동 fallback chain 자동 갱신은 v1.5+ (`provider-auto-config` Phase 2 의 active-providers.yaml 갱신). W16 은 **수동 1회 등록** 만.
+- ⏸ 등록 후 자동 default LLM 활성화는 별도 `myharness config set default_llm local-llm:<model>` 명령 (v1.5+). W16 은 **provider 등록 + available models 채움** 까지만.
+
+**FR 매핑**: FR-0.5 (provider 등록) 의 **로컬 LLM sub-case** (CONCEPT.md §5.5.1 의 discover + auth + save 3-단계 중 **수동 sub-case**).
+
+**상세설계**: [`docs/architecture/DETAILED_DESIGN_ADD_LOCAL.md`](./architecture/DETAILED_DESIGN_ADD_LOCAL.md) (D-59)
+
+**TC scaffold**: `docs/specs/TC_UNIT.md` §W16-AddLocal (L1 Unit 8개) + `docs/specs/TC_INTEGRATION.md` §W16-AddLocal (L2 3개)
+
 ### 5.3 결정 보류 해소 트리거 (TASK-002)
 
 **TASK-002** 의 해소는 **yklee 인프라 정보 수령 후**:

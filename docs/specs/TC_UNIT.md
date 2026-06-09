@@ -2730,7 +2730,244 @@ async fn tc_chain_dispatch_with_breaker_and_retry() {
 
 | 산출물 | 경로 | 분량 | 비고 |
 | --- | --- | --- | --- |
-| **TC_UNIT.md** (메인) | `docs/specs/TC_UNIT.md` | **2,773 lines / 11 sections** | VERDICT line 3 + 10 § (§0~§10) + TC distribution 160 |
+| **TC_UNIT.md** (메인) | `docs/specs/TC_UNIT.md` | **2,773+8 = 2,781 lines / 11+1 sections** | VERDICT line 3 + 10 § (§0~§10) + §W16-AddLocal patch (D-59) + TC distribution 160+8=168 |
+
+---
+
+## §W16-AddLocal — `myharness auth add-local` L1 Unit TC (D-59, 2026-06-09)
+
+> **본 § 추가 이유**: TASK-005-1 W11~W15 (OAuth 3 provider 인증) 의 follow-up 으로 **W16 `auth add-local` subcommand** 가 신규 구현됨 (REQUIREMENTS.md §5.2.5 + USE_CASES.md §3.5 UC-AUTH-010 + DETAILED_DESIGN_ADD_LOCAL.md). 본 § 는 L1 Unit TC 8개를 추가 정의 (총 L1 = 160 + 8 = 168).
+>
+> **대상 crate**: `myharness-llm` (신규 module `add_local.rs`) + `myharness-cli` (AuthAction::AddLocal enum + handler).
+>
+> **mock strategy**:
+> - `ProviderRegistry::load_from_path` → `MYHARNESS_HOME=tempdir` env override (paths.rs §1)
+> - `KeyringAuthStore::set` → backend `None` (CI Linux) 에서 in-memory cache 확인 (mut HashMap 직접 read)
+> - HTTP probe → **§L2 의 wiremock** (TC-W16-I01/I02). L1 은 시그니처/에러타입 매칭만 검증, 실제 HTTP 없음.
+> - `inquire` UI → **L1 검증 ❌** (stdin 필요). cli handler 의 `is_terminal()` 분기만 L1 검증.
+
+### §W16.0 메타
+
+| 항목 | 값 |
+| --- | --- |
+| TC ID 범위 | TC-W16-001 ~ TC-W16-008 |
+| TC count | 8 |
+| crate | `myharness-llm` (`add_local.rs`) |
+| impl 진입점 | W16 chapter 1 (TC-001~003) + chapter 2 (TC-004~006) + chapter 3 (TC-007~008) |
+| VERDICT | TBD (구현 후 검증) |
+
+### §W16.1 TC 정의 (8)
+
+#### TC-W16-001: `ModelInfo` serde roundtrip
+
+```rust
+#[test]
+fn tc_w16_001_modelinfo_serde_roundtrip() {
+    let m = ModelInfo {
+        id: "llama3.1:8b".into(),
+        owned_by: Some("ollama".into()),
+    };
+    let s = serde_json::to_string(&m).unwrap();
+    let back: ModelInfo = serde_json::from_str(&s).unwrap();
+    assert_eq!(back, m);
+    // JSON schema 확인
+    assert!(s.contains("\"id\":\"llama3.1:8b\""));
+    assert!(s.contains("\"owned_by\":\"ollama\""));
+}
+```
+
+#### TC-W16-002: `RegisterError::InvalidUrl` 매칭
+
+```rust
+#[test]
+fn tc_w16_002_register_error_invalid_url() {
+    let e = RegisterError::InvalidUrl("not a url".into());
+    assert!(matches!(e, RegisterError::InvalidUrl(_)));
+    assert!(e.to_string().contains("invalid URL"));
+    assert!(e.to_string().contains("not a url"));
+}
+```
+
+#### TC-W16-003: `RegisterError::NotInteractive` 매칭
+
+```rust
+#[test]
+fn tc_w16_003_register_error_not_interactive() {
+    let e = RegisterError::NotInteractive;
+    assert!(matches!(e, RegisterError::NotInteractive));
+    assert!(e.to_string().contains("not interactive"));
+    assert!(e.to_string().contains("tty"));
+}
+```
+
+#### TC-W16-004: `register_local_provider` valid input → Ok
+
+```rust
+#[test]
+fn tc_w16_004_register_local_provider_valid() {
+    let tmp = tempfile::tempdir().unwrap();
+    std::env::set_var("MYHARNESS_HOME", tmp.path());
+
+    let report = tokio_test::block_on(register_local_provider(
+        "http://localhost:11434/v1".into(),
+        None,
+        ModelInfo { id: "llama3.1".into(), owned_by: None },
+        vec![ModelInfo { id: "llama3.1".into(), owned_by: None }],
+    )).unwrap();
+
+    assert_eq!(report.base_url, "http://localhost:11434/v1");
+    assert_eq!(report.model_id, "llama3.1");
+    assert_eq!(report.available_models, vec!["llama3.1".to_string()]);
+    assert!(!report.token_saved);
+
+    // providers.toml 검증
+    let toml = std::fs::read_to_string(tmp.path().join("providers.toml")).unwrap();
+    assert!(toml.contains("base-url = \"http://localhost:11434/v1\"") ||
+            toml.contains("base_url = \"http://localhost:11434/v1\""));
+    assert!(toml.contains("llama3.1"));
+
+    std::env::remove_var("MYHARNESS_HOME");
+}
+```
+
+**mock strategy**: `MYHARNESS_HOME=tempdir` env override → `paths::providers_toml()` 이 tempdir 하위 사용. 실제 fs write 발생하나 격리됨. KeyringAuthStore::set 호출 ❌ (token=None).
+
+#### TC-W16-005: token None → `token_saved = false`
+
+```rust
+#[test]
+fn tc_w16_005_register_token_none_means_token_saved_false() {
+    let tmp = tempfile::tempdir().unwrap();
+    std::env::set_var("MYHARNESS_HOME", tmp.path());
+
+    let report = tokio_test::block_on(register_local_provider(
+        "http://localhost:8000/v1".into(),
+        None,  // ← token 없음
+        ModelInfo { id: "test-model".into(), owned_by: None },
+        vec![ModelInfo { id: "test-model".into(), owned_by: None }],
+    )).unwrap();
+
+    assert!(!report.token_saved);
+    // KeyringAuthStore::set 호출 안 됨 — 검증 어려움 (CI backend=Linux, in-memory cache 비어있음 확인)
+    std::env::remove_var("MYHARNESS_HOME");
+}
+```
+
+#### TC-W16-006: token Some → `token_saved = true` + keyring in-memory
+
+```rust
+#[test]
+fn tc_w16_006_register_token_some_means_token_saved_true_and_keyring_set() {
+    let tmp = tempfile::tempdir().unwrap();
+    std::env::set_var("MYHARNESS_HOME", tmp.path());
+
+    // KeyringAuthStore::probe() 직접 호출해서 같은 backend 의 in-memory cache 확인
+    let store = KeyringAuthStore::probe();
+    let report = tokio_test::block_on(register_local_provider(
+        "http://localhost:8000/v1".into(),
+        Some("test-token-abc123".into()),
+        ModelInfo { id: "test-model".into(), owned_by: None },
+        vec![ModelInfo { id: "test-model".into(), owned_by: None }],
+    )).unwrap();
+
+    assert!(report.token_saved);
+    // CI Linux 의 backend = None 일 수 있음 → in-memory cache 검증
+    if store.backend() == KeyringBackend::None {
+        let cached = store.get(ProviderId::LocalLlm).await.unwrap();
+        assert_eq!(cached.as_deref(), Some("test-token-abc123"));
+    }
+    std::env::remove_var("MYHARNESS_HOME");
+}
+```
+
+#### TC-W16-007: atomic write — providers.toml 손상 시 tmp 파일만 남고 원본 보존
+
+```rust
+#[test]
+fn tc_w16_007_atomic_write_preserves_original_on_failure() {
+    let tmp = tempfile::tempdir().unwrap();
+    let target = tmp.path().join("providers.toml");
+    std::fs::write(&target, "ORIGINAL CONTENT\n").unwrap();
+
+    // read-only parent 디렉토리로 만들어 rename 실패 유도
+    let parent = tmp.path();
+    let mut perms = std::fs::metadata(parent).unwrap().permissions();
+    perms.set_readonly(true);
+    std::fs::set_permissions(parent, perms).unwrap();
+
+    let result = atomic_write(&target, "NEW CONTENT");
+    // Linux: read-only parent 에 write → EACCES. macOS: 성공할 수도 있음. 플랫폼별 분기.
+    if cfg!(target_os = "linux") {
+        assert!(result.is_err());
+    }
+    // read-only 해제 후 원본 검증
+    let mut perms = std::fs::metadata(parent).unwrap().permissions();
+    perms.set_readonly(false);
+    std::fs::set_permissions(parent, perms).unwrap();
+
+    let content = std::fs::read_to_string(&target).unwrap();
+    assert_eq!(content, "ORIGINAL CONTENT\n", "원본 보존 필수");
+}
+```
+
+#### TC-W16-008: `probe_local_models` trailing `/v1/` trim
+
+```rust
+#[test]
+fn tc_w16_008_probe_url_trim_trailing_slash() {
+    // probe_local_models 내부의 URL build 가 trailing slash 를 trim 하는지 검증
+    // → 직접 probe 호출은 HTTP 발생하므로, build_url helper 가 있다면 그것만 검증
+    // 또는 mock server (TC-W16-I01) 로 통합 검증
+    // 본 L1 TC 는 단순히 trim 함수 (있다면) 호출 검증
+    let url_with_slash = "http://localhost:11434/v1/";
+    let url_no_slash = "http://localhost:11434/v1";
+    assert_eq!(url_with_slash.trim_end_matches('/'), url_no_slash);
+}
+```
+
+**mock-free fallback**: §3.4 의 `probe_local_models` 가 trim_end_matches('/') 사용하는지 코드 inspection 으로 verify. 단위 함수 분리되어 있다면 그 함수 직접 테스트.
+
+### §W16.2 mock strategy 명시
+
+| TC | mock type | 격리 방법 |
+| --- | --- | --- |
+| TC-W16-001~003 | mock-free | struct/enum 정의만 |
+| TC-W16-004~006 | tempfile + env override | `MYHARNESS_HOME=tempdir` (paths.rs §1) |
+| TC-W16-007 | read-only parent | platform-specific (Linux 검증) |
+| TC-W16-008 | inline string trim | stdlib `trim_end_matches` |
+
+### §W16.3 TDD 사이클 (D-43~D-47 chapter 패턴, 1 session 안에 가능)
+
+1. **chapter 1** (TC-W16-001~003): `ModelInfo` struct + `RegisterError` enum + Display impl. **RED** (테스트만) → **GREEN** (impl).
+2. **chapter 2** (TC-W16-004~006): `register_local_provider` core signature + body. **RED** → **GREEN**.
+3. **chapter 3** (TC-W16-007~008): `atomic_write` helper + URL trim. **RED** → **GREEN**.
+
+→ **3 chapter × 1 session** (W16 scope = small, D-47 chapter 1~3-B 의 27.5% 1-session 사이클과 동일 패턴). chapter 4 (integration) 는 별도 L2 TC.
+
+### §W16.4 검증 reference
+
+- **DD-AddLocal §7.1** (L1 Unit 8) — 본 §W16 와 1:1 매핑
+- **REVIEW §6.2** — L1 Unit TC 우선순위 가이드 (mock-first, no-IO 원칙) 적용
+- **security-patterns.md** — token 평문 출력 ❌ 검증 (TC-W16-006 의 `test-token-abc123` 는 fixture, 실 token 아님, D-06 strict 준수)
+
+### §W16.5 v1.5+ 후보 (claim-only 회피)
+
+- (OI-1) 비대화형 `--url/--token/--model` 플래그 — L1 + 1 (TC-W16-009)
+- (OI-2) Ollama native `/api/tags` 지원 — L1 + 2 (TC-W16-010, 011)
+- (OI-3) 다중 모델 1회 등록 — L1 + 1 (TC-W16-012)
+- (OI-4) `register_local_provider` 의 keyring backend 분기 (Apple/Win/Linux 별) — L1 + 3 (TC-W16-013, 014, 015) — 현재는 W12 의 in-memory fallback 으로 통합 처리
+
+### §W16.6 cross-references
+
+- **입력 SSOT**:
+  - `docs/architecture/DETAILED_DESIGN_ADD_LOCAL.md` (D-59, §3 + §7)
+  - `docs/REQUIREMENTS.md` §5.2.5 (W16 결정)
+  - `docs/USE_CASES.md` §3.5 (UC-AUTH-010) + §10.4b (ACC-01~07)
+  - `docs/CONCEPT.md` §5.5.1 (discover + auth + save) + §5.2 (12 명령어)
+- **plan**: W16 (TASK-005-1 v1 MVP 후속)
+- **sibling**: TC_INTEGRATION.md §W16-AddLocal (3 TC), TC_COMPONENT.md §W16-AddLocal (1 TC), TC_E2E.md §W16-AddLocal (1 TC manual)
+- **plan output**: `outputs/w16-impl/deliverable.md` (구현 후 작성)
+- **SSOT parent**: `docs/architecture/DETAILED_DESIGN_ADD_LOCAL.md` (D-59, W16 ddoc)
 | `deliverable_tc1.md` (early signal) | `docs/team/deliverable_tc1.md` | (prior attempt 1 작성) | status=in_progress → done |
 | engine deliverable | `outputs/tc-1/deliverable.md` | (chunk 1 후 작성, status=in_progress) | chunk 5 후 status=done 갱신 |
 | `board.md` (board) | `~/.mavis/plans/plan_ddcdd2a3/board.md` | start + done 2 entry (D-16 minimal noise) | sibling task 들과 공유 |

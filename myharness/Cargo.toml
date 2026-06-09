@@ -51,6 +51,10 @@ dirs = "5"
 async-trait = "0.1"
 chrono = { version = "0.4", default-features = false, features = ["clock", "serde"] }
 reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls"] }
+# URL parsing (W16 add-local)
+url = "2"
+# Interactive CLI prompts (W16 add-local)
+inquire = "0.7"
 
 [profile.release]
 lto = "thin"

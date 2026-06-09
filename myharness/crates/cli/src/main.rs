@@ -134,6 +134,18 @@ enum AuthAction {
     },
     /// 등록된 OAuth provider 목록
     List,
+    /// 로컬 LLM 서버 등록 (D-59 W16) — Ollama / vLLM / LM Studio / llama.cpp
+    ///
+    /// Interactive wizard:
+    ///   1. 서버 URL 입력 (default: http://localhost:11434/v1)
+    ///   2. API token 입력 (선택, 빈칸 가능)
+    ///   3. GET /v1/models 로 모델 목록 probe
+    ///   4. arrow-key 로 모델 선택
+    ///   5. ~/.myharness/providers.toml 의 LocalLlm entry 갱신
+    ///
+    /// Examples:
+    ///   myharness auth add-local
+    AddLocal,
 }
 
 fn main() -> anyhow::Result<()> {
@@ -367,6 +379,9 @@ async fn run_auth(action: AuthAction) -> anyhow::Result<()> {
             let s = mgr.status(&provider).map_err(|e| anyhow::anyhow!("{e}"))?;
             print_auth_status(&s);
         }
+        AuthAction::AddLocal => {
+            handle_auth_add_local().await?;
+        }
     }
     Ok(())
 }
@@ -509,4 +524,87 @@ fn resolve_llm_client() -> Arc<dyn LLMClient> {
         myharness_llm::provider::ProviderId::Claude,
         "claude-sonnet-4-6",
     ))
+}
+
+/// W16 (D-59) — `myharness auth add-local` wizard handler.
+///
+/// 흐름:
+/// 1. is_terminal() 체크 (CI/pipe 환경 거부)
+/// 2. inquire 3 단계: URL → token(optional) → /v1/models probe → 모델 선택
+/// 3. myharness_llm::register_local_provider() 호출
+/// 4. 한국어 결과 출력
+async fn handle_auth_add_local() -> anyhow::Result<()> {
+    use std::io::IsTerminal;
+    use inquire::{Password, Select, Text};
+
+    // 1. 비대화형 거부
+    if !std::io::stdin().is_terminal() || !std::io::stdout().is_terminal() {
+        anyhow::bail!(
+            "auth add-local 은 interactive 만 지원 — stdin/stdout 이 tty 아님 (CI/pipe 환경 ❌)"
+        );
+    }
+
+    println!("로컬 LLM 서버 등록 (Ollama / vLLM / LM Studio / llama.cpp)");
+    println!();
+
+    // 2-1. URL 입력
+    let url: String = Text::new("Server URL")
+        .with_default("http://localhost:11434/v1")
+        .with_help_message("OpenAI 호환 endpoint (e.g., http://localhost:11434/v1 for Ollama)")
+        .prompt()
+        .map_err(|e| anyhow::anyhow!("inquire URL prompt: {e}"))?;
+
+    if url::Url::parse(&url).is_err() {
+        anyhow::bail!("invalid URL: {url}");
+    }
+
+    // 2-2. Token 입력 (선택)
+    let token_input: String = Password::new("API Token")
+        .with_help_message("빈칸 가능 — Ollama 는 보통 불요 (Enter 만 누르면 skip)")
+        .without_confirmation()
+        .prompt()
+        .map_err(|e| anyhow::anyhow!("inquire token prompt: {e}"))?;
+    let token: Option<String> = if token_input.is_empty() {
+        None
+    } else {
+        Some(token_input)
+    };
+
+    // 3. probe + 모델 선택
+    println!();
+    println!("→ {url}/models 에 연결 시도 중...");
+    let models = myharness_llm::probe_local_models(&url, token.as_deref())
+        .await
+        .map_err(|e| anyhow::anyhow!("{e}"))?;
+
+    println!("✓ {} 개 모델 발견", models.len());
+
+    let selected: myharness_llm::ModelInfo = Select::new("Model", models.clone())
+        .with_help_message("arrow-key 로 선택, Enter 확정, ESC 취소")
+        .prompt()
+        .map_err(|e| anyhow::anyhow!("inquire model select: {e}"))?;
+
+    // 4. register
+    let report = myharness_llm::register_local_provider(url.clone(), token, selected, models)
+        .await
+        .map_err(|e| anyhow::anyhow!("{e}"))?;
+
+    // 5. 결과 출력
+    println!();
+    println!("✓ 로컬 LLM 등록 완료");
+    println!("  서버: {}", report.base_url);
+    println!(
+        "  모델: {} (전체 {}개 사용 가능)",
+        report.model_id,
+        report.available_models.len()
+    );
+    println!(
+        "  저장: {}",
+        myharness_llm::paths::providers_toml().display()
+    );
+    if report.token_saved {
+        println!("  토큰: keychain 저장됨");
+    }
+
+    Ok(())
 }

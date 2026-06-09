@@ -1953,6 +1953,168 @@ fallback_order:
 
 ---
 
+## §W16-AddLocal — `myharness auth add-local` L2 Integration TC (D-59, 2026-06-09)
+
+> **본 § 추가 이유**: TASK-005-1 W16 (`auth add-local` subcommand) 의 L2 Integration TC 3개를 추가 정의 (총 L2 = 25 + 3 = 28). 1 crate boundary (LLM ↔ external HTTP) + 1 cross-crate (cli dispatch + LLM register API) + 1 E2E persistence 검증.
+>
+> **mock strategy**: **wiremock** crate (HTTP mock) + `MYHARNESS_HOME=tempdir` env override + `KeyringAuthStore::probe()` (CI backend=None).
+>
+> **대상 crate boundary**: `myharness-llm::add_local::probe_local_models` ↔ **external HTTP server (OpenAI 호환)**.
+
+### §W16.0 메타
+
+| 항목 | 값 |
+| --- | --- |
+| TC ID 범위 | TC-W16-I01 ~ TC-W16-I03 |
+| TC count | 3 |
+| crate boundary | `myharness-llm::add_local` ↔ external HTTP |
+| mock | `wiremock` (workspace dep 추가) |
+| VERDICT | TBD (구현 후 검증) |
+
+### §W16.1 TC 정의 (3)
+
+#### TC-W16-I01: mock server 가 `/v1/models` 200 + 3 models 반환 → `probe_local_models` 3개 추출
+
+```rust
+use wiremock::{MockServer, Mock, ResponseTemplate};
+use wiremock::matchers::{method, path};
+
+#[tokio::test]
+async fn tc_w16_i01_probe_extracts_three_models() {
+    let server = MockServer::start().await;
+    let body = serde_json::json!({
+        "object": "list",
+        "data": [
+            {"id": "llama3.1:8b", "object": "model", "owned_by": "ollama"},
+            {"id": "qwen2.5:14b", "object": "model", "owned_by": "ollama"},
+            {"id": "mistral:7b", "object": "model", "owned_by": "ollama"},
+        ]
+    });
+    Mock::given(method("GET"))
+        .and(path("/v1/models"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(body))
+        .mount(&server)
+        .await;
+
+    let models = myharness_llm::add_local::probe_local_models(
+        &server.uri(), None
+    ).await.unwrap();
+
+    assert_eq!(models.len(), 3);
+    let ids: Vec<&str> = models.iter().map(|m| m.id.as_str()).collect();
+    assert!(ids.contains(&"llama3.1:8b"));
+    assert!(ids.contains(&"qwen2.5:14b"));
+    assert!(ids.contains(&"mistral:7b"));
+    // owned_by 보존 확인
+    assert!(models.iter().all(|m| m.owned_by.as_deref() == Some("ollama")));
+}
+```
+
+#### TC-W16-I02: mock server 401 반환 → `RegisterError::HttpError { status: 401, .. }`
+
+```rust
+#[tokio::test]
+async fn tc_w16_i02_probe_returns_http_error_on_401() {
+    let server = MockServer::start().await;
+    Mock::given(method("GET"))
+        .and(path("/v1/models"))
+        .respond_with(ResponseTemplate::new(401).set_body_string("Unauthorized: invalid token"))
+        .mount(&server)
+        .await;
+
+    let err = myharness_llm::add_local::probe_local_models(
+        &server.uri(), Some("bad-token")
+    ).await.unwrap_err();
+
+    match err {
+        myharness_llm::add_local::RegisterError::HttpError { status, body, .. } => {
+            assert_eq!(status, 401);
+            assert!(body.contains("Unauthorized"));
+        }
+        e => panic!("expected HttpError, got {e:?}"),
+    }
+}
+```
+
+#### TC-W16-I03: end-to-end — mock server + `register_local_provider` → providers.toml 검증
+
+```rust
+#[tokio::test]
+async fn tc_w16_i03_register_writes_providers_toml_end_to_end() {
+    let server = MockServer::start().await;
+    let body = serde_json::json!({
+        "data": [
+            {"id": "llama3.1:8b", "owned_by": "ollama"},
+            {"id": "qwen2.5:14b", "owned_by": "ollama"},
+        ]
+    });
+    Mock::given(method("GET"))
+        .and(path("/v1/models"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(body))
+        .mount(&server)
+        .await;
+
+    // isolate via tempdir
+    let tmp = tempfile::tempdir().unwrap();
+    std::env::set_var("MYHARNESS_HOME", tmp.path());
+
+    let models = myharness_llm::add_local::probe_local_models(
+        &server.uri(), None
+    ).await.unwrap();
+    let selected = models.iter().find(|m| m.id == "qwen2.5:14b").unwrap().clone();
+
+    let report = myharness_llm::add_local::register_local_provider(
+        server.uri(),
+        None,
+        selected,
+        models,
+    ).await.unwrap();
+
+    assert_eq!(report.model_id, "qwen2.5:14b");
+    assert_eq!(report.available_models, vec!["llama3.1:8b".to_string(), "qwen2.5:14b".to_string()]);
+
+    // providers.toml 검증
+    let toml_path = tmp.path().join("providers.toml");
+    assert!(toml_path.exists(), "providers.toml must be created");
+    let content = std::fs::read_to_string(&toml_path).unwrap();
+    // serde 별칭 또는 원본 — 둘 다 허용
+    assert!(content.contains("qwen2.5:14b"));
+    assert!(content.contains("llama3.1:8b"));
+    assert!(content.contains(&server.uri()));
+
+    // registry reload 검증
+    let registry = myharness_llm::ProviderRegistry::load_from_path(&toml_path).unwrap();
+    let local = registry.get(myharness_llm::ProviderId::LocalLlm).unwrap();
+    assert_eq!(local.base_url, server.uri());
+    assert_eq!(local.default_model, "qwen2.5:14b");
+    assert_eq!(local.available_models.len(), 2);
+
+    std::env::remove_var("MYHARNESS_HOME");
+}
+```
+
+### §W16.2 mock strategy 명시
+
+| TC | mock type | 격리 |
+| --- | --- | --- |
+| TC-W16-I01 | wiremock (HTTP 200) | `MockServer::start()` ephemeral port |
+| TC-W16-I02 | wiremock (HTTP 401) | same |
+| TC-W16-I03 | wiremock + tempfile + env override | `MYHARNESS_HOME=tempdir` (paths.rs §1) |
+
+### §W16.3 TDD chapter 4 (W16)
+
+본 §W16 (L1 §W16-AddLocal + L2 §W16-AddLocal) 가 chapter 4 의 RED 진입점. **`cargo test --workspace` 시 8 L1 + 3 L2 = 11 fail (RED) → 11 pass (GREEN)**. wiremock 의존성 추가 필요 (workspace `[dev-dependencies]` or `myharness-llm` 의 `[dev-dependencies]`).
+
+### §W16.4 cross-references
+
+- **입력 SSOT**:
+  - `docs/architecture/DETAILED_DESIGN_ADD_LOCAL.md` (D-59, §7.2 L2 Integration 3)
+  - `docs/specs/TC_UNIT.md` §W16-AddLocal (L1 8)
+- **sibling**: TC_COMPONENT.md §W16-AddLocal (1 TC: cli dispatch), TC_E2E.md §W16-AddLocal (1 TC manual: real Ollama)
+- **mock crate**: `wiremock` (workspace dev-dep 추가 — `wiremock = "0.6"`)
+
+---
+
 ## VERDICT (final, post-handoff)
 
 ```

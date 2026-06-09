@@ -203,8 +203,11 @@ Result aggregation → Orchestrator → yklee (한국어 요약 + handoff)
 | UC-AUTH-007 | `myharness auth <provider> set-key --from-keychain` | `provider-auto-config` skill | keychain 에서 가져오기 (장소별 alias) | catalog |
 | UC-AUTH-008 | `myharness auth <provider> test` | `provider-auto-config` skill | 연결 테스트 (ping model, latency 측정) | catalog |
 | UC-AUTH-009 | `myharness auth default <provider>` | orchestrator | primary 변경 (config.yaml 갱신) | catalog |
+| **UC-AUTH-010** | **`myharness auth add-local`** | orchestrator (직접) | **로컬 LLM 서버 (Ollama/vLLM/LM Studio/llama.cpp) URL + 선택적 token 입력 → /v1/models probe → 모델 선택 TUI → ProviderRegistry 의 LocalLlm entry 의 base_url/default_model 갱신** | **§3 detailed, D-59 W16** |
 
 > **D-38 노트**: UC-AUTH-001/008 의 `auth setup` / `auth <provider> test` 는 fallback chain 의 source — `~/.myharness/state/active-providers.yaml` 자동 갱신 (CONCEPT.md §5.5.3).
+>
+> **D-59 노트 (W16)**: UC-AUTH-010 (`auth add-local`) 은 OAuth flow 와 다른 **수동 endpoint 등록** sub-case. CONCEPT.md §5.5.1 의 discover + auth + save 3-단계 중 **수동 sub-case** (자동 discover 는 W7.3 `scan_local.rs` 가 담당). `provider-auto-config` skill (D-38) 영역 밖 — W16 은 v1 의 6 built-in provider 중 `LocalLlm` 의 1-shot 등록 UI.
 
 ### 2.5 UC-INSTALL-* (설치 / 배포, 6개)
 
@@ -493,7 +496,65 @@ Result aggregation → Orchestrator → yklee (한국어 요약 + handoff)
 
 ---
 
-### 3.5 UC-LOOP-001: loop mode (ralph-wiggum, D-29)
+### 3.5 UC-AUTH-010: 로컬 LLM 서버 등록 (`auth add-local`, D-59 W16)
+
+**명령**: `myharness auth add-local` (no-arg, 완전 interactive wizard)
+
+**Actor**:
+- 주 actor: yklee (A1)
+- 시스템: orchestrator (mode 무관, 단일 sub-command) + `myharness-llm::register_local_provider` API + `inquire` UI crate
+
+**사전조건**:
+- 사용자 입력이 tty (stdin/stdout 모두 tty). 비대화형 (`auth add-local < /dev/null`) 실행 시 graceful error.
+- 로컬 LLM 서버 (Ollama/vLLM/LM Studio/llama.cpp) 가 **이미 실행 중** (URL probe 시 available 해야 함). 미실행 시 §7.1 (connection refused) + exit code 1.
+
+**흐름 (정상)**:
+1. **CLI parse** — `auth add-local` (no-arg, AuthAction::AddLocal enum)
+2. **URL 입력 (inquire Text prompt)**:
+   - placeholder: `http://localhost:11434/v1` (Ollama default) / `http://localhost:8000/v1` (vLLM) / `http://localhost:1234/v1` (LM Studio) / `http://localhost:8080/v1` (llama.cpp)
+   - 검증: `url::Url::parse` 성공해야 진행. 실패 시 재입력 (loop, ESC 로 cancel)
+3. **Token 입력 (inquire Text prompt, `is_password = true` style — input masking)**:
+   - placeholder hint: "press Enter to skip (Ollama 는 보통 불요)"
+   - 빈 입력 = None (token 없이 등록)
+   - 비어있지 않으면 `KeyringAuthStore::set(ProviderId::LocalLlm, &token).await` 호출 (W7.2 in-memory cache + macOS keyring / Win credential / Linux libsecret fallback)
+4. **`GET {base_url}/models` probe (reqwest, 3s timeout)**:
+   - 성공 (200) → JSON `{"data": [{"id": "..."}, ...]}` 파싱 → 모델 목록 확보
+   - 실패 (connection refused / 4xx / 5xx) → 에러 출력 + `continue? (y/n)` prompt. n 선택 시 abort
+5. **모델 선택 (inquire Select prompt, arrow-key)**:
+   - 모델 0개 → "no models found at {url}" + abort
+   - 1개+ → arrow-key select UI 표시
+   - Enter → 선택 확정
+6. **`ProviderRegistry` 갱신**:
+   - `~/.myharness/providers.toml` 로드 (없으면 with_builtins() 시작)
+   - `LocalLlm` entry 의 `base_url` (입력값) + `default_model` (선택한 모델 id) + `available_models` (전체 목록) 갱신
+   - `save_to_path()` 로 atomic write
+7. **결과 출력 (한국어)**:
+   ```
+   ✓ 로컬 LLM 등록 완료
+     서버: <입력 URL>
+     모델: <선택 모델 id> (전체 N개 사용 가능)
+     저장: ~/.myharness/providers.toml
+   ```
+8. **§10 acceptance**: UC-AUTH-010-ACC-01 ~ ACC-05 (§10.4)
+
+**예외**:
+- URL parse 실패 / connection refused / 4xx 5xx / 모델 0개 / inquire 사용자 cancel (ESC) → §7.1 (graceful abort, exit code 1)
+- Keychain backend None (Linux libsecret 미설치) → env var hint 메시지 출력 후 in-memory cache 로 진행 (W7.2 graceful fallback 재사용)
+- 비-tty 환경 실행 → "auth add-local 은 interactive 만 지원 — stdin redirect ❌" 에러 + exit 1
+
+**Mode 별 동작**:
+- `mode=orchestrator` (default): 위 흐름 그대로
+- `mode=single` / `mode=loop`: 동일 (auth subcommand 는 mode 무관, §5.3 dispatch matrix 의 sub-agent = 없음)
+
+**Sub-agent dispatch**: **없음** — `auth add-local` 은 orchestrator 가 직접 처리. UC-AUTH-001 의 `provider-auto-config` skill 도 호출 ❌ (W16 은 v1.5 의 auto-fallback 갱신 영역 밖).
+
+**TASK-002 의존성**: ❌ (TASK-002 는 server/env 인프라. local LLM 서버 자체는 yklee 인프라와 무관 — Ollama/vLLM 모두 cross-platform standalone binary)
+
+**관련 use case**: UC-AUTH-001 (provider discover+login), UC-AUTH-008 (auth test) — W16 은 LocalLlm 1-shot 수동 등록. UC-AUTH-001 의 batch wizard 와 별도 경로.
+
+---
+
+### 3.6 UC-LOOP-001: loop mode (ralph-wiggum, D-29)
 
 **명령**: `myharness --mode=loop --goal "<text>" --max-iterations=N [--success-criteria "<text>"]` (CONCEPT.md §5.10 의 loop row)
 
@@ -1025,6 +1086,16 @@ UC-LOOP-001 (orchestrator, iteration N)
 - **UC-AUTH-001-ACC-07**: `auth <provider> test` 실행 시 ping model + latency 측정이 성공한다
 - **UC-AUTH-001-ACC-08**: `fallback_order` 가 config 우선순위 + active filter 로 자동 구성된다
 - **UC-AUTH-001-ACC-09**: `log.jsonl` 에 `event: "auth_setup"` 항목이 append 된다
+
+### 10.4b UC-AUTH-010 (add-local, D-59 W16)
+
+- **UC-AUTH-010-ACC-01**: `myharness auth add-local` 실행 시 interactive wizard 가 시작되어 (1) URL (2) 선택적 token (3) 모델 선택 3 단계를 차례로 제시한다
+- **UC-AUTH-010-ACC-02**: URL 입력은 `url::Url::parse` 검증 후에만 다음 단계로 진행되며, 잘못된 URL 입력 시 재입력 prompt 가 뜬다
+- **UC-AUTH-010-ACC-03**: `GET {base_url}/models` probe 가 3s timeout 내에 성공하면 JSON `data[*].id` 가 arrow-key 선택 UI 로 표시된다
+- **UC-AUTH-010-ACC-04**: 모델 선택 확정 후 `~/.myharness/providers.toml` 의 `LocalLlm` entry 의 `base_url` + `default_model` + `available_models` 가 갱신되며, atomic write (tmp + rename) 로 손상 방지된다
+- **UC-AUTH-010-ACC-05**: token 비어있음 → keychain set 생략, `requires_key: false` 인 LocalLlm 의 정의대로 진행. token 있음 → `KeyringAuthStore::set(LocalLlm, &token)` 호출 + in-memory cache + env hint 메시지 (Linux None backend 시)
+- **UC-AUTH-010-ACC-06**: connection refused / 4xx 5xx / 모델 0개 / inquire cancel (ESC) 중 어느 하나라도 발생 시 graceful abort + exit code 1 + 한국어 에러 메시지
+- **UC-AUTH-010-ACC-07**: 비-tty 환경에서 실행 시 (stdin 또는 stdout 이 tty 아님) "interactive only" 에러 + exit 1
 
 ### 10.5 UC-LOOP-001 (loop mode)
 

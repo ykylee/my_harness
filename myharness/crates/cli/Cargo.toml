@@ -27,6 +27,8 @@ tokio = { workspace = true }
 ratatui = { workspace = true }
 crossterm = { workspace = true }
 async-trait = { workspace = true }
+inquire = { workspace = true }
+url = { workspace = true }
 
 [dev-dependencies]
 tempfile = "3"

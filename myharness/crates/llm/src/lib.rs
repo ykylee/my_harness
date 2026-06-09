@@ -16,7 +16,9 @@
 //! - [`auth_keyring`]: OS keychain 백엔드 (graceful fallback)
 //! - [`paths`]: `~/.myharness/` 경로 헬퍼
 //! - [`error`]: `LlmError` (thiserror)
+//! - [`add_local`]: W16 `auth add-local` subcommand 의 register API + probe
 
+pub mod add_local;
 pub mod auth_keyring;
 pub mod auth_state;
 pub mod auth_store;
@@ -35,6 +37,7 @@ pub mod registry;
 pub mod router;
 pub mod scan_local;
 
+pub use add_local::{ModelInfo, RegisterError, RegisterReport, probe_local_models, register_local_provider};
 pub use auth_keyring::{KeyringAuthStore, KeyringBackend};
 pub use auth_state::{AuthState, AuthStatus};
 pub use auth_store::{AuthStore, AuthStoreError, InMemoryAuthStore};
