@@ -62,7 +62,8 @@ impl OAuthProvider for MinimaxOAuth {
     fn client_secret(&self) -> Option<&str> { None }
     fn default_scopes(&self) -> &[&str] { &["completions.read", "completions.write"] }
     fn extra_authorize_params(&self) -> Vec<(&str, String)> {
-        vec![("response_type", "code".into())]
+        // response_type=code 는 flow.rs:115 에서 push 함 (중복 회피).
+        vec![]
     }
 }
 
