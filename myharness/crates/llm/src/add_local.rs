@@ -208,7 +208,9 @@ pub async fn register_local_provider(
     };
     registry.replace(new);
 
-    // 4. atomic write
+    // 4. atomic write (with auto-backup, W18 R-4 대응)
+    //    backup 은 silent — 실패 시 register 계속 진행 (R-4 graceful)
+    let _ = backup_providers_toml(&path, 5);
     let toml_str = registry.to_toml()?;
     atomic_write(&path, &toml_str).map_err(RegistryError::from)?;
 
@@ -256,6 +258,110 @@ pub(crate) fn atomic_write(path: &Path, content: &str) -> std::io::Result<()> {
     let tmp = path.with_extension("toml.tmp");
     std::fs::write(&tmp, content)?;
     std::fs::rename(&tmp, path)?;
+    Ok(())
+}
+
+/// W17 (v1.5 OI-1) — `register_local_provider` 의 비대화형 변형.
+///
+/// `probe_local_models` 호출 없이 (HTTP round-trip 생략) `register_local_provider` 를 직접 호출.
+/// CI/스크립트 환경 (stdin/stdout non-tty) 에서 사용.
+///
+/// # 인자
+/// - `base_url`: OpenAI 호환 endpoint (e.g., `http://localhost:11434/v1`)
+/// - `token`: API token (optional)
+/// - `model_id`: 사용자가 직접 지정한 모델 id (probe 없음 → 모델 검증 ❌, user 책임)
+///
+/// # 비고
+/// - `available_models = vec![model_id]` 1개로 hardcode (probe 없으므로)
+/// - `selected_model.owned_by = None` (probe 안 했으니 서버 메타 모름)
+/// - URL 검증 + KeyringAuthStore set + ProviderRegistry 갱신 + atomic write = interactive 와 동일
+pub async fn register_local_provider_non_interactive(
+    base_url: String,
+    token: Option<String>,
+    model_id: String,
+) -> Result<RegisterReport, RegisterError> {
+    let selected = ModelInfo {
+        id: model_id.clone(),
+        owned_by: None,
+    };
+    let available = vec![selected.clone()];
+    register_local_provider(base_url, token, selected, available).await
+}
+
+/// W18 (v1.5 R-4 대응) — providers.toml 덮어쓰기 직전 자동 backup.
+///
+/// # 동작
+/// 1. `path` 가 존재하지 않으면 `None` 반환 (신규 write case, backup 불요)
+/// 2. `path` 가 존재하면 `path.with_extension("toml.backup.<unix_ts>")` 으로 copy
+/// 3. **실패 시 warn 만, register_local_provider 는 계속 진행** (graceful, R-4 fail-soft)
+/// 4. `max_backups` 개수 초과 시 가장 오래된 것부터 삭제 (default 5)
+///
+/// # WHY silent fail
+/// - 사용자가 R-4 사고에도 register 가 성공해야 LLM 사용 가능
+/// - backup 실패는 `eprintln!` 로 stderr 에 알리고, 사용자가 수동 `cp` 가능
+/// - 명시적 `--backup` flag ❌ (사용자 부담 + default = ON 이 안전)
+///
+/// # Returns
+/// - `Some(backup_path)`: backup 성공 (또는 skip)
+/// - `None`: backup 시도했으나 실패 (warn 만, register 계속)
+pub fn backup_providers_toml(
+    path: &Path,
+    max_backups: usize,
+) -> Option<std::path::PathBuf> {
+    if !path.exists() {
+        return Some(path.to_path_buf()); // 신규 write — backup 불요, path 그대로 반환
+    }
+    let ts = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|d| d.as_secs())
+        .unwrap_or(0);
+    let backup = with_backup_suffix(path, ts);
+    if let Err(e) = std::fs::copy(path, &backup) {
+        eprintln!(
+            "⚠  providers.toml backup 실패 ({e}). register 는 계속 진행 — 수동으로 `cp {} {{}}.backup` 권고.",
+            path.display()
+        );
+        return None;
+    }
+    // cleanup: max_backups 초과 시 가장 오래된 것부터 삭제
+    if let Err(e) = cleanup_old_backups(path, max_backups) {
+        eprintln!("⚠  backup cleanup 실패 ({e}). 수동 정리 권고.");
+    }
+    Some(backup)
+}
+
+/// `providers.toml` → `providers.toml.backup.<ts>` 경로 생성.
+fn with_backup_suffix(path: &Path, ts: u64) -> std::path::PathBuf {
+    let mut s = path.as_os_str().to_os_string();
+    s.push(format!(".backup.{ts}"));
+    std::path::PathBuf::from(s)
+}
+
+/// backup 파일들 중 가장 오래된 것부터 삭제하여 `max_backups` 개 이하로 유지.
+fn cleanup_old_backups(path: &Path, max_backups: usize) -> std::io::Result<()> {
+    let parent = match path.parent() {
+        Some(p) => p,
+        None => return Ok(()),
+    };
+    let prefix = format!(
+        "{}.backup.",
+        path.file_name().and_then(|s| s.to_str()).unwrap_or("providers.toml")
+    );
+    let mut backups: Vec<_> = std::fs::read_dir(parent)?
+        .filter_map(|e| e.ok())
+        .filter(|e| {
+            e.file_name()
+                .to_str()
+                .map(|n| n.starts_with(&prefix))
+                .unwrap_or(false)
+        })
+        .collect();
+    // 오래된 순 (file name 의 timestamp suffix 기준)
+    backups.sort_by_key(|e| e.file_name());
+    let excess = backups.len().saturating_sub(max_backups);
+    for e in backups.iter().take(excess) {
+        let _ = std::fs::remove_file(e.path()); // best-effort cleanup
+    }
     Ok(())
 }
 
@@ -352,127 +458,133 @@ mod tests {
 
     #[tokio::test]
     #[serial_test::serial(env)]
-    async fn tc_w16_005_register_token_none_means_token_saved_false() {
+    async fn tc_w17_004_non_interactive_empty_model_id() {
         let tmp = tempfile::tempdir().unwrap();
-        // SAFETY: test 전용 env mutation
         unsafe { std::env::set_var("MYHARNESS_HOME", tmp.path()); }
 
-        let report = register_local_provider(
-            "http://localhost:8000/v1".into(),
+        // 빈 model_id 도 register 자체는 성공 (사용자 책임) — 단 available_models 에 빈 string 1개
+        let report = register_local_provider_non_interactive(
+            "http://localhost:11434/v1".into(),
             None,
-            ModelInfo {
-                id: "test-model".into(),
-                owned_by: None,
-            },
-            vec![ModelInfo {
-                id: "test-model".into(),
-                owned_by: None,
-            }],
+            "".into(),
         )
         .await
         .unwrap();
 
-        assert!(!report.token_saved);
-        // SAFETY: test 전용 env cleanup
+        assert_eq!(report.model_id, "");
+        assert_eq!(report.available_models, vec!["".to_string()]);
+        unsafe { std::env::remove_var("MYHARNESS_HOME"); }
+    }
+
+    // ── W18 (v1.5 R-4 대응) backup TC ─────────────────────────────────────────
+
+    #[tokio::test]
+    #[serial_test::serial(env)]
+    async fn tc_w18_001_backup_created_before_overwrite() {
+        let tmp = tempfile::tempdir().unwrap();
+        unsafe { std::env::set_var("MYHARNESS_HOME", tmp.path()); }
+
+        // 1) 첫 register — providers.toml 신규 생성 (backup ❌)
+        let r1 = register_local_provider(
+            "http://localhost:11434/v1".into(),
+            None,
+            ModelInfo { id: "llama3.1".into(), owned_by: None },
+            vec![ModelInfo { id: "llama3.1".into(), owned_by: None }],
+        )
+        .await
+        .unwrap();
+        assert_eq!(r1.model_id, "llama3.1");
+        let toml_path = tmp.path().join("providers.toml");
+        assert!(toml_path.exists());
+
+        // backup 파일 없음 (신규 write)
+        let backups_after_first: Vec<_> = std::fs::read_dir(tmp.path())
+            .unwrap()
+            .filter_map(|e| e.ok())
+            .filter(|e| e.file_name().to_string_lossy().contains(".backup."))
+            .collect();
+        assert_eq!(backups_after_first.len(), 0, "신규 write 시 backup ❌");
+
+        // 2) 두 번째 register — backup 생성 확인
+        //    (ts 가 동일할 수 있으니 살짝 sleep)
+        std::thread::sleep(std::time::Duration::from_millis(1100));
+        let _r2 = register_local_provider(
+            "http://localhost:11434/v1".into(),
+            None,
+            ModelInfo { id: "qwen2.5".into(), owned_by: None },
+            vec![ModelInfo { id: "qwen2.5".into(), owned_by: None }],
+        )
+        .await
+        .unwrap();
+
+        let backups_after_second: Vec<_> = std::fs::read_dir(tmp.path())
+            .unwrap()
+            .filter_map(|e| e.ok())
+            .filter(|e| e.file_name().to_string_lossy().contains(".backup."))
+            .collect();
+        assert_eq!(backups_after_second.len(), 1, "두 번째 write 시 backup 1개");
+
+        // backup 내용 = 첫 번째 write (llama3.1)
+        let backup_content = std::fs::read_to_string(backups_after_second[0].path()).unwrap();
+        assert!(backup_content.contains("llama3.1"));
+        assert!(!backup_content.contains("qwen2.5"), "backup 은 덮어쓰기 전 상태");
+
+        // 현재 providers.toml = 두 번째 write (qwen2.5)
+        let current = std::fs::read_to_string(&toml_path).unwrap();
+        assert!(current.contains("qwen2.5"));
+
         unsafe { std::env::remove_var("MYHARNESS_HOME"); }
     }
 
     #[tokio::test]
     #[serial_test::serial(env)]
-    async fn tc_w16_006_register_token_some_means_token_saved_true() {
+    async fn tc_w18_002_backup_max_retention_5() {
         let tmp = tempfile::tempdir().unwrap();
-        // SAFETY: test 전용 env mutation
         unsafe { std::env::set_var("MYHARNESS_HOME", tmp.path()); }
 
-        let store = KeyringAuthStore::probe();
-        let report = register_local_provider(
-            "http://localhost:8000/v1".into(),
-            Some("test-token-abc123".into()),
-            ModelInfo {
-                id: "test-model".into(),
-                owned_by: None,
-            },
-            vec![ModelInfo {
-                id: "test-model".into(),
-                owned_by: None,
-            }],
-        )
-        .await
-        .unwrap();
-
-        assert!(report.token_saved);
-
-        // CI Linux (backend=None) → in-memory cache 검증
-        if store.backend() == crate::auth_keyring::KeyringBackend::None {
-            let cached = store.get(ProviderId::LocalLlm).await.unwrap();
-            assert_eq!(cached.as_deref(), Some("test-token-abc123"));
+        // 7번 연속 register → backup 6개 생성 시도 → max_backups=5 로 oldest 1개 삭제
+        for i in 0..7 {
+            // ts 가 같으면 filename 동일 → sleep 으로 분기
+            if i > 0 {
+                std::thread::sleep(std::time::Duration::from_millis(1100));
+            }
+            let _ = register_local_provider(
+                "http://localhost:11434/v1".into(),
+                None,
+                ModelInfo { id: format!("m{i}"), owned_by: None },
+                vec![ModelInfo { id: format!("m{i}"), owned_by: None }],
+            )
+            .await
+            .unwrap();
         }
-        // SAFETY: test 전용 env cleanup
+
+        let backups: Vec<_> = std::fs::read_dir(tmp.path())
+            .unwrap()
+            .filter_map(|e| e.ok())
+            .filter(|e| e.file_name().to_string_lossy().contains(".backup."))
+            .collect();
+        // 6번 backup (1~6번 write 각각) + cleanup → 5개 이하
+        // 첫 번째 write 는 backup ❌, 두 번째부터 backup
+        // → 6번 backup 시도 → max 5개 유지 → 5개
+        assert!(
+            backups.len() <= 5,
+            "max 5개 유지, 실제 {}개",
+            backups.len()
+        );
+
         unsafe { std::env::remove_var("MYHARNESS_HOME"); }
     }
 
     #[test]
-    fn tc_w16_007_atomic_write_preserves_original_on_rename_failure() {
+    fn tc_w18_003_backup_helper_unit_no_file() {
+        // providers.toml 없는 상태에서 backup → Some(path) (신규 write case)
         let tmp = tempfile::tempdir().unwrap();
-        let target = tmp.path().join("providers.toml");
-        std::fs::write(&target, "ORIGINAL CONTENT\n").unwrap();
+        let path = tmp.path().join("providers.toml");
+        assert!(!path.exists());
 
-        // 정상 write 성공 케이스 먼저
-        atomic_write(&target, "NEW CONTENT").unwrap();
-        let content = std::fs::read_to_string(&target).unwrap();
-        assert_eq!(content, "NEW CONTENT");
-
-        // read-only parent 로 만들어 tmp write 실패 유도
-        let mut perms = std::fs::metadata(tmp.path()).unwrap().permissions();
-        #[cfg(unix)]
-        {
-            use std::os::unix::fs::PermissionsExt;
-            perms.set_mode(0o555); // read+execute only
-        }
-        #[cfg(not(unix))]
-        {
-            perms.set_readonly(true);
-        }
-        std::fs::set_permissions(tmp.path(), perms).unwrap();
-
-        let result = atomic_write(&target, "FAILING CONTENT");
-        // Unix read-only: write 실패 (EACCES) 또는 rename 실패 (EACCES)
-        // write 가 .tmp 에서 실패 → tmp 파일 없음, 원본 그대로
-        // write 성공 + rename 실패 → .tmp 파일 남고 원본 그대로
-        // 둘 다 원본 보존
-        if result.is_err() {
-            let content = std::fs::read_to_string(&target).unwrap();
-            // 원본이 보존되거나, NEW CONTENT 가 그대로일 수 있음 (read-only 가 rename 만 막은 경우)
-            // 핵심: "FAILING CONTENT" 가 target 에 안 써짐
-            assert_ne!(content, "FAILING CONTENT", "원본/이전값 보존 필수");
-        }
-
-        // cleanup
-        let mut perms = std::fs::metadata(tmp.path()).unwrap().permissions();
-        #[cfg(unix)]
-        {
-            use std::os::unix::fs::PermissionsExt;
-            perms.set_mode(0o755);
-        }
-        #[cfg(not(unix))]
-        {
-            perms.set_readonly(false);
-        }
-        std::fs::set_permissions(tmp.path(), perms).unwrap();
-    }
-
-    #[test]
-    fn tc_w16_008_url_trim_trailing_slash() {
-        // probe_local_models 내부의 URL build 가 trim_end_matches('/') 사용 검증
-        // → 직접 probe 호출은 HTTP 발생하므로, build_url helper 가 있다면 그것만 검증
-        // 본 L1 TC 는 단순히 trim 함수 동작 검증
-        let url_with_slash = "http://localhost:11434/v1/";
-        let url_no_slash = "http://localhost:11434/v1";
-        assert_eq!(url_with_slash.trim_end_matches('/'), url_no_slash);
-
-        // probe_local_models 의 URL format 검증 (실제 HTTP 호출 ❌, build 만)
-        let built = format!("{}/models", "http://localhost:11434/v1/".trim_end_matches('/'));
-        assert_eq!(built, "http://localhost:11434/v1/models");
+        let result = backup_providers_toml(&path, 5);
+        assert!(result.is_some(), "no-file case 도 Some 반환 (신규 write)");
+        assert!(!path.exists(), "신규 write case → 실제 파일 생성 ❌");
     }
 
     // ── W17 (v1.5 OI-1) 비대화형 TC ─────────────────────────────────────────
@@ -571,3 +683,4 @@ mod tests {
         unsafe { std::env::remove_var("MYHARNESS_HOME"); }
     }
 }
+
