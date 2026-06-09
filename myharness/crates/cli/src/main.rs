@@ -15,6 +15,14 @@ struct Args {
     /// 모드 (orchestrator | single | loop) — CONCEPT.md §5.10
     #[arg(long, default_value = "orchestrator")]
     mode: String,
+
+    /// 모든 권한 prompt 자동 y (CI / 비대화형 환경)
+    #[arg(long, short = 'y')]
+    yes: bool,
+
+    /// Bash sanitizer 모드 (strict | permissive | off)
+    #[arg(long, default_value = "strict")]
+    safe_mode: String,
 }
 
 fn main() -> anyhow::Result<()> {
