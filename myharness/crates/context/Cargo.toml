@@ -1,0 +1,15 @@
+[package]
+name = "myharness-context"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+description = "CLAUDE.md load + auto memory + /compact (Layer 1)"
+
+[dependencies]
+serde = { workspace = true }
+toml = { workspace = true }
+anyhow = { workspace = true }
+thiserror = { workspace = true }
+tracing = { workspace = true }
+dirs = { workspace = true }

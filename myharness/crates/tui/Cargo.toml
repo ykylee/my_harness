@@ -1,0 +1,12 @@
+[package]
+name = "myharness-tui"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+description = "ratatui + crossterm 기반 TUI primitive"
+
+[dependencies]
+ratatui = { workspace = true }
+crossterm = { workspace = true }
+anyhow = { workspace = true }

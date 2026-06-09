@@ -1,0 +1,16 @@
+[package]
+name = "myharness-auth"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+description = "keyring crate + per-provider auth state"
+
+[dependencies]
+keyring = { workspace = true }
+serde = { workspace = true }
+toml = { workspace = true }
+anyhow = { workspace = true }
+thiserror = { workspace = true }
+tracing = { workspace = true }
+dirs = { workspace = true }

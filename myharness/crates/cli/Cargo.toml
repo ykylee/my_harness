@@ -1,0 +1,25 @@
+[package]
+name = "myharness"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+description = "yklee 의 개인 코딩 에이전트 CLI/TUI (v1 MVP)"
+default-run = "myharness"
+
+[[bin]]
+name = "myharness"
+path = "src/main.rs"
+
+[dependencies]
+myharness-core = { path = "../core" }
+myharness-llm = { path = "../llm" }
+myharness-tui = { path = "../tui" }
+myharness-tools = { path = "../tools" }
+myharness-context = { path = "../context" }
+myharness-auth = { path = "../auth" }
+myharness-compression = { path = "../compression" }
+clap = { workspace = true }
+anyhow = { workspace = true }
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true }
