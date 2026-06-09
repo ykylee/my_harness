@@ -92,6 +92,8 @@ yklee 가 판단: 외부 워커 컨슈밍만으로는 **yklee 만이 진화 가�
 | D-38 | 2026-06-07 | **TASK-008 결정: 하드코딩 fallback 폐기 → `provider-auto-config` skill (동적 발견 + per-provider auth)** — yklee 결정. **하드코딩 fallback list 폐기**, 런타임 discovered list + per-provider auth. **§5.5 전면 갱신** (정적 config → 동적 discover + auth, 4 subsections: 지원 provider / 동적 발견+auth / fallback chain / 라이브러리). **`docs/skills/provider-auto-config/SKILL.md` 신설** (reference design, v1 구현 시 base) — auto-invoke trigger, discover 로직 (env/keychain/local server), per-provider auth state, CLI interface (`myharness auth list/login/logout/set-key/test`), active-providers.yaml, v1 Phase 1/2/3 분리, Rust sample code. §5.14 Built-in skills 에 `provider-auto-config` 추가. §11.1 TASK-008 ✅ 결정 완료 + §11.3 TASK-008 결정 근거 5개 + v1 Phase 1/2/3 분리. | yklee 가 "모델 구성 및 배치는 상황에 따라 달라질 수 있으니 auth가 연결된 프로바이더 및 로컬 구성을 토대로 동적으로 구성할 수 있도록 스킬을 만들어두자. 그리고 각 프로바이더 별 auth 관련 기능도 제공해야해" — 환경 가변성 / 사용자 개입 최소화 / 확장성 / local-first / graceful degrade. | Phase 1 (TASK-005-1 MVP) = 6 provider 정적 + Anthropic key + Ollama detect + hardcoded fallback. Phase 2 (TASK-005-2 v1.5) = `provider-auto-config` skill 정식 구현 + dynamic fallback. Phase 3 (TASK-005-3 v2.0) = OAuth + MCP-based discover. |
 | D-39 | 2026-06-07 | **세션 마무리 (v1 컨셉 Phase 종료)** — `session_handoff.md` / `work_backlog.md` / `state.json` 갱신. **5/5 결정 검토 완료** (TASK-002 ⏸ 보류 + TASK-005/006/007/008 ✅). 8 done tasks. 다음 세션 시작점 = **TASK-005-1 (v1 MVP Rust 빌드)**. backlog 3 files 갱신, state.json 에 decisions 섹션 신설 (decided 4 / deferred 1). | yklee 가 "세션 마무리 준비하자" — standard_ai_workflow 운영 원칙 (handoff / state / backlog 갱신). | 다음 세션 TASK-005-1 시작. v1 Rust 구현 시점에 TASK-002 (도메인별 명령) 자연 도출 가능. |
 | D-40 | 2026-06-07 | **§11.2 (claude-code 2.1.169 pending 검증) 취소** — yklee 결정. 2.1.169 changelog 공개 시 검증 안 함, **v1 spec 잠금 (Rust 1안 / ratatui / headroom 3 algo / provider-auto-config)**. §11.2 섹션 완전 제거. §11.3 TASK-008 의 "D-34 (2.1.169 영향) — Anthropic fallback 동작 검증 후 Phase 2 에 반영" → "**D-40 으로 취소, 검증 미진행** (v1 spec 잠금)" 으로 갱신. | yklee 가 "claude-code 2.1.169 검증 안할거야 11.2 내용 확인하고 취소해" — 2.1.169 영향 미검증 결정. 공개 채널 (GitHub release, feed.xml, CHANGELOG.md) 모두 v2.1.168 까지만 노출 + 검증 부담 회피 + v1 spec 의존성 제거. | 향후 2.1.169 이상 변경 시점에 v1 spec 영향 별도 평가 (현재 v1.5+ 에서 처리). |
+| D-41 | 2026-06-09 | **TASK-005-1 환경 검증 완료** — Linux x86_64 / Rust 1.94.1 / 12+ crate 가용. Prerequisite 5건 (libsecret-1-dev, 5 cross target, cargo-dist/binstall, ANTHROPIC_API_KEY, serde_yml) 설치 후 cargo workspace init 진입 | 환경 검증 단계라 blocker 없음. API key 미설정으로 LLM E2E 는 키 주입 후. | (없음) |
+| D-42 | 2026-06-09 | **config 포맷 = TOML 통일** (D-42) — v1 의 모든 사용자 편집 config / state / provider registry 를 TOML 로 통일. `serde_yaml` 0.9.34-deprecated + `serde_yml` 0.0.13-deprecated 회피. JSON 파일 (auth state / metrics / mcp.json / log.jsonl / state.json) 은 유지. CONCEPT.md §5.12 / §5.5 / §5.6 19곳 갱신. | yklee 가 (a) TOML 만 결정 — single-user + TUI config 충분 + Cargo 표준 TOML 안정성. | CONCEPT.md 표면 일관성 ↑ / 1개 crate 의존성 (`toml`) 추가. |
 
 ---
 
@@ -149,12 +151,26 @@ yklee 가 판단: 외부 워커 컨슈밍만으로는 **yklee 만이 진화 가�
 - **세션 마무리 (D-39)** — v1 컨셉 Phase 종료. session_handoff.md / work_backlog.md / state.json 갱신. 5/5 결정 검토 완료 (TASK-002 ⏸ + TASK-005/006/007/008 ✅). 다음 세션 시작점 = TASK-005-1 (v1 MVP Rust 빌드).
 - **§11.2 claude-code 2.1.169 검증 취소 (D-40)** — yklee 결정. v1 spec 잠금 (Rust 1안 / ratatui / headroom 3 algo / provider-auto-config). §11.2 완전 제거.
 
+### 2026-06-09 — TASK-005-1 환경 검증 (D-41)
+- W0-1 (Rust toolchain + crate 가용성): Rust 1.94.1 / 2024 edition / native target `x86_64-unknown-linux-gnu` ✅
+- W0-2 (cross-build + keychain + .myharness): cross target 5/6 미설치, Linux keychain backend 부재 (secret-tool / gnome-keyring-daemon 없음), ~/.myharness/ 부재 (clean slate) ✅
+- 핵심 crate 12+ 전부 가용: rig-core 0.38.1, rmcp 1.7.0, ratatui 0.30.1, keyring 4.0.1, tree-sitter 0.26.9 등
+- Prerequisite 5건 식별: (1) libsecret-1-dev + gnome-keyring, (2) 5 cross rustup target, (3) cargo-dist + cargo-binstall, (4) ANTHROPIC_API_KEY, (5) serde_yaml → serde_yml 전환
+- TASK-005-1 진입 가능 ✅ (cargo init 즉시 가능, prerequisite 설치 후 진행)
+
+### 2026-06-09 — D-42 config TOML 통일
+- D-42 결정: v1 의 모든 사용자 편집 config / state / provider registry 포맷을 YAML → TOML 로 일괄 교체
+- 이유: `serde_yaml` 0.9.34-deprecated + `serde_yml` 0.0.13-deprecated (두 crate 모두 unmaintained). yklee single-user + TUI config 만 필요 → TOML (Cargo 표준) 으로 충분
+- JSON 파일 (auth state snapshot / metrics / mcp.json / log.jsonl / state.json / ai-workflow/*.json) 은 format 그대로 유지
+- 영향: CONCEPT.md 19곳 .yaml → .toml syntax 변환 + SKILL.md YAML 예시 TOML 변환 + README.md / state.json / development_log.md 결정 기록 반영
+- `serde_yaml` / `serde_yml` crate 의존 회피 → W2 (cargo workspace init) 시 `toml` crate 만 의존성 추가
+
 ---
 
 ## 4. 진행 중 / 미해결 (In Progress / Open)
 
 ### In Progress
-- **TASK-005 my_harness 스택 결정** (Rust 1안 vs TypeScript 2안) — `REFERENCES.md` §5 + `PROVIDERS.md` + `headroom.md` §13 입력 준비됨. 결정만 남음.
+- **TASK-005-1 (in_progress, D-41 환경 검증 완료)** — W0-1/W0-2 검증 ✅. Prerequisite 5건 설치 후 cargo workspace init → ratatui shell → rig-core Anthropic → basic tools → /compact → standard_ai_workflow output
 - 6개 심층분석 + claude-code + PROVIDERS.md 의 통합 인덱스 (`docs/references/README.md`) — 미작성
 
 ### Open
@@ -192,6 +208,7 @@ yklee 가 판단: 외부 워커 컨슈밍만으로는 **yklee 만이 진화 가�
 - `docs/references/{codex,aider,goose,opencode,gemini-cli,headroom}.md` — 6개 심층분석 (14섹션)
 - `docs/development_log.md` — **본 문서**
 - `ai-workflow/memory/{state.json,session_handoff.md,work_backlog.md,backlog/}` — 워크플로우 상태
+- (v1 추가 예정) `Cargo.toml` / `myharness/` source tree — v1 MVP Rust 빌드 (TASK-005-1) 산출물
 
 ### 5.4 mavis 인프라 메모
 - agent memory: `~/.mavis/agents/mavis/memory/MEMORY.md` — worker long Write call 죽음 패턴 (D-16)
