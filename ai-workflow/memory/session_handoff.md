@@ -4,7 +4,7 @@
 - Scope: current focus, task status, key changes, next actions, risks
 - Audience: yklee, Mavis orchestrator, .MiniMax 워커 에이전트
 - Status: active
-- Updated: 2026-06-09 (D-45, TASK-005-1 W7 완료 — myharness-llm crate v1 + 5 commit dual-push)
+- Updated: 2026-06-09 (D-46, TASK-005-1 W8 완료 — myharness-context crate v1 + 5 commit dual-push)
 - Related docs: [Project Profile](../../docs/PROJECT_PROFILE.md), [Work Backlog](./work_backlog.md), [State Cache](./state.json), [CONCEPT.md](../../docs/CONCEPT.md) (SSOT)
 
 ## Current Focus
@@ -12,13 +12,13 @@
 - **v1 컨셉 Phase 종료 (2026-06-07)** — my_harness 의 SSOT (CONCEPT.md) 확립. 17 섹션 (12 + 5 신규: §5.10~§5.14). 4/5 결정 ✅ 완료, 1/5 (TASK-002) ⏸ 보류.
   - **TASK-005**: Rust 1안 (D-36) — ratatui + rig-core + rmcp + keyring + cargo-dist
   - **TASK-006**: ratatui + crossterm (D-36, TASK-005 종속)
-  - **TASK-007**: headroom v1 = 3 알고리즘 (CacheAligner + ContentRouter + SmartCrusher + CodeCompressor) (D-37). CCR + Kompress-base v1.5+
-  - **TASK-008**: provider-auto-config skill (D-38) — 하드코딩 fallback 폐기, 동적 discovered list + per-provider auth (D-45 에서 v1 simple 구현)
+  - **TASK-007**: headroom v1 = 3 알고리즘 (D-37). CCR + Kompress-base v1.5+ (D-46 W8.4 에서 CacheAligner/ContentRouter/SmartCrusher/CodeCompressor v1 구현)
+  - **TASK-008**: provider-auto-config skill (D-38) — v1 simple 구현 (D-45)
   - **TASK-002**: ⏸ 보류 (yklee 인프라 정보 의존)
-- **TASK-005-1 (D-43 → D-44 → D-45)**: W3~W6.5 (tools crate) + W7 (llm crate) 완료 ✅
-- **W7 산출물 (D-45)**: myharness-llm crate — 6 provider enum + ProviderRegistry + LLMClient trait + rig-core 0.38 Anthropic/Gemini wrapper + OpenAI 호환 (DeepSeek/Ollama/local-llm) wrapper + MockClient + AuthState/AuthStatus + InMemory/Keyring AuthStore (libsecret 부재 graceful fallback) + provider-auto-config discover (env+keychain+local scan) + ActiveProviderChain + FallbackRouter (cascade + per-provider status + retry policy). 87 tests pass. release 빌드 성공.
-- **W7 5 commit**: 29052ad (W7.1) → 9212a2c (W7.2) → bcabf94 (W7.3) → f917326 (W7.4) → 7264589 (W7.5) → Gitea origin push → GitHub upstream push
-- **다음: W8 (context)** — CLAUDE.md + memory + /compact Layer 1
+- **TASK-005-1 (D-43 → D-44 → D-45 → D-46)**: W3~W6.5 (tools) + W7 (llm) + W8 (context) 완료 ✅
+- **W8 산출물 (D-46)**: myharness-context crate — CLAUDE.md loader (project root + parent walk + global fallback) + auto memory (NDJSON append-only) + ContextManager (token budget + /compact Layer 1: Truncate/Summarize-stub/Hybrid) + Layer 2 BuiltinPipeline (CacheAligner + ContentRouter + SmartCrusher + CodeCompressor, 기본 off) + ContextConfig (config.toml [context] 섹션) + ContextOrchestrator (전체 통합). 54 tests pass. release 빌드 성공.
+- **W8 5 commit**: 4d61e85 (W8.1) → 3116114 (W8.2) → fa09aeb (W8.3) → afcccea (W8.4) → faf7f85 (W8.5) → Gitea origin push → GitHub upstream push
+- **다음: W9 (compression crate)** — §5.6 Layer 1 + Layer 2 정식 통합, 또는 W10 (TUI shell) 진입. context crate 와 중복 기능 분리 필요.
 
 ## Work Status
 
@@ -70,10 +70,11 @@
 - [x] **dual-remote push (D-44)** ✅
 - [x] **W7 (D-45)** — myharness-llm crate v1 (6 provider + LLMClient + rig-core wrap + auth + discover + chain + router) ✅
 - [x] **W7 dual-remote push (D-45)** ✅
-- [ ] **Gitea PAT 설정** (다음 세션, yklee 제공) — 기존 D-44 에서 적용됨, 회전 권고
-- [ ] **W8 (context)** — CLAUDE.md + memory + /compact Layer 1
+- [x] **W8 (D-46)** — myharness-context crate v1 (CLAUDE.md + auto memory + ContextManager + Layer 2 4 알고리즘 + ContextConfig + ContextOrchestrator) ✅
+- [x] **W8 dual-remote push (D-46)** ✅
+- [ ] **Gitea PAT 회전** (이전 세션 노출 회전 권고) — yklee 가 회전 시 통지
+- [ ] **W9 (compression crate)** — §5.6 Layer 1 정식 (LLM-driven summarize) + Layer 2 (CCR + Kompress-base) 또는 W10 (TUI shell) 우선
 - [ ] **ANTHROPIC_API_KEY 주입 시 LLM E2E 테스트** (real-anthropic ignored test 활성화)
-- [ ] **§5.6 Layer 1 구현** (필수 자동 압축) — token budget 추적 + auto truncate/summarize + /compact
 - [ ] **§5.12 디렉토리 자동 생성** (v1 first run 시) — `~/.myharness/{config,state,memory,handoff,compression,sub-agents}/` + `state.json` + `auth/`
 - [ ] **Phase 1 of provider-auto-config** — D-45 W7 에서 v1 simple 구현. v1.5+ 에서 정식 + marketplace.
 - [ ] **TASK-002 (도메인별 명령)** — yklee 인프라 정보 수령 후 (SSH 별칭 / Brewfile / dotfiles / 런타임 버전) 진행

@@ -5,7 +5,8 @@
     "project_profile_path": "docs/PROJECT_PROFILE.md",
     "session_handoff_path": "ai-workflow/memory/session_handoff.md",
     "work_backlog_index_path": "ai-workflow/memory/work_backlog.md",
-    "latest_backlog_path": "docs/skills/provider-auto-config/SKILL.md",
+    "latest_backlog_path": "ai-workflow/memory/backlog/2026-06-09.md",
+    "concept_ssot_path": "docs/CONCEPT.md",
     "repository_assessment_path": null
   },
   "project": {
@@ -13,39 +14,87 @@
     "document_home": "README.md",
     "operations_path": null,
     "backlog_path": "ai-workflow/memory/backlog/",
-    "handoff_path": null,
+    "handoff_path": "ai-workflow/memory/session_handoff.md",
     "environment_path": "ai-workflow/memory/environments/"
   },
   "commands": {
     "quick_tests": null,
     "isolated_tests": null,
-    "runtime_checks": null
+    "runtime_checks": null,
+    "v1_mvp_build": "TASK-005-1 W3~W8.5 완료 (D-43/D-45/D-46): tools + llm + context crates. 9+5+5 commit dual push. 다음 = W9 compression 또는 W10 tui."
   },
   "session": {
-    "current_baseline": "**v1 컨셉 Phase 종료 (2026-06-07)** — my_harness 의 SSOT (CONCEPT.md) 확립. 17 섹션 (12 + 5 신규: §5.10~§5.14). 4/5 결정 ✅ 완료, 1/5 (TASK-002) ⏸ 보류.",
-    "current_axis": "**v1 컨셉 Phase 종료 (2026-06-07)** — my_harness 의 SSOT (CONCEPT.md) 확립. 17 섹션 (12 + 5 신규: §5.10~§5.14). 4/5 결정 ✅ 완료, 1/5 (TASK-002) ⏸ 보류.",
-    "current_focus": null,
-    "in_progress_items": [],
-    "blocked_items": [],
-    "recent_done_items": [
-      "TASK-001 my-harness 부트스트랩 (standard_ai_workflow 적용)"
+    "current_baseline": "**TASK-005-1 v1 MVP 3/8 waves 완료 (D-46)** — tools (W3~W6.5) + llm (W7) + context (W8) crates. v1 컨셉 Phase 종료 (D-22~D-38). 4/5 결정 ✅, 1/5 (TASK-002) ⏸.",
+    "current_axis": "**TASK-005-1 W9 대기 (또는 W10)** — W8 context 완료 (D-46). W9 compression (Layer 1 정식 + Layer 2 CCR/Kompress-base) 또는 W10 tui shell 우선.",
+    "current_focus": "TASK-005-1 — W3~W8.5 완료 + dual-remote push (D-44/D-45/D-46). W9/W10 선택 대기.",
+    "in_progress_items": [
+      "TASK-005-1: v1 MVP Rust 빌드 (W3~W8.5 완료, W9/W10 선택 대기)"
     ],
-    "environment_constraints": []
+    "blocked_items": [
+      "TASK-002: 도메인별 명령 가이드 (yklee 인프라 정보 의존)"
+    ],
+    "recent_done_items": [
+      "D-41 TASK-005-1 환경 검증 (2026-06-09)",
+      "D-43 TASK-005-1 W3~W6.5 (tools crate 63 tests) + Gitea push (2026-06-09)",
+      "D-44 dual-remote (D-20) 적용 (2026-06-09)",
+      "D-45 TASK-005-1 W7 (myharness-llm crate v1, 87 tests) + 5 commit dual-push (2026-06-09)",
+      "D-46 TASK-005-1 W8 (myharness-context crate v1, 54 tests) + 5 commit dual-push (2026-06-09)"
+    ],
+    "environment_constraints": [
+      "ANTHROPIC_API_KEY absent — mock-driven 검증. Key 주입 시 real-anthropic ignored test 활성화",
+      "libsecret 부재 (D-41) — keyring AuthStore graceful fallback (backend=None)",
+      "Gitea PAT (D-44) — ~/.git-credentials (chmod 600). 회전 권고",
+      "GitHub auth via gh CLI (ykylee)"
+    ]
+  },
+  "decisions": {
+    "decided": [
+      {"id": "TASK-005", "decision": "Rust 1안", "ref": "D-36", "section": "§11.3"},
+      {"id": "TASK-006", "decision": "ratatui + crossterm", "ref": "D-36 (TASK-005 종속)", "section": "§11.3"},
+      {"id": "TASK-007", "decision": "headroom v1 = 3 알고리즘", "ref": "D-37 + D-46 (W8.4: 4 알고리즘 built-in: CacheAligner + ContentRouter + SmartCrusher + CodeCompressor)", "section": "§5.6"},
+      {"id": "TASK-008", "decision": "provider-auto-config skill", "ref": "D-38 + D-45 (W7: v1 simple 구현)", "section": "§5.5"},
+      {"id": "D-42", "decision": "config 포맷 = TOML 통일", "ref": "D-42", "section": "§5.12, §5.5"}
+    ],
+    "deferred": [
+      {"id": "TASK-002", "decision": "도메인별 명령 가이드", "reason": "yklee 인프라 정보 의존", "resume": "v1 Rust 구현 시점 또는 yklee 인프라 정보 수령 시"}
+    ]
   },
   "backlog": {
-    "latest_backlog_path": "docs/skills/provider-auto-config/SKILL.md",
-    "task_count": 0,
-    "in_progress_items": [],
-    "blocked_items": [],
-    "done_items": []
+    "latest_backlog_path": "ai-workflow/memory/backlog/2026-06-09.md",
+    "task_count": 9,
+    "in_progress_items": [
+      "TASK-005-1: v1 MVP Rust 빌드 (in_progress, W3~W8.5 완료, W9/W10 선택 대기)"
+    ],
+    "blocked_items": [
+      "TASK-002: 도메인별 명령 가이드 (yklee 인프라 정보 의존)"
+    ],
+    "done_items": [
+      "TASK-001: my-harness 부트스트랩 (standard_ai_workflow 적용)",
+      "TASK-003: Gitea 미러 (5 repo)",
+      "TASK-004: CLI/TUI 툴 레퍼런스 분석 (1차 + 2차 + 7-doc cross-review)",
+      "TASK-005: 스택 결정 (Rust 1안)",
+      "TASK-006: TUI 라이브러리 (ratatui + crossterm)",
+      "TASK-007: headroom v1 우선순위 (3 알고리즘)",
+      "TASK-008: Provider fallback (provider-auto-config skill)"
+    ]
   },
   "next_documents": [
+    "docs/CONCEPT.md",
+    "docs/development_log.md",
     "docs/PROJECT_PROFILE.md",
+    "docs/references/README.md",
+    "docs/skills/provider-auto-config/SKILL.md",
     "ai-workflow/memory/session_handoff.md",
     "ai-workflow/memory/work_backlog.md",
-    "docs/skills/provider-auto-config/SKILL.md",
     "ai-workflow/memory/state.json",
-    "docs/CONCEPT.md"
+    "ai-workflow/memory/backlog/2026-06-09.md"
+  ],
+  "next_actions": [
+    "TASK-005-1 W9 또는 W10 선택 — W9 compression (Layer 1 정식 + CCR/Kompress-base) 또는 W10 tui shell",
+    "ANTHROPIC_API_KEY 주입 시 LLM E2E 테스트 (W7.5 spec 의 real-anthropic ignored test 활성화)",
+    "§5.12 디렉토리 자동 생성 (v1 first run 시)",
+    "TASK-002 (도메인별 명령): yklee 인프라 정보 수령 시 진행",
+    "Gitea PAT 회전 (이전 세션 노출)"
   ],
   "repository_assessment": {
     "path": null,

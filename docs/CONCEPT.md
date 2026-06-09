@@ -367,6 +367,8 @@ ollama/qwen2.5-coder:32b
 → unified identifier 로 config / log / cache key 모두 일관.
 
 > **W7 (2026-06-09) 완료 (D-45)** — myharness-llm crate v1 구현: 6 provider enum + ProviderRegistry + LLMClient trait + rig-core 0.38 Anthropic/Gemini wrapper + OpenAI 호환 (DeepSeek/Ollama/local-llm) wrapper + MockClient + AuthState/AuthStatus + InMemory/Keyring AuthStore (libsecret 부재 환경 graceful fallback) + provider-auto-config discover (env+keychain+local scan) + ActiveProviderChain + FallbackRouter (cascade + per-provider status). 87 tests pass without ANTHROPIC_API_KEY (mock-driven). release 빌드 성공. §5.5 spec 그대로 구현.
+> 
+> **W8 (2026-06-09) 완료 (D-46)** — myharness-context crate v1 구현: CLAUDE.md loader (project root + parent walk + global fallback) + auto memory (NDJSON append-only, ~/.myharness/memory/auto/) + ContextManager (token budget + /compact Layer 1: Truncate/Summarize-stub/Hybrid) + Layer 2 BuiltinPipeline (CacheAligner + ContentRouter + SmartCrusher + CodeCompressor, 기본 off) + ContextConfig (config.toml [context] 섹션) + ContextOrchestrator (전체 통합). 54 tests pass. release 빌드 성공. §5.6 spec 그대로 구현.
 
 ### 5.6 Context 관리 (claude-code 13.6 + 2-계층 압축, D-27 + D-30)
 

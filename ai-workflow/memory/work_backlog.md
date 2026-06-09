@@ -33,7 +33,7 @@
 - [x] **TASK-008**: Provider fallback 결정 — **`provider-auto-config` skill** (D-38). 하드코딩 fallback 폐기, 동적 discovered list
 
 ### In Progress
-- [ ] **TASK-005-1** (v1.0 MVP, Rust 빌드) — W3~W6.5 완료 + W7 완료 (D-43, D-45) + dual-remote push (D-44, D-45). W8 context 진입 대기.
+- [ ] **TASK-005-1** (v1.0 MVP, Rust 빌드) — W3~W6.5 + W7 + W8 완료 (D-43, D-45, D-46) + dual-remote push (D-44, D-45, D-46). W9 compression 또는 W10 tui 대기.
 
 ### Planned (다음 세션)
 - [x] prerequisite 5건 설치
@@ -52,8 +52,9 @@
 - [x] 9 commit dual push (Gitea + GitHub, D-44) ✅
 - [x] W7 llm crate (rig-core 0.38 + 6 provider + auth + discover + chain + router) (D-45) ✅
 - [x] W7 5 commit dual push (D-45) ✅
-- [ ] W8 context (CLAUDE.md + memory + /compact Layer 1)
-- [ ] W9 compression (Layer 1)
+- [x] W8 context crate (CLAUDE.md + auto memory + ContextManager + Layer 2 4 알고리즘 + ContextConfig) (D-46) ✅
+- [x] W8 5 commit dual push (D-46) ✅
+- [ ] W9 compression (Layer 1 정식 + Layer 2 CCR/Kompress-base) 또는 W10 tui shell 우선
 - [ ] W10 tui shell + sub-agent 1-2개
 - [ ] W11 standard_ai_workflow output + 4 permission 완성
 - [ ] **TASK-005-2** (v1.5) — Plugin 4-계층 + marketplace + auto memory + provider-auto-config skill 정식 구현 + CCR/Kompress-base
@@ -92,6 +93,7 @@
 | **D-43** | **TASK-005-1 W3~W6.5 완료** (tools crate 63 tests) | — |
 | **D-44** | **dual-remote 적용** (Gitea + GitHub) | D-20 |
 | **D-45** | **TASK-005-1 W7 완료** (myharness-llm crate v1, 87 tests) | §5.5 |
+| **D-46** | **TASK-005-1 W8 완료** (myharness-context crate v1, 54 tests) | §5.6 |
 
 ## 5. 관련 문서 (SSOT)
 
