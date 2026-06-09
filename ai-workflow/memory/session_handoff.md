@@ -4,7 +4,7 @@
 - Scope: current focus, task status, key changes, next actions, risks
 - Audience: yklee, Mavis orchestrator, .MiniMax 워커 에이전트
 - Status: active
-- Updated: 2026-06-09 (D-59, TASK-005-1 W16 완료 — `myharness auth add-local` subcommand: Ollama/vLLM/LM Studio/llama.cpp 로컬 LLM 서버 URL+token(선택)+모델 선택 UI → `~/.myharness/providers.toml` 의 LocalLlm entry 갱신. inquire UI 3단계, atomic write, 12/12 TC PASS, dual-push 완료)
+- Updated: 2026-06-09 (D-59 + **TASK-005-1 v1 MVP 종료 선언**, yklee 결정. W16 add-local follow-up 으로 main 머지 완료 → feature/w16 브랜치 정리 + origin/upstream 양쪽 삭제)
 - Related docs: [Project Profile](../../docs/PROJECT_PROFILE.md), [Work Backlog](./work_backlog.md), [State Cache](./state.json), [CONCEPT.md](../../docs/CONCEPT.md) (SSOT)
 
 ## Current Focus
@@ -16,6 +16,13 @@
   - **TASK-008**: provider-auto-config skill (D-38) — v1 simple 구현 (D-45)
   - **TASK-002**: ⏸ 보류 (yklee 인프라 정보 의존)
 - **TASK-005-1 v1 MVP 8/8 waves + D-52 follow-up 6 작업 완료 (D-58)** — tools (W3~W6.5) + llm (W7) + context (W8) + compression (W9) + tui (W10) + core (W11) + MiniMax LLM API (W12, D-50) + OAuth 2.0 headless auth (W13, D-51) + W13.5 env override (D-52) + W13.6 mock e2e test (D-52) + **W14 Device Authorization Grant (D-53)** + **W14.4 `--no-browser` 3 모드 (D-54)** + **W14.5 polling output + expired_in ms 단위 (D-55)** + **W14.6 token 단위 변환 (D-56)** + **W15.a OAuth token 자동 resolve (D-57)** + **W15.b OAuth token 자동 refresh (D-58)**
+- **TASK-005-1 v1 MVP 종료 선언 (D-59 follow-up, 2026-06-09 22:48)** — yklee 결정. **W16 add-local follow-up** 까지 main 머지 완료:
+  - W16 = `myharness auth add-local` subcommand (Ollama/vLLM/LM Studio/llama.cpp URL+token+모델 선택 UI)
+  - W16 follow-up = `resolve_llm_client()` 에 LocalLlm 분기 추가 (`MYHARNESS_USE_LOCAL_LLM=1` opt-in env)
+  - 9 L1 + 3 L2 + 4 scenario TC = 16/16 PASS, 388+ tests workspace PASS, dual-push 완료
+  - feature/w16-add-local 브랜치 local/origin/upstream 모두 삭제, main = 140acf9
+  - 보존: `local/d-43-47-tc-scaffold` (이전 세션 TC scaffold 보존 브랜치) 그대로
+- **다음 (선택)**: TASK-005-2 (v1.5) 진입 대기 — yklee 결정. v1.5 후보: Plugin 4-계층 + marketplace + auto memory + provider-auto-config skill 정식 + CCR/Kompress-base ONNX + 비대화형 add-local (`--url/--token/--model` flags, W16 OI-1)
 - **W12 산출물 (D-50)**: librarian 조사 (api.minimax.io/v1, MiniMax-M3, OpenAI-호환 Bearer, tool_use 지원). `ProviderMetadata::builtin_minimax()` 갱신. `KeyringAuthStore` in-memory cache + env hint. cli default LLM = `MINIMAX_API_KEY` env 자동 detect → `OpenAiCompatProvider`
 - **W13 산출물 (D-51)**: `myharness-auth` crate v1 (7 모듈: `pkce` RFC 7636 S256 + `flow` OAuth 2.0 Authorization Code with PKCE + `callback` loopback HTTP server 5min timeout + `browser` xdg-open/open/start + `store` `~/.myharness/oauth/{provider}.toml` chmod 600 + `provider` MiniMax/OpenAI/Google 3 provider + `manager` AuthManager login/refresh/status/logout). 38 tests
 - **W13.5 산출물 (D-52)**: `OAUTH_PROVIDERS` static LazyLock 제거 → `oauth_providers()` 매번 새 instance. `MinimaxOAuth::from_env()` / `OpenAiOAuth::from_env()` / `GoogleOAuth::from_env()`. `MYHARNESS_OAUTH_CLIENT_ID_{MINIMAX,OPENAI,GOOGLE}` env override
@@ -102,7 +109,7 @@
 - [x] **W15.b (D-58)** — OAuth token 자동 refresh (LlmError::ProviderCall 401 감지 → AuthManager::ensure_fresh → 새 OpenAiCompatProvider → retry 1회) ✅
 - [x] **D-52 follow-up 6 commit dual push (D-53~D-58)** ✅
 - [ ] **Gitea PAT 회전** (이전 세션 노출 회전 권고) — yklee 가 회전 시 통지
-- [ ] **TASK-005-1 v1 MVP 종료 선언** (W3~W15.b 완료, 8/8 waves + D-52 follow-up 6 작업, 388 tests pass, dual-push 완료)
+- [x] **TASK-005-1 v1 MVP 종료 선언** (W3~W16 완료, 8/8 waves + D-52 follow-up 6 작업 + W16 add-local, 388+ tests pass, dual-push 완료, 2026-06-09 22:48)
 - [ ] **TASK-005-2 (v1.5)** 진입 — Plugin 4-계층 + marketplace + auto memory + provider-auto-config skill 정식 + CCR/Kompress-base ONNX
 - [ ] **MiniMax Device OAuth real flow** 검증 — yklee 가 MiniMax console 에서 device grant 활성화 후 `myharness auth login minimax --no-browser` 실행 (OpenClaw/Hermes 공통 client_id 78257093-7e40-4613-99e0-527b14b39113, W15.b 자동 refresh 도 real test 가능)
 - [ ] **OpenAI/Google 도 동일 패턴** (Authorization Code + PKCE, client_id 등록 후 검증)

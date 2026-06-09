@@ -21,14 +21,14 @@
     "quick_tests": "cargo test --manifest-path myharness/Cargo.toml --workspace --lib",
     "isolated_tests": "cargo test --manifest-path myharness/Cargo.toml -p myharness-auth --lib",
     "runtime_checks": "cargo build --manifest-path myharness/Cargo.toml -p myharness --release",
-    "v1_mvp_build": "TASK-005-1 v1 MVP 8/8 waves 완료 (D-49~D-52) + Device Authorization Grant (D-53) + --no-browser 3 모드 (D-54) + polling output/expired_in 단위 (D-55) + token 단위 변환 (D-56) + OAuth 자동 resolve (D-57) + OAuth 자동 refresh (D-58, W15.b). 38+ commit dual push. 388 tests pass, 0 fail, 2 ignored."
+    "v1_mvp_build": "TASK-005-1 v1 MVP 8/8 waves 완료 (D-49~D-52) + Device Authorization Grant (D-53) + --no-browser 3 모드 (D-54) + polling output/expired_in 단위 (D-55) + token 단위 변환 (D-56) + OAuth 자동 resolve (D-57) + OAuth 자동 refresh (D-58, W15.b) + W16 auth add-local subcommand (D-59) + W16 follow-up LocalLlm 라우팅 분기. **v1 MVP 종료 선언 (2026-06-09 22:48)**. 40+ commit dual push. 388+ tests pass, 0 fail, 2 ignored."
   },
   "session": {
-    "current_baseline": "**TASK-005-1 v1 MVP 8/8 waves + D-52 follow-up 6 작업 완료 (D-58)** — W3~W6.5 tools + W7 llm + W8 context + W9 compression + W10 tui + W11 core + W12 MiniMax LLM API + W13 OAuth 2.0 headless auth + W14 Device Authorization Grant + W14.4 `--no-browser` 3 모드 + W14.5 polling output/expired_in 단위 + W14.6 token 단위 변환 + W15.a OAuth 자동 resolve + W15.b OAuth 자동 refresh (401 → ensure_fresh → retry). 38+ commit dual-push. 388 tests pass, 0 fail, 2 ignored. v1 컨셉 Phase 종료 (D-22~D-38). 4/5 결정 ✅, 1/5 (TASK-002) ⏸.",
-    "current_axis": "**TASK-005-1 종료 선언 또는 TASK-005-2 (v1.5) 진입 대기** — v1 MVP 8/8 waves + D-52 follow-up 6 작업 완료. yklee 결정 대기.",
-    "current_focus": "TASK-005-1 — W3~W15.b 완료 + dual-remote push (D-44~D-58). v1 MVP 종료 또는 v1.5 진입.",
+    "current_baseline": "**TASK-005-1 v1 MVP 종료 선언 (D-59 follow-up, 2026-06-09)** — W3~W16 완료 (8/8 waves + D-52 follow-up 6 + W16 add-local + W16 follow-up LocalLlm 라우팅 분기). 40+ commit dual-push, 388+ tests pass. v1 컨셉 Phase 종료 (D-22~D-38) + v1 MVP 빌드 종료 (TASK-005-1). 4/5 결정 ✅, 1/5 (TASK-002) ⏸. main = 140acf9. 보존: local/d-43-47-tc-scaffold.",
+    "current_axis": "**TASK-005-2 (v1.5) 진입 대기** — TASK-005-1 종료 선언 후 v1.5 후보 결정. yklee 결정 대기.",
+    "current_focus": "TASK-005-1 종료 선언 완료 → v1.5 후보 (Plugin 4-계층 + marketplace + auto memory + provider-auto-config skill 정식 + CCR/Kompress-base ONNX + 비대화형 add-local 등) 진입 결정 대기.",
     "in_progress_items": [
-      "TASK-005-1: v1 MVP Rust 빌드 (8/8 waves + D-52 follow-up 5 작업 완료, 종료 선언 또는 v1.5 진입 대기)"
+      "TASK-005-1 v1 MVP 종료 선언 (D-59 follow-up, 2026-06-09 22:48) — W3~W16 완료 + dual-push + 브랜치 정리 + main 머지. 388+ tests pass. v1 빌드 phase 완전 종료."
     ],
     "blocked_items": [
       "TASK-002: 도메인별 명령 가이드 (yklee 인프라 정보 의존)",
@@ -47,7 +47,9 @@
       "D-55 TASK-005-1 W14.5 (polling output 항상 출력 + 1.5x backoff + expired_in ms 단위, cf29576) + dual-push (2026-06-09)",
       "D-56 TASK-005-1 W14.6 (device_token_to_oauth expired_in ms → s 변환, 9f7f957) + dual-push (2026-06-09)",
       "D-57 TASK-005-1 W15.a (OAuth token 자동 resolve, env var 없이도 LLM 호출, 4 단계 우선순위, f92e988) + dual-push (2026-06-09)",
-      "D-58 TASK-005-1 W15.b (OAuth token 자동 refresh, 401 → ensure_fresh → 새 OpenAiCompatProvider → retry 1회, 9 cli tests) + dual-push (2026-06-09)"
+      "D-58 TASK-005-1 W15.b (OAuth token 자동 refresh, 401 → ensure_fresh → 새 OpenAiCompatProvider → retry 1회, 9 cli tests) + dual-push (2026-06-09)",
+      "D-59 TASK-005-1 W16 (myharness auth add-local subcommand: Ollama/vLLM/LM Studio/llama.cpp URL+token+모델 선택 UI, inquire 3단계, atomic write, 9 L1 + 3 L2 + 4 scenario TC = 16/16 PASS) + W16 follow-up (resolve_llm_client LocalLlm 분기, MYHARNESS_USE_LOCAL_LLM=1 opt-in, 192.168.0.101:1234 LM Studio gemma-4-12b-qat 검증: '2+2 is 4.' 응답) + main 머지 (140acf9) + 브랜치 정리 (2026-06-09)",
+      "D-59 follow-up TASK-005-1 v1 MVP 종료 선언 (2026-06-09 22:48, yklee 결정) — handoff + state 갱신, 보존: local/d-43-47-tc-scaffold"
     ],
     "environment_constraints": [
       "ANTHROPIC_API_KEY absent — mock-driven 검증. v1 은 MiniMax API key 기반 (D-50)",
@@ -73,7 +75,8 @@
       {"id": "D-54", "decision": "device flow 3 모드: default / --no-browser / --non-interactive (browser open 여부와 polling 독립)", "ref": "D-54 (W14.4)", "section": "§5.5"},
       {"id": "D-55", "decision": "device flow polling output 항상 stdout + 1.5x backoff cap 10s + expired_in ms 단위 unix timestamp", "ref": "D-55 (W14.5)", "section": "§5.5"},
       {"id": "D-57", "decision": "OAuth token 자동 resolve (4 단계 credential chain: ~/.myharness/oauth/<provider>.toml > MINIMAX_API_KEY > ANTHROPIC_API_KEY > MockClient)", "ref": "D-57 (W15.a)", "section": "§5.5"},
-      {"id": "D-58", "decision": "OAuth token 자동 refresh (LlmError::ProviderCall msg 401/unauthorized/auth 키워드 감지 → AuthManager::ensure_fresh → store save → 새 OpenAiCompatProvider 빌드 → retry 1회). is_unauthorized_error 가 oauth 키워드 제외 (false 양성 방지)", "ref": "D-58 (W15.b)", "section": "§5.5"}
+      {"id": "D-58", "decision": "OAuth token 자동 refresh (LlmError::ProviderCall msg 401/unauthorized/auth 키워드 감지 → AuthManager::ensure_fresh → store save → 새 OpenAiCompatProvider 빌드 → retry 1회). is_unauthorized_error 가 oauth 키워드 제외 (false 양성 방지)", "ref": "D-58 (W15.b)", "section": "§5.5"},
+      {"id": "D-59", "decision": "W16 add-local: myharness auth add-local subcommand (inquire 3단계 UI: URL → token(선택) → /v1/models probe → 모델 선택 → providers.toml 갱신). OpenAI 호환 (/v1/models) 4 서버 통합 (Ollama/vLLM/LM Studio/llama.cpp). W16 follow-up: resolve_llm_client 에 LocalLlm 분기 추가 (MYHARNESS_USE_LOCAL_LLM=1 opt-in env, providers.toml 의 LocalLlm entry 자동 사용). live LM Studio 검증: gemma-4-12b-qat '2+2 is 4.' 응답.", "ref": "D-59 (W16 + follow-up)", "section": "§5.2 (12 명령어) + §5.5 (LLM auth)"}
     ],
     "deferred": [
       {"id": "TASK-002", "decision": "도메인별 명령 가이드", "reason": "yklee 인프라 정보 의존", "resume": "v1 Rust 구현 완료 후 yklee 인프라 정보 수령 시"},
@@ -132,9 +135,10 @@
     "ai-workflow/memory/backlog/2026-06-09.md"
   ],
   "next_actions": [
-    "W16 add-local 후속 (선택, yklee 결정): 비대화형 --url/--token/--model 플래그 (CI/스크립트용, OI-1)",
-    "W16 add-local 후속 (선택): Ollama native /api/tags 지원 (OpenAI 호환 미활성 시, OI-2)",
-    "TASK-005-1 v1 MVP 종료 선언 또는 TASK-005-2 (v1.5) 진입 — yklee 결정 대기",
+    "**TASK-005-1 v1 MVP 종료 선언 완료 (2026-06-09 22:48)** — W3~W16 + dual-push + 브랜치 정리 + main 머지. 다음 TASK 결정 대기",
+    "TASK-005-2 (v1.5) 진입 결정 — yklee 결정 시. 후보: Plugin 4-계층 + marketplace + auto memory + provider-auto-config skill 정식 + CCR/Kompress-base ONNX",
+    "W16 add-local OI-1 (선택): 비대화형 --url/--token/--model 플래그 (CI/스크립트용)",
+    "W16 add-local OI-2 (선택): Ollama native /api/tags 지원 (OpenAI 호환 미활성 시)",
     "MiniMax Device OAuth real flow: yklee 가 MiniMax console 에서 device grant 활성화 후 `myharness auth login minimax --no-browser` 실행 (OpenClaw/Hermes 공통 client_id 78257093-7e40-4613-99e0-527b14b39113, W15.b 자동 refresh 도 real test 가능)",
     "OpenAI/Google 도 동일 패턴 (Authorization Code + PKCE, client_id 등록 후)",
     "ANTHROPIC_API_KEY 주입 시 LLM E2E 테스트 (real-anthropic ignored test 활성화)",

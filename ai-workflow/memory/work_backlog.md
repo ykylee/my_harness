@@ -144,6 +144,8 @@
 | **D-56** | **TASK-005-1 W14.6 완료 (token 단위 변환)** — `device_token_to_oauth` expired_in ms → s (`TokenStore::save` 초 단위 일관성) | §5.5 |
 | **D-57** | **TASK-005-1 W15.a 완료 (OAuth token 자동 resolve)** — cli `resolve_llm_client()` helper, 4 단계 credential chain: `~/.myharness/oauth/<provider>.toml` > env var > MockClient. token 만료 시 WARN + env var fallback (자동 refresh 는 W15.b) | §5.5 |
 | **D-58** | **TASK-005-1 W15.b 완료 (OAuth token 자동 refresh)** — cli `RefreshingLlmClient` wrapper, `LlmError::ProviderCall(msg)` 401/unauthorized/auth 키워드 감지 (oauth 제외) → `AuthManager::ensure_fresh` → store save → 새 `OpenAiCompatProvider` 빌드 → retry 1회. retry 1회 한정 (무한루프 방지). refresh_token 없으면 expired token 그대로 retry. 9 cli tests | §5.5 |
+| **D-59** | **TASK-005-1 W16 완료 (`myharness auth add-local` subcommand)** — Ollama/vLLM/LM Studio/llama.cpp URL+token(선택)+모델 선택 UI (inquire 3단계). OpenAI 호환 `/v1/models` probe 4 서버 통합. atomic write (tmp+rename) 로 providers.toml 손상 방지. **W16 follow-up**: `resolve_llm_client()` 에 LocalLlm 분기 추가 (`MYHARNESS_USE_LOCAL_LLM=1` opt-in env, providers.toml 의 LocalLlm entry 자동 사용). live 검증: 192.168.0.101:1234 LM Studio gemma-4-12b-qat `"2+2 is 4."` 응답. 9 L1 + 3 L2 + 4 scenario TC = 16/16 PASS, 388+ workspace tests, dual-push 완료 | §5.2, §5.5 |
+| **D-59 follow-up** | **TASK-005-1 v1 MVP 종료 선언** (2026-06-09 22:48, yklee 결정) — W3~W16 40+ commit dual-push, 브랜치 정리 (feature/w16-add-local local/origin/upstream 모두 삭제), main = 140acf9. 보존: `local/d-43-47-tc-scaffold`. handoff + state + decisions + next_actions 갱신 | — |
 
 ## 5. 관련 문서 (SSOT)
 
