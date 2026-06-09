@@ -4,7 +4,7 @@
 - 범위: 전체 태스크 목록, 우선순위, 진행 상태, 날짜별 기록 연결
 - 대상 독자: 개발자, AI 에이전트, 프로젝트 매니저
 - 상태: stable
-- 최종 수정일: 2026-06-09 (D-44, dual-remote 적용 — Gitea PAT + GitHub upstream + 9 commit 양쪽 push)
+- 최종 수정일: 2026-06-09 (D-58, TASK-005-1 v1 MVP 8/8 waves + D-52 follow-up 6 작업 완료 — W3~W6.5 tools + W7 llm + W8 context + W9 compression + W10 tui + W11 core + W12 MiniMax LLM API + W13 OAuth 2.0 headless auth + W14 Device Authorization Grant + W14.4 --no-browser 3 모드 + W14.5 polling output + W14.6 token 단위 + W15.a OAuth 자동 resolve + W15.b OAuth 자동 refresh. 38+ commit dual-push)
 - 관련 문서: [세션 인계](./session_handoff.md), [프로젝트 프로필](../../docs/PROJECT_PROFILE.md), [CONCEPT.md](../../docs/CONCEPT.md)
 
 ## 1. 운영 원칙
@@ -33,7 +33,7 @@
 - [x] **TASK-008**: Provider fallback 결정 — **`provider-auto-config` skill** (D-38). 하드코딩 fallback 폐기, 동적 discovered list
 
 ### Done (recent)
-- [x] **TASK-005-1** (v1.0 MVP, Rust 빌드) — W3~W6.5 + W7 + W8 + W9 + W10 + W11 완료 (D-43, D-45, D-46, D-47, D-48, D-49) + dual-remote push. **6/8 waves 완료**, v1 MVP 완성.
+- [x] **TASK-005-1** (v1.0 MVP, Rust 빌드) — W3~W6.5 + W7 + W8 + W9 + W10 + W11 + W12 + W13 + W13.5 + W13.6 + W14 (Device Authorization Grant) + W14.4 (`--no-browser` 3 모드) + W14.5 (polling output + expired_in ms) + W14.6 (token ms→s 변환) + W15.a (OAuth 자동 resolve) + W15.b (OAuth 자동 refresh) 완료 (D-43, D-45~D-58) + dual-remote push. **8/8 waves + D-52 follow-up 6 작업 완료**, v1 MVP 완성. **388 tests pass, 0 fail, 2 ignored**. 38+ commit dual-push (Gitea + GitHub).
 
 ### Planned
 - [ ] **TASK-005-2** (v1.5) — Plugin 4-계층 + marketplace + auto memory + provider-auto-config skill 정식 + CCR/Kompress-base ONNX
@@ -80,8 +80,21 @@
 - [x] W13.2 3 provider (MiniMax / OpenAI / Google) (D-51) ✅
 - [x] W13.3 AuthManager (login + refresh + status + logout) (D-51) ✅
 - [x] W13.4 cli auth subcommand (D-51) ✅
-- [x] W13 3 commit dual push (D-51) ✅
-- [ ] yklee OAuth client ID 등록 후 real OAuth flow 검증 (다음 세션)
+- [x] W13 4 commit dual push (D-51) ✅
+- [x] W13.5 OAuth env override (MYHARNESS_OAUTH_CLIENT_ID_{MINIMAX,OPENAI,GOOGLE} + MINIMAX_API_HOST) + OAUTH_PROVIDERS static LazyLock 제거 (D-52) ✅
+- [x] W13.6 mock OAuth server + AuthManager end-to-end e2e test (real network 없이, CI 가능) (D-52) ✅
+- [x] W13.5 + W13.6 2 commit dual push (D-52) ✅
+- [x] W14 MiniMax Device Authorization Grant (Authorization Code + PKCE 404 → device flow 교체, OpenClaw/Hermes 공통 client_id 78257093-7e40-4613-99e0-527b14b39113) (D-53) ✅
+- [x] W14.4 --no-browser 의미 수정 (3 모드: default / --no-browser / --non-interactive, browser open 과 polling 독립) (D-54) ✅
+- [x] W14.5 device flow polling output 항상 stdout + 1.5x backoff + expired_in ms 단위 unix timestamp (D-55) ✅
+- [x] W14.6 device_token_to_oauth expired_in ms → s 변환 (TokenStore::save 초 단위 일관성) (D-56) ✅
+- [x] W15.a OAuth token 자동 resolve (4 단계 credential chain: oauth store > env var > MockClient) (D-57) ✅
+- [x] W15.b OAuth token 자동 refresh (LlmError::ProviderCall msg 401/unauthorized/auth 키워드 감지 → AuthManager::ensure_fresh → store save → 새 OpenAiCompatProvider 빌드 → retry 1회) (D-58) ✅
+- [x] D-52 follow-up 6 commit dual push (D-53~D-58) ✅
+- [ ] **TASK-005-1 v1 MVP 종료 선언** (8/8 waves + D-52 follow-up 6 작업 완료, yklee 결정 대기)
+- [ ] **TASK-005-2** (v1.5) — Plugin 4-계층 + marketplace + auto memory + provider-auto-config skill 정식 구현 + CCR/Kompress-base
+- [ ] yklee MiniMax Device OAuth real flow 검증 — yklee 가 MiniMax console 에서 device grant 활성화 후 `myharness auth login minimax --no-browser` 실행 (OpenClaw/Hermes 공통 client_id 사용, W15.b 자동 refresh 도 real test 가능)
+- [ ] yklee OpenAI/Google OAuth client_id 등록 후 동일 패턴 검증 (OpenAI: `platform.openai.com` OAuth Apps, Google: Google Cloud Console Credentials OAuth 2.0 Client IDs)
 - [ ] **TASK-005-2** (v1.5) — Plugin 4-계층 + marketplace + auto memory + provider-auto-config skill 정식 구현 + CCR/Kompress-base
 - [ ] **TASK-005-3** (v2.0) — TUI/IDE/Web hand-off (5 surfaces) + Routines + OAuth + MCP-based discover
 - [ ] **TASK-005-4** (v2.5) — Multi-agent parallel + confidence scoring
@@ -121,7 +134,16 @@
 | **D-46** | **TASK-005-1 W8 완료** (myharness-context crate v1, 54 tests) | §5.6 |
 | **D-47** | **TASK-005-1 W9 완료** (myharness-compression crate v1, 40 tests + context summarize 정식) | §5.6 |
 | **D-48** | **TASK-005-1 W10 완료** (myharness-tui crate v1, 50 tests + cli 통합) | §5.10, §5.11 |
-| **D-49** | **TASK-005-1 W11 완료 (v1 MVP 마지막 wave)** (myharness-core crate v1, 32 tests + standard_ai_workflow 6 원칙 native + 4 permission + tool alias + MockClient FIFO + Orchestrator fatal + cli task/handoff) | §5.4, §5.9 |
+| **D-49** | **TASK-005-1 W11 완료 (v1 MVP 6/8 waves)** (myharness-core crate v1, 32 tests + standard_ai_workflow 6 원칙 native + 4 permission + tool alias + MockClient FIFO + Orchestrator fatal + cli task/handoff) | §5.4, §5.9 |
+| **D-50** | **TASK-005-1 W12 완료 (MiniMax LLM API 연결, minimax TBD D-28 해소)** (librarian ⭐⭐⭐⭐⭐ 5/5, api.minimax.io/v1 + MiniMax-M3 + 7 models + OpenAI-호환 Bearer + tool_use, KeyringAuthStore in-memory, MINIMAX_API_HOST env, cli default LLM env 자동 detect) | §5.5 |
+| **D-51** | **TASK-005-1 W13 완료 (OAuth 2.0 headless auth)** (myharness-auth crate v1, 7 모듈: pkce/flow/callback/browser/store/provider/manager, 3 provider MiniMax/OpenAI/Google 모두 PKCE public client, cli auth subcommand) | §5.5 |
+| **D-52** | **TASK-005-1 W13.5 + W13.6 완료 (v1 MVP 8/8 waves 종료)** (env override + mock OAuth e2e test, real network 없이 CI 가능, 39 auth tests pass) | §5.5 |
+| **D-53** | **TASK-005-1 W14 완료 (MiniMax Device Authorization Grant)** — Authorization Code + PKCE 가 404, device flow (RFC 8628 MiniMax 구현, OpenClaw/Hermes 공통 client_id 78257093-7e40-4613-99e0-527b14b39113) 로 교체. CN: `MYHARNESS_MINIMAX_CN=1` 또는 `MINIMAX_OAUTH_BASE_URL` env | §5.5 |
+| **D-54** | **TASK-005-1 W14.4 완료 (`--no-browser` 3 모드)** — signature `(auto_open_browser, non_interactive)` 분리. 3 모드: default / --no-browser / --non-interactive (CI/스크립트). 42 auth tests, 379 workspace tests | §5.5 |
+| **D-55** | **TASK-005-1 W14.5 완료 (polling output + expired_in 단위)** — URL + user_code + expires_in 항상 stdout, OpenClaw 1.5x backoff cap 10s, expired_in ms 단위 unix timestamp 처리 | §5.5 |
+| **D-56** | **TASK-005-1 W14.6 완료 (token 단위 변환)** — `device_token_to_oauth` expired_in ms → s (`TokenStore::save` 초 단위 일관성) | §5.5 |
+| **D-57** | **TASK-005-1 W15.a 완료 (OAuth token 자동 resolve)** — cli `resolve_llm_client()` helper, 4 단계 credential chain: `~/.myharness/oauth/<provider>.toml` > env var > MockClient. token 만료 시 WARN + env var fallback (자동 refresh 는 W15.b) | §5.5 |
+| **D-58** | **TASK-005-1 W15.b 완료 (OAuth token 자동 refresh)** — cli `RefreshingLlmClient` wrapper, `LlmError::ProviderCall(msg)` 401/unauthorized/auth 키워드 감지 (oauth 제외) → `AuthManager::ensure_fresh` → store save → 새 `OpenAiCompatProvider` 빌드 → retry 1회. retry 1회 한정 (무한루프 방지). refresh_token 없으면 expired token 그대로 retry. 9 cli tests | §5.5 |
 
 ## 5. 관련 문서 (SSOT)
 

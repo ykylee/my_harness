@@ -17,6 +17,8 @@ use myharness_llm::LLMClient;
 use myharness_tools::ToolRegistry;
 use myharness_tui::{App, AppKey, LoopConfig, LoopRunner, MessageRole, Orchestrator, TtyGuard};
 
+mod refreshing_client;
+
 #[derive(Parser, Debug)]
 #[command(
     name = "myharness",
@@ -408,17 +410,18 @@ fn print_auth_status(s: &AuthStatus) {
 }
 
 /// W15.a — OAuth token store 우선 + env var fallback (opencode multi-source credential chain).
+/// W15.b — OAuth 경로(1번)를 `RefreshingLlmClient` 로 wrap → 401 시 자동 refresh + 1회 retry.
 ///
 /// 우선순위:
 /// 1. `~/.myharness/oauth/minimax.toml` 의 OAuth access_token (env var 보다 우선, opencode 패턴)
+///    + `RefreshingLlmClient` 가 401 시 자동 refresh (W15.b)
 /// 2. `MINIMAX_API_KEY` env var (regular API key)
 /// 3. `ANTHROPIC_API_KEY` env var
 /// 4. MockClient fallback
-///
-/// token 만료 시 (W15.a): WARN + env var fallback. 자동 refresh 는 W15.b 에서 LLM client 레벨로.
 fn resolve_llm_client() -> Arc<dyn LLMClient> {
     use myharness_auth::TokenStore;
     use myharness_llm::provider::ProviderId;
+    use refreshing_client::RefreshingLlmClient;
 
     // 1) OAuth token store 우선.
     if let Ok(store) = TokenStore::new() {
@@ -437,7 +440,7 @@ fn resolve_llm_client() -> Arc<dyn LLMClient> {
                         .map(|e| e.format("%Y-%m-%dT%H:%M:%SZ").to_string())
                         .unwrap_or_else(|| "unknown".into())
                 );
-                return Arc::new(
+                let inner: Arc<dyn LLMClient> = Arc::new(
                     myharness_llm::OpenAiCompatProvider::new(
                         &base_url,
                         &stored.token.access_token,
@@ -446,6 +449,25 @@ fn resolve_llm_client() -> Arc<dyn LLMClient> {
                     )
                     .expect("failed to init MiniMax OpenAI-compat client"),
                 );
+
+                // W15.b: 401 자동 refresh + 1회 retry 를 위해 RefreshingLlmClient 로 wrap.
+                // store 가 비어있거나 ensure_fresh 실패 시 graceful fallback (W15.a WARN 유지).
+                if let Ok(auth) = AuthManager::new() {
+                    if let Some(provider) = find_provider("minimax") {
+                        return Arc::new(RefreshingLlmClient::new(
+                            inner,
+                            "minimax",
+                            &base_url,
+                            &model,
+                            Arc::new(auth),
+                            Arc::new(store),
+                            provider,
+                        ));
+                    }
+                }
+                // wrap 실패 (provider 못 찾음 / auth init 실패) → inner 그대로 반환
+                // (W15.a 의 동작과 호환, refresh 없이 호출)
+                return inner;
             }
             tracing::warn!(
                 "OAuth token for minimax is expired; falling back to env var. \

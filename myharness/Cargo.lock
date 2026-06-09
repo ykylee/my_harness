@@ -2666,6 +2666,8 @@ name = "myharness"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "async-trait",
+ "chrono",
  "clap",
  "crossterm",
  "myharness-auth",
@@ -2676,6 +2678,8 @@ dependencies = [
  "myharness-tools",
  "myharness-tui",
  "ratatui",
+ "serde_json",
+ "tempfile",
  "tokio",
  "tracing",
  "tracing-subscriber",

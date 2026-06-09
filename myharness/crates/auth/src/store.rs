@@ -31,6 +31,7 @@ pub struct StoredToken {
     pub stored_at: chrono::DateTime<chrono::Utc>,
 }
 
+#[derive(Clone)]
 pub struct TokenStore {
     pub base_dir: PathBuf,
 }

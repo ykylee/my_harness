@@ -18,31 +18,43 @@
     "environment_path": "ai-workflow/memory/environments/"
   },
   "commands": {
-    "quick_tests": null,
-    "isolated_tests": null,
-    "runtime_checks": null,
-    "v1_mvp_build": "TASK-005-1 W3~W8.5 완료 (D-43/D-45/D-46): tools + llm + context crates. 9+5+5 commit dual push. 다음 = W9 compression 또는 W10 tui."
+    "quick_tests": "cargo test --manifest-path myharness/Cargo.toml --workspace --lib",
+    "isolated_tests": "cargo test --manifest-path myharness/Cargo.toml -p myharness-auth --lib",
+    "runtime_checks": "cargo build --manifest-path myharness/Cargo.toml -p myharness --release",
+    "v1_mvp_build": "TASK-005-1 v1 MVP 8/8 waves 완료 (D-49~D-52) + Device Authorization Grant (D-53) + --no-browser 3 모드 (D-54) + polling output/expired_in 단위 (D-55) + token 단위 변환 (D-56) + OAuth 자동 resolve (D-57) + OAuth 자동 refresh (D-58, W15.b). 38+ commit dual push. 388 tests pass, 0 fail, 2 ignored."
   },
   "session": {
-    "current_baseline": "**TASK-005-1 v1 MVP 3/8 waves 완료 (D-46)** — tools (W3~W6.5) + llm (W7) + context (W8) crates. v1 컨셉 Phase 종료 (D-22~D-38). 4/5 결정 ✅, 1/5 (TASK-002) ⏸.",
-    "current_axis": "**TASK-005-1 W9 대기 (또는 W10)** — W8 context 완료 (D-46). W9 compression (Layer 1 정식 + Layer 2 CCR/Kompress-base) 또는 W10 tui shell 우선.",
-    "current_focus": "TASK-005-1 — W3~W8.5 완료 + dual-remote push (D-44/D-45/D-46). W9/W10 선택 대기.",
+    "current_baseline": "**TASK-005-1 v1 MVP 8/8 waves + D-52 follow-up 6 작업 완료 (D-58)** — W3~W6.5 tools + W7 llm + W8 context + W9 compression + W10 tui + W11 core + W12 MiniMax LLM API + W13 OAuth 2.0 headless auth + W14 Device Authorization Grant + W14.4 `--no-browser` 3 모드 + W14.5 polling output/expired_in 단위 + W14.6 token 단위 변환 + W15.a OAuth 자동 resolve + W15.b OAuth 자동 refresh (401 → ensure_fresh → retry). 38+ commit dual-push. 388 tests pass, 0 fail, 2 ignored. v1 컨셉 Phase 종료 (D-22~D-38). 4/5 결정 ✅, 1/5 (TASK-002) ⏸.",
+    "current_axis": "**TASK-005-1 종료 선언 또는 TASK-005-2 (v1.5) 진입 대기** — v1 MVP 8/8 waves + D-52 follow-up 6 작업 완료. yklee 결정 대기.",
+    "current_focus": "TASK-005-1 — W3~W15.b 완료 + dual-remote push (D-44~D-58). v1 MVP 종료 또는 v1.5 진입.",
     "in_progress_items": [
-      "TASK-005-1: v1 MVP Rust 빌드 (W3~W8.5 완료, W9/W10 선택 대기)"
+      "TASK-005-1: v1 MVP Rust 빌드 (8/8 waves + D-52 follow-up 5 작업 완료, 종료 선언 또는 v1.5 진입 대기)"
     ],
     "blocked_items": [
-      "TASK-002: 도메인별 명령 가이드 (yklee 인프라 정보 의존)"
+      "TASK-002: 도메인별 명령 가이드 (yklee 인프라 정보 의존)",
+      "MiniMax OAuth real flow: yklee 가 platform.minimax.io 에서 OAuth client 등록 후 (D-52 W14 에서 client_id 는 OpenClaw/Hermes 공통값 78257093-7e40-4613-99e0-527b14b39113 으로 통합됨, real flow 는 device grant 검증 필요)"
     ],
     "recent_done_items": [
-      "D-41 TASK-005-1 환경 검증 (2026-06-09)",
-      "D-43 TASK-005-1 W3~W6.5 (tools crate 63 tests) + Gitea push (2026-06-09)",
-      "D-44 dual-remote (D-20) 적용 (2026-06-09)",
-      "D-45 TASK-005-1 W7 (myharness-llm crate v1, 87 tests) + 5 commit dual-push (2026-06-09)",
-      "D-46 TASK-005-1 W8 (myharness-context crate v1, 54 tests) + 5 commit dual-push (2026-06-09)"
+      "D-46 TASK-005-1 W8 (myharness-context crate v1, 56 tests) + 5 commit dual-push (2026-06-09)",
+      "D-47 TASK-005-1 W9 (myharness-compression crate v1, 40 tests) + dual-push (2026-06-09)",
+      "D-48 TASK-005-1 W10 (myharness-tui crate v1, 51 tests) + dual-push (2026-06-09)",
+      "D-49 TASK-005-1 W11 (myharness-core crate v1, 32 tests) + dual-push (2026-06-09)",
+      "D-50 TASK-005-1 W12 (MiniMax LLM API 연결, api.minimax.io/v1, MiniMax-M3, 95 llm tests) + dual-push (2026-06-09)",
+      "D-51 TASK-005-1 W13 (myharness-auth crate v1, OAuth 2.0 headless auth, 38 tests) + dual-push (2026-06-09)",
+      "D-52 TASK-005-1 W13.5 (OAuth env override) + W13.6 (mock OAuth e2e test, 39 auth tests) + dual-push (2026-06-09)",
+      "D-53 TASK-005-1 W14 (MiniMax Device Authorization Grant, Authorization Code + PKCE 404 → device flow 교체, dfb40b4) + dual-push (2026-06-09)",
+      "D-54 TASK-005-1 W14.4 (`--no-browser` 의미 수정, 3 모드: default/--no-browser/--non-interactive, 6c85655) + dual-push (2026-06-09)",
+      "D-55 TASK-005-1 W14.5 (polling output 항상 출력 + 1.5x backoff + expired_in ms 단위, cf29576) + dual-push (2026-06-09)",
+      "D-56 TASK-005-1 W14.6 (device_token_to_oauth expired_in ms → s 변환, 9f7f957) + dual-push (2026-06-09)",
+      "D-57 TASK-005-1 W15.a (OAuth token 자동 resolve, env var 없이도 LLM 호출, 4 단계 우선순위, f92e988) + dual-push (2026-06-09)",
+      "D-58 TASK-005-1 W15.b (OAuth token 자동 refresh, 401 → ensure_fresh → 새 OpenAiCompatProvider → retry 1회, 9 cli tests) + dual-push (2026-06-09)"
     ],
     "environment_constraints": [
-      "ANTHROPIC_API_KEY absent — mock-driven 검증. Key 주입 시 real-anthropic ignored test 활성화",
-      "libsecret 부재 (D-41) — keyring AuthStore graceful fallback (backend=None)",
+      "ANTHROPIC_API_KEY absent — mock-driven 검증. v1 은 MiniMax API key 기반 (D-50)",
+      "libsecret 부재 (D-41) — keyring AuthStore in-memory fallback (D-50)",
+      "MINIMAX_API_KEY env 자동 detect → OpenAiCompatProvider (D-50 W12)",
+      "W15.a: OAuth token 자동 resolve 가 1순위로 env var 대체 (4 단계 credential chain: oauth store → MINIMAX_API_KEY → ANTHROPIC_API_KEY → MockClient)",
+      "W15.b: OAuth token 자동 refresh (LlmError::ProviderCall msg 에 401/unauthorized/auth 키워드 시 AuthManager::ensure_fresh → store save → 새 OpenAiCompatProvider 빌드 → retry 1회). 1회 한정 (무한루프 방지). refresh_token 없으면 expired token 그대로 retry",
       "Gitea PAT (D-44) — ~/.git-credentials (chmod 600). 회전 권고",
       "GitHub auth via gh CLI (ykylee)"
     ]
@@ -53,20 +65,34 @@
       {"id": "TASK-006", "decision": "ratatui + crossterm", "ref": "D-36 (TASK-005 종속)", "section": "§11.3"},
       {"id": "TASK-007", "decision": "headroom v1 = 3 알고리즘", "ref": "D-37 + D-46 (W8.4: 4 알고리즘 built-in: CacheAligner + ContentRouter + SmartCrusher + CodeCompressor)", "section": "§5.6"},
       {"id": "TASK-008", "decision": "provider-auto-config skill", "ref": "D-38 + D-45 (W7: v1 simple 구현)", "section": "§5.5"},
-      {"id": "D-42", "decision": "config 포맷 = TOML 통일", "ref": "D-42", "section": "§5.12, §5.5"}
+      {"id": "D-42", "decision": "config 포맷 = TOML 통일", "ref": "D-42", "section": "§5.12, §5.5"},
+      {"id": "D-50", "decision": "v1 LLM API key 기반 (MiniMax 우선, api.minimax.io/v1 + MiniMax-M3 + OpenAI-호환)", "ref": "D-50 (W12)", "section": "§5.5"},
+      {"id": "D-51", "decision": "OAuth 2.0 headless auth (PKCE public client, 3 provider: MiniMax/OpenAI/Google)", "ref": "D-51 (W13)", "section": "§5.5"},
+      {"id": "D-52", "decision": "OAuth env override (MYHARNESS_OAUTH_CLIENT_ID_{MINIMAX,OPENAI,GOOGLE} + MINIMAX_API_HOST) + OAUTH_PROVIDERS static LazyLock 제거", "ref": "D-52 (W13.5)", "section": "§5.5"},
+      {"id": "D-53", "decision": "MiniMax OAuth = Device Authorization Grant (OpenClaw/Hermes 공통 client_id 78257093-7e40-4613-99e0-527b14b39113, 기존 Authorization Code+PKCE 는 deprecated 표시만 유지)", "ref": "D-53 (W14)", "section": "§5.5"},
+      {"id": "D-54", "decision": "device flow 3 모드: default / --no-browser / --non-interactive (browser open 여부와 polling 독립)", "ref": "D-54 (W14.4)", "section": "§5.5"},
+      {"id": "D-55", "decision": "device flow polling output 항상 stdout + 1.5x backoff cap 10s + expired_in ms 단위 unix timestamp", "ref": "D-55 (W14.5)", "section": "§5.5"},
+      {"id": "D-57", "decision": "OAuth token 자동 resolve (4 단계 credential chain: ~/.myharness/oauth/<provider>.toml > MINIMAX_API_KEY > ANTHROPIC_API_KEY > MockClient)", "ref": "D-57 (W15.a)", "section": "§5.5"},
+      {"id": "D-58", "decision": "OAuth token 자동 refresh (LlmError::ProviderCall msg 401/unauthorized/auth 키워드 감지 → AuthManager::ensure_fresh → store save → 새 OpenAiCompatProvider 빌드 → retry 1회). is_unauthorized_error 가 oauth 키워드 제외 (false 양성 방지)", "ref": "D-58 (W15.b)", "section": "§5.5"}
     ],
     "deferred": [
-      {"id": "TASK-002", "decision": "도메인별 명령 가이드", "reason": "yklee 인프라 정보 의존", "resume": "v1 Rust 구현 시점 또는 yklee 인프라 정보 수령 시"}
+      {"id": "TASK-002", "decision": "도메인별 명령 가이드", "reason": "yklee 인프라 정보 의존", "resume": "v1 Rust 구현 완료 후 yklee 인프라 정보 수령 시"},
+      {"id": "MiniMax-Device-OAuth", "decision": "real device grant 검증", "reason": "mock e2e test 로 흐름 검증 완료 (W13.6 + W15.b). real flow 는 yklee 가 MiniMax console 에서 device grant 활성화 후 가능", "resume": "yklee 의 MiniMax device grant 활성화 후 `myharness auth login minimax --no-browser` 실행"},
+      {"id": "OpenAI-OAuth", "decision": "real OAuth flow 검증", "reason": "yklee 가 platform.openai.com OAuth Apps 에서 client_id 등록 필요", "resume": "client_id 등록 후"},
+      {"id": "Google-OAuth", "decision": "real OAuth flow 검증", "reason": "yklee 가 Google Cloud Console Credentials OAuth 2.0 Client IDs 에서 client_id 등록 필요", "resume": "client_id 등록 후"},
+      {"id": "TASK-005-2", "decision": "v1.5 Plugin 4-계층 + marketplace + auto memory + provider-auto-config 정식 + CCR/Kompress-base ONNX", "reason": "TASK-005-1 종료 선언 후 진입", "resume": "yklee 결정 시"},
+      {"id": "MYHARNESS_MINIMAX_CN", "decision": "MiniMax CN endpoint override", "reason": "W14 에서 base_host `MINIMAX_OAUTH_BASE_URL` env override 가능. CN 정식 endpoint 는 v1.5+", "resume": "yklee 의 CN endpoint 가용성 확인 후"}
     ]
   },
   "backlog": {
     "latest_backlog_path": "ai-workflow/memory/backlog/2026-06-09.md",
-    "task_count": 9,
+    "task_count": 17,
     "in_progress_items": [
-      "TASK-005-1: v1 MVP Rust 빌드 (in_progress, W3~W8.5 완료, W9/W10 선택 대기)"
+      "TASK-005-1: v1 MVP Rust 빌드 (8/8 waves + D-52 follow-up 5 작업 완료, 종료 선언 또는 v1.5 진입 대기)"
     ],
     "blocked_items": [
-      "TASK-002: 도메인별 명령 가이드 (yklee 인프라 정보 의존)"
+      "TASK-002: 도메인별 명령 가이드 (yklee 인프라 정보 의존)",
+      "MiniMax Device OAuth real flow: client_id 통합값 (OpenClaw/Hermes 공통) 으로 mock e2e 검증 완료. real flow 는 yklee 가 MiniMax console 에서 device grant 활성화 후 가능"
     ],
     "done_items": [
       "TASK-001: my-harness 부트스트랩 (standard_ai_workflow 적용)",
@@ -75,7 +101,23 @@
       "TASK-005: 스택 결정 (Rust 1안)",
       "TASK-006: TUI 라이브러리 (ratatui + crossterm)",
       "TASK-007: headroom v1 우선순위 (3 알고리즘)",
-      "TASK-008: Provider fallback (provider-auto-config skill)"
+      "TASK-008: Provider fallback (provider-auto-config skill)",
+      "TASK-005-1 W3~W6.5: myharness-tools crate (5 tool + 4 permission + 9 sanitizer + JSON schema + 5 provider wire format)",
+      "TASK-005-1 W7: myharness-llm crate v1 (6 provider + LLMClient + rig-core wrap + auth + discover + chain + router)",
+      "TASK-005-1 W8: myharness-context crate v1 (CLAUDE.md + auto memory + ContextManager + Layer 2 4 알고리즘)",
+      "TASK-005-1 W9: myharness-compression crate v1 (Summarizer + CCR + Kompress-base v1 simple + BuiltinRegistry)",
+      "TASK-005-1 W10: myharness-tui crate v1 (ratatui App + crossterm + 4 SubAgent + Orchestrator + LoopRunner + cli)",
+      "TASK-005-1 W11: myharness-core crate v1 (standard_ai_workflow output + 4 permission + session)",
+      "TASK-005-1 W12: MiniMax LLM API 연결 (api.minimax.io/v1 + MiniMax-M3 + KeyringAuthStore in-memory + cli default LLM env 자동 detect)",
+      "TASK-005-1 W13: myharness-auth crate v1 (OAuth 2.0 headless auth: pkce/flow/callback/browser/store/provider/manager)",
+      "TASK-005-1 W13.5: OAuth env override (MYHARNESS_OAUTH_CLIENT_ID_{MINIMAX,OPENAI,GOOGLE} + MINIMAX_API_HOST) + OAUTH_PROVIDERS static LazyLock 제거",
+      "TASK-005-1 W13.6: mock OAuth server + AuthManager end-to-end e2e test (real network 없이, CI 가능)",
+      "TASK-005-1 W14: MiniMax Device Authorization Grant (Authorization Code + PKCE 404 → device flow 교체, OpenClaw/Hermes 공통 client_id)",
+      "TASK-005-1 W14.4: --no-browser 의미 수정 (3 모드: default/--no-browser/--non-interactive, browser open 과 polling 독립)",
+      "TASK-005-1 W14.5: device flow polling output 항상 stdout + 1.5x backoff + expired_in ms 단위 unix timestamp",
+      "TASK-005-1 W14.6: device_token_to_oauth expired_in ms → s 변환 (TokenStore::save 초 단위 일관성)",
+      "TASK-005-1 W15.a: OAuth token 자동 resolve (4 단계 credential chain: oauth store > env var > MockClient)",
+      "TASK-005-1 W15.b: OAuth token 자동 refresh (LlmError::ProviderCall msg 401/unauthorized/auth 키워드 감지 → AuthManager::ensure_fresh → store save → 새 OpenAiCompatProvider 빌드 → retry 1회). is_unauthorized_error 가 oauth 키워드 제외 (false 양성 방지)"
     ]
   },
   "next_documents": [
@@ -90,8 +132,10 @@
     "ai-workflow/memory/backlog/2026-06-09.md"
   ],
   "next_actions": [
-    "TASK-005-1 W9 또는 W10 선택 — W9 compression (Layer 1 정식 + CCR/Kompress-base) 또는 W10 tui shell",
-    "ANTHROPIC_API_KEY 주입 시 LLM E2E 테스트 (W7.5 spec 의 real-anthropic ignored test 활성화)",
+    "TASK-005-1 v1 MVP 종료 선언 또는 TASK-005-2 (v1.5) 진입 — yklee 결정 대기",
+    "MiniMax Device OAuth real flow: yklee 가 MiniMax console 에서 device grant 활성화 후 `myharness auth login minimax --no-browser` 실행 (OpenClaw/Hermes 공통 client_id 78257093-7e40-4613-99e0-527b14b39113, W15.b 자동 refresh 도 real test 가능)",
+    "OpenAI/Google 도 동일 패턴 (Authorization Code + PKCE, client_id 등록 후)",
+    "ANTHROPIC_API_KEY 주입 시 LLM E2E 테스트 (real-anthropic ignored test 활성화)",
     "§5.12 디렉토리 자동 생성 (v1 first run 시)",
     "TASK-002 (도메인별 명령): yklee 인프라 정보 수령 시 진행",
     "Gitea PAT 회전 (이전 세션 노출)"

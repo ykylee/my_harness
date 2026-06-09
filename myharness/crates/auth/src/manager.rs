@@ -101,6 +101,7 @@ pub struct LoginOutcome {
     pub user_pasted_code: Option<String>,
 }
 
+#[derive(Clone)]
 pub struct AuthManager {
     pub store: TokenStore,
 }
