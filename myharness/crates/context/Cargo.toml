@@ -15,6 +15,10 @@ thiserror = { workspace = true }
 tracing = { workspace = true }
 dirs = { workspace = true }
 chrono = { workspace = true }
+async-trait = { workspace = true }
+tokio = { workspace = true }
+myharness-llm = { path = "../llm" }
+myharness-compression = { path = "../compression" }
 
 [dev-dependencies]
 tempfile = "3"

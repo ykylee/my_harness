@@ -8,8 +8,11 @@
 
 use std::collections::VecDeque;
 
+use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
+
+use myharness_compression::Summarizer;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
@@ -89,10 +92,21 @@ pub struct BudgetReport {
     pub should_compact: bool,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub struct ContextManager {
     pub config: BudgetConfig,
     history: VecDeque<Message>,
+    summarizer: Option<std::sync::Arc<dyn Summarizer>>,
+}
+
+impl std::fmt::Debug for ContextManager {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("ContextManager")
+            .field("config", &self.config)
+            .field("history_len", &self.history.len())
+            .field("summarizer", &self.summarizer_name())
+            .finish()
+    }
 }
 
 impl ContextManager {
@@ -106,7 +120,24 @@ impl ContextManager {
         if config.chars_per_token == 0 {
             return Err(BudgetError::Invalid("chars_per_token must be > 0".into()));
         }
-        Ok(Self { config, history: VecDeque::new() })
+        Ok(Self { config, history: VecDeque::new(), summarizer: None })
+    }
+
+    pub fn with_summarizer(mut self, summarizer: std::sync::Arc<dyn Summarizer>) -> Self {
+        self.summarizer = Some(summarizer);
+        self
+    }
+
+    pub fn set_summarizer(&mut self, summarizer: std::sync::Arc<dyn Summarizer>) {
+        self.summarizer = Some(summarizer);
+    }
+
+    pub fn clear_summarizer(&mut self) {
+        self.summarizer = None;
+    }
+
+    pub fn summarizer_name(&self) -> Option<&'static str> {
+        self.summarizer.as_ref().map(|s| s.name())
     }
 
     pub fn push(&mut self, msg: Message) {
@@ -158,10 +189,10 @@ impl ContextManager {
     pub fn compact(&mut self) {
         match self.config.strategy {
             CompactStrategy::Truncate => self.truncate_keep_recent(),
-            CompactStrategy::Summarize => self.summarize_stub(),
+            CompactStrategy::Summarize => self.run_summarize(),
             CompactStrategy::Hybrid => {
                 self.truncate_keep_recent();
-                self.summarize_stub();
+                self.run_summarize();
             }
         }
     }
@@ -175,11 +206,39 @@ impl ContextManager {
         }
     }
 
-    /// Summarize stub — v1.5+ 에서 LLM 호출. 현재는 truncate 만 호출.
-    fn summarize_stub(&mut self) {
-        // W8.5 에서 LLM-driven summarize 구현. 현재는 no-op.
-        // 단, "hybrid 정책으로 명시 호출" 의도이므로 truncate_keep_recent 가 호출된 상태에서
-        // 추가로 메시지 압축 시도 (현재는 keep_recent 가 이미 적용됨).
+    /// W9.2 — LLM-driven summarize. summarizer 가 없으면 no-op.
+    /// drop 할 old message 들을 join → summarizer.summarize() → 결과를 단일 assistant message 로
+    /// history 맨 앞에 삽입. 단, summarizer 없을 때는 기존 truncate 만 fallback.
+    fn run_summarize(&mut self) {
+        let keep = self.config.keep_recent;
+        let len = self.history.len();
+        if len <= keep {
+            return;
+        }
+        let drop_count = len - keep;
+        // summarizer 없으면 truncate fallback
+        let Some(summarizer) = self.summarizer.clone() else {
+            self.history.drain(0..drop_count);
+            return;
+        };
+        let to_summarize: Vec<Message> = self.history.drain(0..drop_count).collect();
+        let combined: String = to_summarize
+            .iter()
+            .map(|m| format!("[{:?}] {}", m.role, m.content))
+            .collect::<Vec<_>>()
+            .join("\n");
+        // blocking call via tokio runtime handle (이 context 는 sync API)
+        let summary = tokio::task::block_in_place(|| {
+            tokio::runtime::Handle::current().block_on(summarizer.summarize(&combined))
+        });
+        match summary {
+            Ok(s) => {
+                self.history.push_front(Message::assistant(format!("[Summary] {s}")));
+            }
+            Err(_) => {
+                // 실패 시 fallback: drop 만
+            }
+        }
     }
 }
 
@@ -280,6 +339,50 @@ mod tests {
         })
         .unwrap();
         for i in 0..10 {
+            m.push(Message::user(format!("m{i}")));
+        }
+        m.compact();
+        assert_eq!(m.len(), 2);
+    }
+
+    #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+    async fn summarize_strategy_uses_summarizer() {
+        use myharness_compression::MockSummarizer;
+        let s = std::sync::Arc::new(MockSummarizer::new());
+        s.push("concise summary");
+        let mut m = ContextManager::new(BudgetConfig {
+            max_tokens: 100,
+            warn_ratio: 0.8,
+            keep_recent: 2,
+            strategy: CompactStrategy::Summarize,
+            chars_per_token: 1,
+        })
+        .unwrap()
+        .with_summarizer(s.clone());
+        for i in 0..5 {
+            m.push(Message::user(format!("old{i}")));
+        }
+        m.push(Message::user("keep1"));
+        m.push(Message::user("keep2"));
+        // run_summarize 는 block_in_place 사용 — async runtime 필요
+        m.compact();
+        // 결과: [Summary] message + keep1 + keep2 = 3 messages
+        assert_eq!(m.len(), 3);
+        assert!(m.history[0].content.contains("[Summary]"));
+        assert!(m.history[0].content.contains("concise summary"));
+    }
+
+    #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+    async fn summarize_falls_back_to_truncate_without_summarizer() {
+        let mut m = ContextManager::new(BudgetConfig {
+            max_tokens: 100,
+            warn_ratio: 0.8,
+            keep_recent: 2,
+            strategy: CompactStrategy::Summarize,
+            chars_per_token: 1,
+        })
+        .unwrap();
+        for i in 0..5 {
             m.push(Message::user(format!("m{i}")));
         }
         m.compact();
