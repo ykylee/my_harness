@@ -143,4 +143,20 @@ mod tests {
         assert!(r.env_hits.len() <= 6);
         assert!(r.local_hits.len() == 4);
     }
+
+    /// W12 (D-50) — integration test: discover() 가 6 provider 의 default model/base_url 로 동작.
+    /// 실제 network call 은 안 함 (--ignored). real test 는 MINIMAX_API_KEY 등 env 주입 후 수동 실행.
+    #[tokio::test]
+    #[ignore = "requires real network and env var; run manually with MINIMAX_API_KEY set"]
+    async fn discover_minimax_integration_smoke() {
+        // 가정: env MINIMAX_API_KEY=... 가 설정되어 있어야 함 (CI 환경 아닐 때만)
+        let reg = ProviderRegistry::with_builtins();
+        let r = discover(&reg, DiscoverOpts::default()).await.unwrap();
+        // env_hits 에 minimax 가 있어야 함 (MINIMAX_API_KEY set 가정)
+        let has_minimax = r.env_hits.iter().any(|h| h.provider == ProviderId::Minimax);
+        assert!(has_minimax, "MINIMAX_API_KEY not detected; set env first");
+        // chain 에 minimax primary
+        let primary = r.chain.primary().unwrap();
+        assert_eq!(primary.provider, ProviderId::Minimax);
+    }
 }
