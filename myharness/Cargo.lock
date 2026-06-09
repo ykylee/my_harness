@@ -2667,6 +2667,7 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "clap",
+ "crossterm",
  "myharness-auth",
  "myharness-compression",
  "myharness-context",
@@ -2674,6 +2675,8 @@ dependencies = [
  "myharness-llm",
  "myharness-tools",
  "myharness-tui",
+ "ratatui",
+ "tokio",
  "tracing",
  "tracing-subscriber",
 ]
@@ -2777,8 +2780,18 @@ name = "myharness-tui"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "async-trait",
  "crossterm",
+ "myharness-core",
+ "myharness-llm",
+ "myharness-tools",
  "ratatui",
+ "serde",
+ "serde_json",
+ "tempfile",
+ "thiserror 2.0.18",
+ "tokio",
+ "tracing",
 ]
 
 [[package]]

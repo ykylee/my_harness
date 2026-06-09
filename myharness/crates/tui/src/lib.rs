@@ -1,8 +1,25 @@
-//! myharness-tui — ratatui + crossterm 기반 TUI primitive
+//! myharness-tui — ratatui + crossterm 기반 TUI shell + sub-agent registry + orchestrator dispatch
 //!
-//! v1 MVP skeleton (TASK-005-1 W2).
-//! 본 구현은 TASK-005-1 W3~W11 에서 진행.
+//! 모듈:
+//! - [`events`]: crossterm backend + key mapping
+//! - [`app`]: App state + ratatui draw logic
+//! - [`agent`]: SubAgent trait + 4 구현 (W10.2)
+//! - [`orchestrator`]: 도메인 dispatch + tools/llm 통합 (W10.3)
+//! - [`loop_mode`]: ralph-wiggum 패턴 (W10.4)
 
+pub mod agent;
+pub mod app;
+pub mod events;
+pub mod loop_mode;
+pub mod orchestrator;
+
+pub use agent::{SubAgent, SubAgentDef, SubAgentDomain, SubAgentError, SubAgentKind, SubAgentRegistry};
+pub use app::{draw, render_to_buffer, App, AppMessage, MessageRole};
+pub use events::{AppKey, TtyGuard};
+pub use loop_mode::{LoopConfig, LoopIteration, LoopReport, LoopRunner, LoopStop};
+pub use orchestrator::{DispatchDecision, DispatchKind, Orchestrator};
+
+/// Crate 버전.
 pub fn version() -> &'static str {
     env!("CARGO_PKG_VERSION")
 }
@@ -14,5 +31,16 @@ mod tests {
     #[test]
     fn version_is_set() {
         assert!(!version().is_empty());
+    }
+
+    #[test]
+    fn public_api_exports() {
+        let _app: App = App::new("x", "orchestrator");
+        let _k: AppKey = AppKey::Enter;
+        let _msg: AppMessage = AppMessage::user("hi");
+        use crate::agent::CodeReviewerAgent;
+        let _a: &dyn SubAgent = &CodeReviewerAgent;
+        let _o: Orchestrator = Orchestrator::new();
+        let _c: LoopConfig = LoopConfig::default();
     }
 }
