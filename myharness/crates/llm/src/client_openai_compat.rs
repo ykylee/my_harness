@@ -11,6 +11,8 @@ use rig_core::client::CompletionClient;
 use rig_core::completion::CompletionModel;
 use rig_core::message::{AssistantContent, Message as RigMessage, UserContent};
 
+use crate::client::Message;
+
 use crate::client::{CompletionRequest, CompletionResponse, LLMClient};
 use crate::error::LlmError;
 use crate::provider::ProviderId;
@@ -144,5 +146,71 @@ mod tests {
         )
         .unwrap();
         assert_eq!(p.provider_id(), ProviderId::LocalLlm);
+    }
+
+    /// W12 (D-50) — MiniMax OpenAI-compat client 구성 검증 (real network 없음).
+    /// base_url/모델/key 가 rig-core CompletionsClient 로 정확히 전달되는지.
+    #[test]
+    fn minimax_provider_builds_with_correct_metadata() {
+        let p = OpenAiCompatProvider::new(
+            "https://api.minimax.io/v1",
+            "sk-cp-fake-test-key-12345",
+            "MiniMax-M3",
+            ProviderId::Minimax,
+        )
+        .unwrap();
+        assert_eq!(p.provider_id(), ProviderId::Minimax);
+        assert_eq!(p.base_url(), "https://api.minimax.io/v1");
+        assert_eq!(p.default_model, "MiniMax-M3");
+    }
+
+    /// W12 (D-50) — CN endpoint (api.minimaxi.com) 도 동일하게 빌드 가능.
+    #[test]
+    fn minimax_cn_endpoint_builds() {
+        let p = OpenAiCompatProvider::new(
+            "https://api.minimaxi.com/v1",
+            "sk-cp-cn-key",
+            "MiniMax-M3",
+            ProviderId::Minimax,
+        )
+        .unwrap();
+        assert_eq!(p.base_url(), "https://api.minimaxi.com/v1");
+    }
+
+    /// W12 (D-50) — real MiniMax API 호출. MINIMAX_API_KEY env 가 있어야 동작.
+    /// network test — CI 환경에선 #[ignore], 수동 실행:
+    /// `MINIMAX_API_KEY=... cargo test minimax_real_api_smoke -- --ignored --nocapture`
+    #[tokio::test]
+    #[ignore = "requires real MINIMAX_API_KEY + network access"]
+    async fn minimax_real_api_smoke() {
+        let api_key = match std::env::var("MINIMAX_API_KEY") {
+            Ok(k) => k,
+            Err(_) => {
+                eprintln!("MINIMAX_API_KEY not set; skipping");
+                return;
+            }
+        };
+        let base_url = std::env::var("MINIMAX_API_HOST")
+            .unwrap_or_else(|_| "https://api.minimax.io/v1".into());
+        let p = OpenAiCompatProvider::new(
+            &base_url,
+            &api_key,
+            "MiniMax-M3",
+            ProviderId::Minimax,
+        )
+        .unwrap();
+        let req = CompletionRequest {
+            model: "MiniMax-M3".into(),
+            system: Some("You are a concise assistant. Reply in 1 sentence.".into()),
+            messages: vec![Message::user("Reply with the single word: PONG")],
+            max_tokens: Some(32),
+            temperature: Some(1.0),
+            stop: vec![],
+            stream: false,
+            metadata: serde_json::Value::Null,
+        };
+        let resp = p.complete(req).await.expect("MiniMax API call failed");
+        eprintln!("MiniMax response: model={} content={:?}", resp.model, resp.content);
+        assert!(!resp.content.is_empty(), "empty response from MiniMax");
     }
 }
