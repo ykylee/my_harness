@@ -105,16 +105,22 @@ enum TaskAction {
 
 #[derive(Subcommand, Debug)]
 enum AuthAction {
-    /// OAuth 로그인 (browser 자동 open + local callback server)
+    /// OAuth 로그인. 기본: URL 출력 + browser 자동 open + polling + save.
+    /// `--no-browser`: URL 출력 + polling + save (user 가 직접 browser paste).
+    /// `--non-interactive`: URL 출력만 + 즉시 종료 (CI/스크립트용).
+    /// OpenAI/Google: redirect flow. MiniMax: DeviceCodeFlow (W14).
     Login {
         /// provider id: minimax | openai | google
         provider: String,
-        /// OAuth callback port (default 0 = OS 자동 할당)
+        /// OAuth callback port (OpenAI/Google redirect flow 용, default 0 = OS 자동 할당)
         #[arg(long, default_value_t = 0)]
         port: u16,
-        /// headless 환경 — browser open 안 하고 URL 만 print
+        /// browser 자동 open 안 함. URL 출력 후 polling + save 계속 (user 가 직접 paste).
         #[arg(long)]
         no_browser: bool,
+        /// polling + save 안 함. URL 출력만 + 즉시 종료 (CI/스크립트).
+        #[arg(long)]
+        non_interactive: bool,
     },
     /// OAuth 토큰 삭제
     Logout {
@@ -354,21 +360,23 @@ async fn run_auth(action: AuthAction) -> anyhow::Result<()> {
                 println!("  - {} ({}) — authorize={}, token={}", p.id(), p.display_name(), p.authorize_endpoint(), p.token_endpoint());
             }
         }
-        AuthAction::Login { provider, port, no_browser } => {
+        AuthAction::Login { provider, port, no_browser, non_interactive } => {
             // MiniMax 는 W14 부터 Device Authorization Grant (D-52 follow-up) 사용.
             // 다른 provider (OpenAI, Google) 는 표준 Authorization Code + PKCE redirect flow.
             if provider == "minimax" {
                 let mgr = AuthManager::new().map_err(|e| anyhow::anyhow!("{e}"))?;
-                let outcome = mgr.login_minimax_device(!no_browser)
+                let outcome = mgr.login_minimax_device(!no_browser, non_interactive)
                     .await
                     .map_err(|e| anyhow::anyhow!("{e}"))?;
                 print_login_outcome(&outcome);
             } else {
+                // OpenAI/Google: redirect flow. non_interactive 는 동일 (URL 만 return).
                 let p = find_provider(&provider)
                     .ok_or_else(|| anyhow::anyhow!("provider '{provider}' not found (try `myharness auth list`)"))?;
                 let mgr = AuthManager::new().map_err(|e| anyhow::anyhow!("{e}"))?;
                 let effective_port = if port == 0 { 0 } else { port };
-                let outcome = mgr.login(p.clone(), !no_browser, effective_port)
+                let interactive = !no_browser && !non_interactive;
+                let outcome = mgr.login(p.clone(), interactive, effective_port)
                     .await
                     .map_err(|e| anyhow::anyhow!("{e}"))?;
                 print_login_outcome(&outcome);

@@ -156,16 +156,26 @@ impl AuthManager {
     /// 표준 Authorization Code + PKCE redirect flow 는 MiniMax 에서 404 (D-52 follow-up).
     /// 따라서 DeviceCodeFlow 사용:
     /// 1) POST /oauth/code → user_code + verification_uri
-    /// 2) `interactive=true` 면 browser open
-    /// 3) user 가 verification_uri 에서 user_code 입력
+    /// 2) `auto_open_browser=true` 면 OS 기본 browser 자동 open
+    ///    (`false` 면 user 가 직접 verification_uri 를 browser 에 paste)
+    /// 3) user 가 verification_uri 에서 user_code 입력 → "Authorize"
     /// 4) polling /oauth/token → access_token
     /// 5) TokenStore::save
     ///
-    /// `interactive=false` 면 browser open 안 하고 verification_uri + user_code + expired_in
-    /// 만 return. polling/저장 안 함 (CI/스크립트용).
+    /// `non_interactive=true` 면 1) 만 실행하고 URL + user_code + expired_in 만 return.
+    /// polling/저장 안 함 (CI/스크립트용, v1.5+ 에서 다른 옵션 검토).
+    ///
+    /// `auto_open_browser` 와 `non_interactive` 의 조합 (W14.4):
+    /// - `auto_open_browser=true, non_interactive=false` (default):
+    ///   URL 출력 + browser 자동 open + polling + save
+    /// - `auto_open_browser=false, non_interactive=false` (`--no-browser`):
+    ///   URL 출력 + polling + save (user 가 직접 browser paste)
+    /// - `auto_open_browser=*, non_interactive=true` (`--non-interactive`):
+    ///   URL 출력만 + 즉시 종료
     pub async fn login_minimax_device(
         &self,
-        interactive: bool,
+        auto_open_browser: bool,
+        non_interactive: bool,
     ) -> Result<LoginOutcome, AuthError> {
         let provider = MinimaxDeviceOAuth::from_env();
         let provider_arc: Arc<dyn DeviceCodeProvider> = Arc::new(provider);
@@ -175,7 +185,7 @@ impl AuthManager {
         let interval = req.authorization.interval;
         let expired_in = req.authorization.expired_in;
 
-        if !interactive {
+        if non_interactive {
             return Ok(LoginOutcome {
                 provider: "minimax".to_string(),
                 token: OAuthToken {
@@ -190,9 +200,9 @@ impl AuthManager {
             });
         }
 
-        // 1) browser 자동 open
-        let _ = browser::open(&verification_url);
-        // 2) expired_in 까지 polling
+        if auto_open_browser {
+            let _ = browser::open(&verification_url);
+        }
         let device_token = device_flow::poll_until_success(
             &*provider_arc,
             &user_code,
@@ -201,9 +211,7 @@ impl AuthManager {
             expired_in,
         )
         .await?;
-        // 3) OAuthToken 변환
         let oauth_token = device_token_to_oauth(&device_token);
-        // 4) save
         self.store.save("minimax", &oauth_token)?;
         Ok(LoginOutcome {
             provider: "minimax".to_string(),
@@ -507,6 +515,129 @@ mod tests {
     #[tokio::test]
     async fn login_minimax_device_with_mock_server() {
         use crate::device_flow::{DeviceCodeProvider, poll_token, request_code};
+        use async_trait::async_trait;
+
+        let mock_server = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let mock_addr = mock_server.local_addr().unwrap();
+        let mock_base = format!("http://{mock_addr}");
+
+        let user_code_returned = "DM83-JJXC";
+        let access_token_returned = "at-mock-device-12345";
+        let refresh_token_returned = "rt-mock-device-67890";
+
+        let uc = user_code_returned.to_string();
+        let at = access_token_returned.to_string();
+        let rt = refresh_token_returned.to_string();
+        let mock_task = tokio::spawn(async move {
+            for _ in 0..3 {
+                if let Ok((mut sock, _)) = mock_server.accept().await {
+                    let mut buf = vec![0u8; 8192];
+                    let n = sock.read(&mut buf).await.unwrap();
+                    let req = String::from_utf8_lossy(&buf[..n]).to_string();
+                    let request_line = req.lines().next().unwrap_or("");
+
+                    if request_line.contains("POST /oauth/code") {
+                        let state_param = req
+                            .split("state=")
+                            .nth(1)
+                            .and_then(|s| s.split('&').next().map(|x| x.to_string()))
+                            .unwrap_or_else(|| "placeholder".to_string());
+                        let now = chrono::Utc::now().timestamp() as u64;
+                        let body = format!(
+                            r#"{{"user_code":"{}","verification_uri":"https://platform.test/oauth-authorize?user_code={}","interval":1,"expired_in":{},"state":"{}"}}"#,
+                            uc, uc, now + 60, state_param
+                        );
+                        let resp = format!(
+                            "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{}",
+                            body.len(), body
+                        );
+                        sock.write_all(resp.as_bytes()).await.unwrap();
+                    } else if request_line.contains("POST /oauth/token") {
+                        let now = chrono::Utc::now().timestamp() as u64;
+                        let body = format!(
+                            r#"{{"status":"success","access_token":"{}","refresh_token":"{}","expired_in":{},"token_type":"Bearer"}}"#,
+                            at, rt, now + 3600
+                        );
+                        let resp = format!(
+                            "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{}",
+                            body.len(), body
+                        );
+                        sock.write_all(resp.as_bytes()).await.unwrap();
+                    } else {
+                        let _ = sock.write_all(b"HTTP/1.1 404 Not Found\r\nContent-Length: 0\r\nConnection: close\r\n\r\n").await;
+                    }
+                    sock.shutdown().await.ok();
+                }
+            }
+        });
+
+        struct MockDeviceProvider {
+            code_ep: String,
+            token_ep: String,
+        }
+        #[async_trait]
+        impl DeviceCodeProvider for MockDeviceProvider {
+            fn id(&self) -> &'static str { "minimax" }
+            fn display_name(&self) -> &str { "Mock MiniMax" }
+            fn code_endpoint(&self) -> &str { &self.code_ep }
+            fn token_endpoint(&self) -> &str { &self.token_ep }
+            fn client_id(&self) -> &str { "mock-client" }
+            fn scope(&self) -> &str { "group_id profile model.completion" }
+            fn region(&self) -> &str { "global" }
+        }
+        let provider = MockDeviceProvider {
+            code_ep: format!("{mock_base}/oauth/code"),
+            token_ep: format!("{mock_base}/oauth/token"),
+        };
+
+        let req = request_code(&provider).await.expect("request_code failed");
+        assert_eq!(req.authorization.user_code, user_code_returned);
+        assert!(req.authorization.verification_uri.contains("platform.test/oauth-authorize"));
+        assert_eq!(req.authorization.interval, 1);
+
+        let poll = poll_token(&provider, &req.authorization.user_code, &req.pkce.verifier)
+            .await
+            .expect("poll_token failed");
+        match poll {
+            TokenPoll::Success { access_token, refresh_token, expired_in, .. } => {
+                assert_eq!(access_token, access_token_returned);
+                assert_eq!(refresh_token, refresh_token_returned);
+                let now = chrono::Utc::now().timestamp() as u64;
+                assert!(expired_in > now);
+            }
+            _ => panic!("expected Success, got {poll:?}"),
+        }
+
+        let dir = tempfile::tempdir().unwrap();
+        let mgr = AuthManager::with_store(TokenStore::with_base(dir.path().to_path_buf()));
+        let token = match poll_token(&provider, &req.authorization.user_code, &req.pkce.verifier).await.unwrap() {
+            TokenPoll::Success { access_token, refresh_token, expired_in, token_type, .. } => {
+                DeviceToken {
+                    access_token,
+                    refresh_token,
+                    expired_in,
+                    token_type: token_type.unwrap_or_else(|| "Bearer".into()),
+                    resource_url: None,
+                }
+            }
+            _ => panic!("expected Success on second poll"),
+        };
+        let oauth = device_token_to_oauth(&token);
+        mgr.store.save("minimax", &oauth).unwrap();
+        let loaded = mgr.current_token("minimax").unwrap();
+        assert_eq!(loaded.access_token, access_token_returned);
+        assert!(!loaded.is_expired());
+
+        let _ = mock_task;
+    }
+
+
+    /// W14.4 — `--no-browser` mode (auto_open_browser=false, non_interactive=false)
+    /// 검증: browser open 안 함 + polling + save 진행. user 가 직접 URL 을
+    /// browser 에 paste 한 시나리오.
+    #[tokio::test]
+    async fn login_minimax_device_no_browser_polling_saves() {
+        use crate::device_flow::{DeviceCodeProvider, poll_token, request_code, DeviceToken, TokenPoll};
         use async_trait::async_trait;
 
         let mock_server = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
