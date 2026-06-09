@@ -4,9 +4,11 @@ version.workspace = true
 edition.workspace = true
 license.workspace = true
 authors.workspace = true
-description = "Harness 5 components 공통 trait/struct"
+description = "Harness 5 components 공통 trait/struct + standard_ai_workflow 6 원칙 (W11)"
 
 [dependencies]
 serde = { workspace = true }
+serde_json = { workspace = true }
 anyhow = { workspace = true }
 thiserror = { workspace = true }
+chrono = { workspace = true }
