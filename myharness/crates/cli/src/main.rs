@@ -1,11 +1,14 @@
 //! myharness — yklee 의 개인 코딩 에이전트 CLI/TUI
 //!
-//! v1 MVP (TASK-005-1 W11):
-//! - subcommand: code <action>, env <action>, git <action>, ask, loop, task <start|end>
+//! v1 MVP (TASK-005-1 W13):
+//! - subcommand: code <action>, env <action>, git <action>, ask, loop, task <start|end>, auth <login|logout|status>
 
 use std::sync::Arc;
 
 use clap::{Parser, Subcommand};
+use myharness_auth::{
+    find_provider, AuthManager, AuthStatus, LoginOutcome, OAUTH_PROVIDERS,
+};
 use myharness_core::{
     EventLog, HandoffDoc, PermissionMode, PermissionPolicy, RiskKind, TaskEndReport,
     TaskStartReport, TaskStatus,
@@ -49,15 +52,15 @@ enum Cmd {
     Env { #[command(subcommand)] action: EnvAction },
     Git { #[command(subcommand)] action: GitAction },
     Ask { question: String },
-    /// standard_ai_workflow 호환 task 관리
     Task { #[command(subcommand)] action: TaskAction },
-    /// handoff 생성 (다음 세션/agent 전달용)
     Handoff {
         #[arg(long)]
         from: String,
         #[arg(long)]
         to: String,
     },
+    /// OAuth 인증 (W13) — MiniMax / OpenAI / Google
+    Auth { #[command(subcommand)] action: AuthAction },
 }
 
 #[derive(Subcommand, Debug)]
@@ -100,6 +103,31 @@ enum TaskAction {
     },
 }
 
+#[derive(Subcommand, Debug)]
+enum AuthAction {
+    /// OAuth 로그인 (browser 자동 open + local callback server)
+    Login {
+        /// provider id: minimax | openai | google
+        provider: String,
+        /// OAuth callback port (default 0 = OS 자동 할당)
+        #[arg(long, default_value_t = 0)]
+        port: u16,
+        /// headless 환경 — browser open 안 하고 URL 만 print
+        #[arg(long)]
+        no_browser: bool,
+    },
+    /// OAuth 토큰 삭제
+    Logout {
+        provider: String,
+    },
+    /// 현재 OAuth 토큰 상태 확인
+    Status {
+        provider: String,
+    },
+    /// 등록된 OAuth provider 목록
+    List,
+}
+
 fn main() -> anyhow::Result<()> {
     tracing_subscriber::fmt()
         .with_env_filter(
@@ -114,28 +142,21 @@ fn main() -> anyhow::Result<()> {
     let policy = PermissionPolicy::new(parse_permission_mode(&args.mode))
         .with_auto_approve(args.yes);
 
-    tracing::info!(mode = %mode, policy = ?policy.mode, "myharness v0.1.0 (W11)");
+    tracing::info!(mode = %mode, policy = ?policy.mode, "myharness v0.1.0 (W13)");
 
     let rt = tokio::runtime::Runtime::new()?;
     let _guard = rt.enter();
 
     match args.cmd {
-        Some(Cmd::Task { action }) => {
-            return run_task(action);
-        }
-        Some(Cmd::Handoff { from, to }) => {
-            return run_handoff(from, to);
-        }
+        Some(Cmd::Task { action }) => return run_task(action),
+        Some(Cmd::Handoff { from, to }) => return run_handoff(from, to),
+        Some(Cmd::Auth { action }) => return rt.block_on(run_auth(action)),
         _ => {}
     }
 
     let orch = Orchestrator::new()
         .with_tools(Arc::new(ToolRegistry::default_tools()));
-    // W12 (D-50): MINIMAX_API_KEY env 가 있으면 OpenAiCompatProvider 로 real API client.
-    // 없으면 fallback MockClient (기존 v1 동작).
     let llm: Arc<dyn LLMClient> = if let Ok(api_key) = std::env::var("MINIMAX_API_KEY") {
-        // D-50: MINIMAX_API_HOST env 로 endpoint override (예: CN 사용자 `https://api.minimaxi.com/v1`)
-        // MINIMAX_MODEL env 로 default model override
         let base_url = std::env::var("MINIMAX_API_HOST")
             .unwrap_or_else(|_| "https://api.minimax.io/v1".into());
         let model = std::env::var("MINIMAX_MODEL").unwrap_or_else(|_| "MiniMax-M3".into());
@@ -195,7 +216,7 @@ fn main() -> anyhow::Result<()> {
             let out = rt.block_on(orch.run(&question))?;
             println!("{out}");
         }
-        Some(Cmd::Task { .. }) | Some(Cmd::Handoff { .. }) => unreachable!(),
+        Some(Cmd::Task { .. }) | Some(Cmd::Handoff { .. }) | Some(Cmd::Auth { .. }) => unreachable!(),
         None => match mode {
             "loop" => {
                 let goal = args.goal.unwrap_or_else(|| {
@@ -291,7 +312,6 @@ fn run_task_end(
     log.info(format!("task end: {id}"));
     let mut report = TaskEndReport::new(id, title, summary).with_status(TaskStatus::Done);
     for r in risks {
-        // risk format: "kind:description" (kind=environment|context|dependency|general)
         if let Some((kind, desc)) = r.split_once(':') {
             let rk = match kind {
                 "environment" => RiskKind::Environment,
@@ -305,8 +325,6 @@ fn run_task_end(
         }
     }
     for f in follow_up {
-        // follow_up format: "id|title|description" (| 가독성 ↑). 또는 "id:title:description"
-        // | 가 있으면 splitn(3, '|'), 아니면 ':' 로 시도
         let (id, title, desc) = if f.contains('|') {
             let parts: Vec<&str> = f.splitn(3, '|').collect();
             (parts[0].to_string(), parts[1].to_string(), parts.get(2).unwrap_or(&"").to_string())
@@ -326,4 +344,72 @@ fn run_handoff(from: String, to: String) -> anyhow::Result<()> {
     let h = HandoffDoc::new(from, to);
     println!("{}", h.to_korean());
     Ok(())
+}
+
+async fn run_auth(action: AuthAction) -> anyhow::Result<()> {
+    match action {
+        AuthAction::List => {
+            println!("registered OAuth providers:");
+            for p in OAUTH_PROVIDERS.iter() {
+                println!("  - {} ({}) — authorize={}, token={}", p.id(), p.display_name(), p.authorize_endpoint(), p.token_endpoint());
+            }
+        }
+        AuthAction::Login { provider, port, no_browser } => {
+            let p = find_provider(&provider)
+                .ok_or_else(|| anyhow::anyhow!("provider '{provider}' not found (try `myharness auth list`)"))?;
+            let mgr = AuthManager::new().map_err(|e| anyhow::anyhow!("{e}"))?;
+            let effective_port = if port == 0 { 0 } else { port };
+            let outcome = mgr.login(p.clone(), !no_browser, effective_port).await.map_err(|e| anyhow::anyhow!("{e}"))?;
+            print_login_outcome(&outcome);
+        }
+        AuthAction::Logout { provider } => {
+            let mgr = AuthManager::new().map_err(|e| anyhow::anyhow!("{e}"))?;
+            mgr.logout(&provider).map_err(|e| anyhow::anyhow!("{e}"))?;
+            println!("logged out: {provider}");
+        }
+        AuthAction::Status { provider } => {
+            let mgr = AuthManager::new().map_err(|e| anyhow::anyhow!("{e}"))?;
+            let s = mgr.status(&provider).map_err(|e| anyhow::anyhow!("{e}"))?;
+            print_auth_status(&s);
+        }
+    }
+    Ok(())
+}
+
+fn print_login_outcome(o: &LoginOutcome) {
+    println!("provider: {}", o.provider);
+    if o.token.access_token.is_empty() {
+        // non-interactive — URL 만 return
+        println!("\nTo complete login, open this URL in your browser:\n  {}\n", o.auth_url);
+    } else {
+        println!("login success");
+        println!("  access_token: {}...", &o.token.access_token.chars().take(8).collect::<String>());
+        if let Some(rt) = &o.token.refresh_token {
+            println!("  refresh_token: {}...", &rt.chars().take(8).collect::<String>());
+        }
+        if let Some(exp) = o.token.expires_at {
+            println!("  expires_at: {}", exp.format("%Y-%m-%dT%H:%M:%SZ"));
+        }
+        println!("\nToken saved to ~/.myharness/oauth/{}.toml", o.provider);
+    }
+}
+
+fn print_auth_status(s: &AuthStatus) {
+    println!("provider: {}", s.provider);
+    if s.has_token {
+        println!("  has_token: true");
+        if let Some(p) = &s.access_token_preview {
+            println!("  access_token_preview: {p}...");
+        }
+        println!("  refresh_token: {}", s.refresh_token_present);
+        if let Some(e) = s.expires_at {
+            println!("  expires_at: {}", e.format("%Y-%m-%dT%H:%M:%SZ"));
+        }
+        if let Some(sc) = &s.scope {
+            println!("  scope: {sc}");
+        }
+    } else {
+        println!("  has_token: false");
+        println!("  run `myharness auth {} login` to authenticate", s.provider);
+    }
 }
