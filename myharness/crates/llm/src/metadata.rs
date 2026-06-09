@@ -154,21 +154,36 @@ impl ProviderMetadata {
     }
 
     fn builtin_minimax() -> Self {
+        // D-50 (W12) — librarian 조사 결과로 갱신:
+        // - base_url: `https://api.minimax.io/v1` (글로벌, .io not .chat)
+        //   CN 사용자는 `MINIMAX_API_HOST=https://api.minimaxi.com/v1` env override 가능
+        // - default_model: `MiniMax-M3` (1M context, 2026-05-31 출시, coding SOTA)
+        // - tool_use: M3 + M2.x 모두 지원
+        // - vision: M3 만 지원
+        // - thinking: M3 는 toggle, M2.x 는 always on
         Self {
             id: ProviderId::Minimax,
             display_name: "MiniMax".into(),
             env_var: Some("MINIMAX_API_KEY".into()),
             keychain_service: "myharness:minimax".into(),
             keychain_account: "default".into(),
-            base_url: "https://api.minimax.chat/v1".into(),
-            default_model: "MiniMax-Text-01".into(),
-            available_models: vec!["MiniMax-Text-01".into()],
+            base_url: "https://api.minimax.io/v1".into(),
+            default_model: "MiniMax-M3".into(),
+            available_models: vec![
+                "MiniMax-M3".into(),
+                "MiniMax-M2.7".into(),
+                "MiniMax-M2.7-highspeed".into(),
+                "MiniMax-M2.5".into(),
+                "MiniMax-M2.5-highspeed".into(),
+                "MiniMax-M2.1".into(),
+                "MiniMax-M2".into(),
+            ],
             requires_key: true,
             kind: ProviderKind::OpenAiCompat,
             supports: ProviderCapabilities {
-                tool_use: false,
-                vision: false,
-                thinking: false,
+                tool_use: true,
+                vision: true,
+                thinking: true,
                 prompt_cache: false,
                 streaming: true,
             },
@@ -242,8 +257,14 @@ mod tests {
     fn minimax_registered_but_minimal() {
         let m = ProviderMetadata::builtin(ProviderId::Minimax);
         assert!(m.requires_key);
-        // base_url 은 D-28 TBD — 현재 가정값
-        assert!(m.base_url.starts_with("http"));
+        // D-50: librarian 조사 결과로 업데이트
+        assert_eq!(m.base_url, "https://api.minimax.io/v1");
+        assert_eq!(m.default_model, "MiniMax-M3");
+        assert!(m.supports.tool_use);
+        assert!(m.supports.vision);
+        assert!(m.supports.thinking);
+        assert!(m.supports.streaming);
+        assert_eq!(m.env_var.as_deref(), Some("MINIMAX_API_KEY"));
     }
 
     #[test]
