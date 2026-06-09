@@ -37,7 +37,10 @@ pub mod registry;
 pub mod router;
 pub mod scan_local;
 
-pub use add_local::{ModelInfo, RegisterError, RegisterReport, probe_local_models, register_local_provider};
+pub use add_local::{
+    ModelInfo, RegisterError, RegisterReport, probe_local_models, register_local_provider,
+    register_local_provider_non_interactive,
+};
 pub use auth_keyring::{KeyringAuthStore, KeyringBackend};
 pub use auth_state::{AuthState, AuthStatus};
 pub use auth_store::{AuthStore, AuthStoreError, InMemoryAuthStore};
