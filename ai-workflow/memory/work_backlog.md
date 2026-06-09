@@ -33,7 +33,7 @@
 - [x] **TASK-008**: Provider fallback 결정 — **`provider-auto-config` skill** (D-38). 하드코딩 fallback 폐기, 동적 discovered list
 
 ### In Progress
-- [ ] **TASK-005-1** (v1.0 MVP, Rust 빌드) — W3~W6.5 완료 + dual-remote push (D-44). W7 대기.
+- [ ] **TASK-005-1** (v1.0 MVP, Rust 빌드) — W3~W6.5 완료 + W7 완료 (D-43, D-45) + dual-remote push (D-44, D-45). W8 context 진입 대기.
 
 ### Planned (다음 세션)
 - [x] prerequisite 5건 설치
@@ -50,7 +50,8 @@
 - [x] Gitea PAT 설정 (myharness-cli, D-44) ✅
 - [x] GitHub upstream 추가 (D-20, D-44) ✅
 - [x] 9 commit dual push (Gitea + GitHub, D-44) ✅
-- [ ] W7 llm crate 진입 (rig-core 0.38 + Anthropic provider)
+- [x] W7 llm crate (rig-core 0.38 + 6 provider + auth + discover + chain + router) (D-45) ✅
+- [x] W7 5 commit dual push (D-45) ✅
 - [ ] W8 context (CLAUDE.md + memory + /compact Layer 1)
 - [ ] W9 compression (Layer 1)
 - [ ] W10 tui shell + sub-agent 1-2개
@@ -86,6 +87,11 @@
 | D-37 | **TASK-007 결정: headroom v1 1안 유지** (3 알고리즘) | §11.1 |
 | D-38 | **TASK-008 결정: provider-auto-config skill** (동적 발견 + per-provider auth) | §5.5, §11.3 |
 | **D-39** | **세션 마무리: handoff + backlog + state 갱신** | — |
+| **D-41** | **TASK-005-1 환경 검증 완료** (W0-1 + W0-2) | — |
+| **D-42** | **config 포맷 = TOML 통일** (config.yaml → config.toml) | §5.12, §5.5 |
+| **D-43** | **TASK-005-1 W3~W6.5 완료** (tools crate 63 tests) | — |
+| **D-44** | **dual-remote 적용** (Gitea + GitHub) | D-20 |
+| **D-45** | **TASK-005-1 W7 완료** (myharness-llm crate v1, 87 tests) | §5.5 |
 
 ## 5. 관련 문서 (SSOT)
 

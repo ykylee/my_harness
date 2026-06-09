@@ -4,7 +4,7 @@
 - Scope: current focus, task status, key changes, next actions, risks
 - Audience: yklee, Mavis orchestrator, .MiniMax 워커 에이전트
 - Status: active
-- Updated: 2026-06-09 (D-44, dual-remote 적용 — Gitea PAT + GitHub upstream + 9 commit 양쪽 push)
+- Updated: 2026-06-09 (D-45, TASK-005-1 W7 완료 — myharness-llm crate v1 + 5 commit dual-push)
 - Related docs: [Project Profile](../../docs/PROJECT_PROFILE.md), [Work Backlog](./work_backlog.md), [State Cache](./state.json), [CONCEPT.md](../../docs/CONCEPT.md) (SSOT)
 
 ## Current Focus
@@ -13,13 +13,12 @@
   - **TASK-005**: Rust 1안 (D-36) — ratatui + rig-core + rmcp + keyring + cargo-dist
   - **TASK-006**: ratatui + crossterm (D-36, TASK-005 종속)
   - **TASK-007**: headroom v1 = 3 알고리즘 (CacheAligner + ContentRouter + SmartCrusher + CodeCompressor) (D-37). CCR + Kompress-base v1.5+
-  - **TASK-008**: provider-auto-config skill (D-38) — 하드코딩 fallback 폐기, 동적 discovered list + per-provider auth
+  - **TASK-008**: provider-auto-config skill (D-38) — 하드코딩 fallback 폐기, 동적 discovered list + per-provider auth (D-45 에서 v1 simple 구현)
   - **TASK-002**: ⏸ 보류 (yklee 인프라 정보 의존)
-- **TASK-005-1 (D-43 → D-44)**: W3~W6.5 (tools crate) 완료 ✅ → Gitea push ✅ → GitHub upstream push ✅ (D-44 dual-remote 적용)
-- **W3~W6.5 산출물**: myharness-tools crate — 5 tool (Read/Write/Edit/Bash/Grep/Glob) + 4 permission mode (default/acceptEdits/plan/bypassPermissions) + 9 위험 패턴 sanitizer (Strict/Permissive/Off) + JSON Schema (schemars 1.2) + 5 provider wire format (Anthropic/OpenAI/DeepSeek/Ollama/llama.cpp/litellm). 63 tests passed.
-- **9 commit**: 3f0c9cb, d8e68e1, a6a014c, d371586, ec1f704, daf566f, d5264b6, 25a60e0, dfc9d93 → Gitea origin push
-- **PAT 보류**: Gitea PAT 미설정. 다음 세션 yklee 제공 시 credential store + GitHub upstream 추가.
-- **다음: W7 (llm crate 진입)** — rig-core 0.38 + Anthropic provider. ANTHROPIC_API_KEY absent → mock test 위주.
+- **TASK-005-1 (D-43 → D-44 → D-45)**: W3~W6.5 (tools crate) + W7 (llm crate) 완료 ✅
+- **W7 산출물 (D-45)**: myharness-llm crate — 6 provider enum + ProviderRegistry + LLMClient trait + rig-core 0.38 Anthropic/Gemini wrapper + OpenAI 호환 (DeepSeek/Ollama/local-llm) wrapper + MockClient + AuthState/AuthStatus + InMemory/Keyring AuthStore (libsecret 부재 graceful fallback) + provider-auto-config discover (env+keychain+local scan) + ActiveProviderChain + FallbackRouter (cascade + per-provider status + retry policy). 87 tests pass. release 빌드 성공.
+- **W7 5 commit**: 29052ad (W7.1) → 9212a2c (W7.2) → bcabf94 (W7.3) → f917326 (W7.4) → 7264589 (W7.5) → Gitea origin push → GitHub upstream push
+- **다음: W8 (context)** — CLAUDE.md + memory + /compact Layer 1
 
 ## Work Status
 
@@ -68,12 +67,15 @@
 - [x] **TASK-005-1 환경 검증 (D-41)** ✅
 - [x] **W2~W6.5 (D-43)** — tools crate 5 tool + 4 permission + 9 sanitizer + JSON schema + 5 provider wire format ✅
 - [x] **Gitea push** ✅ (9 commit, 3f0c9cb~dfc9d93)
-- [ ] **Gitea PAT 설정** (다음 세션, yklee 제공)
-- [ ] **W7 (llm crate 진입)** — rig-core 0.38 + Anthropic provider (ANTHROPIC_API_KEY absent → mock test)
-- [ ] **ANTHROPIC_API_KEY 주입 시 LLM E2E 테스트**
+- [x] **dual-remote push (D-44)** ✅
+- [x] **W7 (D-45)** — myharness-llm crate v1 (6 provider + LLMClient + rig-core wrap + auth + discover + chain + router) ✅
+- [x] **W7 dual-remote push (D-45)** ✅
+- [ ] **Gitea PAT 설정** (다음 세션, yklee 제공) — 기존 D-44 에서 적용됨, 회전 권고
+- [ ] **W8 (context)** — CLAUDE.md + memory + /compact Layer 1
+- [ ] **ANTHROPIC_API_KEY 주입 시 LLM E2E 테스트** (real-anthropic ignored test 활성화)
 - [ ] **§5.6 Layer 1 구현** (필수 자동 압축) — token budget 추적 + auto truncate/summarize + /compact
 - [ ] **§5.12 디렉토리 자동 생성** (v1 first run 시) — `~/.myharness/{config,state,memory,handoff,compression,sub-agents}/` + `state.json` + `auth/`
-- [ ] **Phase 1 of provider-auto-config** — 6 provider 정적 등록 + Anthropic API key (env → keychain) + Ollama local detect
+- [ ] **Phase 1 of provider-auto-config** — D-45 W7 에서 v1 simple 구현. v1.5+ 에서 정식 + marketplace.
 - [ ] **TASK-002 (도메인별 명령)** — yklee 인프라 정보 수령 후 (SSH 별칭 / Brewfile / dotfiles / 런타임 버전) 진행
 - [ ] **헤로쿠 / Synology NAS 인프라 검증** — yklee 가 인프라 정보 입력 시점에 작업
 
@@ -90,5 +92,5 @@
 - **yklee 비밀번호 / 토큰 값**: 메모리/문서/git 저장 금지 (D-06 정책). 회전 시 Mavis 가 매번 새로 전달.
 - **TASK-005-1 Prerequisite 5건 미설치**: libsecret-1-dev + gnome-keyring (Linux keychain backend), 5 cross-compile target (rustup), cargo-dist + cargo-binstall, ANTHROPIC_API_KEY (env or keyring), serde_yaml→serde_yml 전환. 설치 후 cargo init 진행.
 - **Gitea PAT 미설정 (D-43)**: yklee 가 다음 세션에서 PAT 제공 시 credential store + GitHub upstream 추가 가능. credential helper 가 비어 있어 push 시 인증이 gh-cli 또는 ssh fallback 으로 처리된 것으로 보임 (정확한 메커니즘 미확인).
-- **ANTHROPIC_API_KEY absent (D-41 에서 식별)**: LLM E2E 테스트는 키 주입 후. W7 llm crate 는 mock test 위주로 진행.
-- **TASK-002 (도메인별 명령)**: yklee 인프라 정보 의존. v1 Rust 구현 단계 (tools crate 완료) 에 도달했으나 아직 인프라 정보 미수령.
+- **ANTHROPIC_API_KEY absent (D-41 에서 식별)**: LLM E2E 테스트는 키 주입 후. W7 llm crate 는 mock test 위주로 진행. D-45 에서 W7 완료 — KeyringAuthStore 도 libsecret 부재 환경 graceful fallback. ANTHROPIC_API_KEY 주입 시 real-anthropic ignored test 활성화 가능.
+- **TASK-002 (도메인별 명령)**: yklee 인프라 정보 의존. v1 Rust 구현 단계 (tools + llm crate 완료) 에 도달했으나 아직 인프라 정보 미수령.
