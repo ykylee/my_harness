@@ -4,11 +4,17 @@ version.workspace = true
 edition.workspace = true
 license.workspace = true
 authors.workspace = true
-description = "built-in 압축 (Layer 1 + Layer 2 의 3 알고리즘 stub)"
+description = "built-in 압축 (Layer 1 + Layer 2 의 6 알고리즘: CacheAligner, ContentRouter, SmartCrusher, CodeCompressor, CCR, Kompress-base)"
 
 [dependencies]
 serde = { workspace = true }
+serde_json = { workspace = true }
 anyhow = { workspace = true }
 thiserror = { workspace = true }
 tracing = { workspace = true }
-tree-sitter = { workspace = true }
+async-trait = { workspace = true }
+tokio = { workspace = true }
+myharness-llm = { path = "../llm" }
+
+[dev-dependencies]
+tempfile = "3"
