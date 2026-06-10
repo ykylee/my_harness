@@ -758,6 +758,12 @@ yklee 환경 검증: 다른 agent 도구 모두 `~/.<toolname>/` 컨벤션 (clau
 - v1: LLM Wiki 미구현. 기본 flat memory + handoff 만
 - TASK-005-2 (v1.5): LLM Wiki v1 — schema + lint 만
 - TASK-005-4 (v2.5): LLM Wiki v2 — full compile + cross-reference
+- **TASK-005-2 v1.5 (D-71)**: vault 위치 = **`~/wiki/`** (out-of-repo, Obsidian 직접 open). ai-workflow/ 와 관계 = **consumer** (raw/ai-workflow/ 로 sync, SSOT 아님). 상세: [architecture/DETAILED_DESIGN_LLM_WIKI.md](../architecture/DETAILED_DESIGN_LLM_WIKI.md)
+
+**SSOT 원칙 (R-4)**:
+- `CONCEPT.md` = single source of truth (이 문서)
+- `~/wiki/` = **derived** view. 위키 내용이 CONCEPT 와 drift 되지 않도록 wiki-lint 스킬 (ai-workflow/skills/wiki-lint/, v1.5) 가 양방향 검증.
+- mirror 아님 — wiki/ 의 결정·정책을 본 문서에 다시 반영할 필요 없음. 본 문서가 바뀌면 wiki/ 갱신은 lint 가 알림.
 
 ### 5.14 Skill/MCP first-class (D-33)
 

@@ -29,6 +29,10 @@ env/
 dist/
 build/
 
+# Rust / Cargo
+target/
+Cargo.lock.bak
+
 # Logs and temp
 *.log
 *.tmp

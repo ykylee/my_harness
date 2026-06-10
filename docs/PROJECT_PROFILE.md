@@ -39,6 +39,7 @@
 - 세션 인계 문서: `ai-workflow/memory/session_handoff.md`
 - 환경 기록 위치: `ai-workflow/memory/environments/`
 - 하네스 설정 예시: `MiniMax_config.example.json` → `.MiniMax/config.json` 으로 복사 후 사용
+- **Second brain vault (D-71)**: `~/wiki/` (Obsidian 직접 open, out-of-repo, ai-workflow consumer). 디자인: [./architecture/DETAILED_DESIGN_LLM_WIKI.md](./architecture/DETAILED_DESIGN_LLM_WIKI.md). 운영 규약: `~/wiki/AGENTS.md`
 
 ## 3. 기본 명령 (Commands)
 - 워크플로우 상태 동기화:
