@@ -505,7 +505,7 @@ mod tests {
         //    AuthManager::login 이 browser open + callback wait 까지 자동화.
         //    여기서는 manual: authorize URL 생성 → fake redirect → exchange.
         use crate::flow::build_authorize_url;
-        let redirect_uri = format!("http://127.0.0.1:0/callback");
+        let redirect_uri = "http://127.0.0.1:0/callback".to_string();
         let auth_req = build_authorize_url(&*provider, &redirect_uri);
         let expected = auth_req.state.clone();
 

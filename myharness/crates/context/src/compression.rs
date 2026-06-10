@@ -313,7 +313,7 @@ mod tests {
         // 6 자리 정밀도: 3.141593 (rounding)
         let v: serde_json::Value = serde_json::from_str(&out).unwrap();
         let x = v["x"].as_f64().unwrap();
-        assert!((x - 3.141593).abs() < 1e-6, "got {x}");
+        assert!((x - std::f64::consts::PI).abs() < 1e-6, "got {x}");
     }
 
     #[test]
