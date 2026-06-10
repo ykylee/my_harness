@@ -4,7 +4,7 @@
 - Scope: current focus, task status, key changes, next actions, risks
 - Audience: yklee, Mavis orchestrator, .MiniMax 워커 에이전트
 - Status: active
-- Updated: 2026-06-10 (D-69 v1.5 안정화 완료 — (1) tool name mismatch 통일 (LLM contract 정합, v1.5+ dispatch 준비, 26 곳 변경), (2) §5.12 init_home_dir() — 11개 디렉토리 자동 생성 (paths.rs +125, integration test 3), (3) clippy 핵심 5건 fix (PI + 4 should_implement_trait allow + 1 useless_format). 3 commit dual-push (6d2a3e8/4891bc6/767c71a). 437 tests pass / 0 fail / 2 ignored)
+- Updated: 2026-06-10 (D-70 v1.5 종료 선언 — v1.5 phase 완전 종료. 8 결정 (D-60~D-65 + D-69 + D-70). D-70 = v1.5.1 lint cleanup (21 style lint → 0 warning, 21 file / +94 -110). 1 commit dual-push (79f38b8). 437 tests pass / 0 fail / 2 ignored. cargo clippy --workspace --all-targets = 0 warning)
 - Related docs: [Project Profile](../../docs/PROJECT_PROFILE.md), [Work Backlog](./work_backlog.md), [State Cache](./state.json), [CONCEPT.md](../../docs/CONCEPT.md) (SSOT)
 
 ## Current Focus
@@ -124,6 +124,8 @@
   - **(1) tool name uppercase 통일** (LLM contract 정합, v1.5+ dispatch 준비) — tools/*.rs `impl Tool::name()` 의 소문자 (read/grep/glob/bash/edit/write) ↔ schema/tui 의 대문자 (Read/Grep/Glob...) mismatch. TUI `ToolRegistry::get("Read")` 시 None 반환할 latent bug (v1.5+ dispatch 활성화 시 발현). 26 곳 변경: 6 impl + registry test 8 + permission 7 + lib 1 + adapter 4 (`to_lowercase()` 제거). cargo test -p myharness-tools: 63/0 fail
   - **(2) §5.12 init_home_dir()** (CONCEPT §5.12 SSOT, D-31) — v1 first run 시 11개 디렉토리 자동 생성 (7 top-level: config/state/memory/handoff/compression/sub-agents/auth + state subdir state/auth + 2 추가: runtime/cache + root). cli main() 진입 시 호출, best-effort (filesystem 권한 실패 시 tracing::warn 후 계속). paths.rs +125 / 4 unit test + 3 integration test (serial_test env race 방지). 3/3 PASS
   - **(3) clippy 핵심 5건 fix** — (a) `context/compression.rs:316` PI 상수 (`std::f64::consts::PI`, deny level test 컴파일 차단 해소), (b) `should_implement_trait` 4 file `#[allow]` (의도적 `Option<Self>` 반환), (c) `useless_format` 1 line (auth/manager.rs:508). 잔여 21 style lint v1.5.1+ OOS
+- [x] **D-70 v1.5.1 lint cleanup (2026-06-10)** — 21 style lint → 0 warning. 자동 fix (cargo clippy --fix --allow-dirty) + manual fix (test code false positive 4 file: auth/manager.rs `AsyncWriteExt` + `TokenPoll`, llm/client_openai_compat.rs `Message`, tui/app.rs `Terminal` + closure type annotation `c: &ratatui::buffer::Cell`, tui/loop_mode.rs let-chain → nested if). 21 file / +94 -110. cargo clippy --workspace --all-targets = **0 warning**. 1 commit dual-push (79f38b8, Gitea + GitHub)
+- [x] **D-70 v1.5 종료 선언 (2026-06-10)** — v1.5 phase 완전 종료. 누적 8 결정 (D-60 W17 + D-61 W18 + D-62 W19-1/정정 + D-63 W20 + D-64 W21 + D-65 v1.5 1차 종료 + D-69 안정화 + D-70 lint cleanup). v1.5 누적: 17 신규 test + 4 code commit + 5 memory commit + 21 file lint cleanup + 437 tests / 0 fail / 2 ignored
 - [ ] **TASK-005-2 v2.0 다음 후보** — Plugin 4-계층 (큰 사이클, auto memory + provider-auto-config + marketplace) / Kompress-back (low priority) / 외부 blocker 해결 (TASK-002, Gitea PAT, OAuth, API key)
 - [ ] **MiniMax Device OAuth real flow** 검증 — yklee 가 MiniMax console 에서 device grant 활성화 후 `myharness auth login minimax --no-browser` 실행 (OpenClaw/Hermes 공통 client_id 78257093-7e40-4613-99e0-527b14b39113, W15.b 자동 refresh 도 real test 가능)
 - [ ] **OpenAI/Google 도 동일 패턴** (Authorization Code + PKCE, client_id 등록 후 검증)
