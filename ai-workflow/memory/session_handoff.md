@@ -4,7 +4,7 @@
 - Scope: current focus, task status, key changes, next actions, risks
 - Audience: yklee, Mavis orchestrator, .MiniMax 워커 에이전트
 - Status: active
-- Updated: 2026-06-10 (D-70 v1.5 종료 선언 — v1.5 phase 완전 종료. 8 결정 (D-60~D-65 + D-69 + D-70). D-70 = v1.5.1 lint cleanup (21 style lint → 0 warning, 21 file / +94 -110). 1 commit dual-push (79f38b8). 437 tests pass / 0 fail / 2 ignored. cargo clippy --workspace --all-targets = 0 warning)
+- Updated: 2026-06-10 (D-71 LLM Wiki v1.5 mass ingest 완료. wiki/ 49 페이지 + raw/ai-workflow/ 303 파일 mirror. 3 commit dual-push 58554c5+090ff11+e529bef. lint 0 error / 69 warn (의도된 false positive). 이전: D-70 v1.5 종료 — 8 결정 (D-60~D-65 + D-69 + D-70))
 - Related docs: [Project Profile](../../docs/PROJECT_PROFILE.md), [Work Backlog](./work_backlog.md), [State Cache](./state.json), [CONCEPT.md](../../docs/CONCEPT.md) (SSOT)
 
 ## Current Focus

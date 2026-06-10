@@ -1,6 +1,6 @@
 {
   "schema_version": "1",
-  "generated_at": "2026-06-09",
+  "generated_at": "2026-06-10",
   "source_of_truth": {
     "project_profile_path": "docs/PROJECT_PROFILE.md",
     "session_handoff_path": "ai-workflow/memory/session_handoff.md",
@@ -34,7 +34,8 @@
       "D-67 v2.0 tract Commit 1 (2026-06-10) — tract 0.23.0 (Pure Rust, Sonos production) 로 전환. 1차 cargo build 즉시 통과 (D-66 lesson). `ModelManager` skeleton 5 L1 / 0 fail. binary 13MB 유지",
       "D-68 v2.0 tract Commit 2 abort (2026-06-10) — actual `embed()` inference 시도 후 5+ error 누적. tract 0.23 API 한계. 변경 모두 revert. v2.0 ONNX 백로그 OOS 유지",
       "D-69 v1.5 안정화 (2026-06-10) — (1) tool name uppercase 통일 (LLM contract 정합, v1.5+ dispatch 준비, 26 곳 변경), (2) §5.12 init_home_dir() — 11개 디렉토리 자동 생성 (paths.rs +125, integration test 3), (3) clippy 핵심 5건 fix (PI + 4 should_implement_trait allow + 1 useless_format). 3 commit dual-push. 437 tests pass / 0 fail / 2 ignored",
-      "D-70 v1.5.1 lint cleanup (2026-06-10) — 21 style lint → 0 warning (collapsible_if 7 + redundant_clone 2 + match simplified 1 + link reference 1 + others 10). 21 file / +94 -110. 자동 fix + manual fix (test code false positive 4 file 복구). cargo clippy --workspace --all-targets = 0 warning. 437 tests / 0 fail 회귀 없음"
+      "D-70 v1.5.1 lint cleanup (2026-06-10) — 21 style lint → 0 warning (collapsible_if 7 + redundant_clone 2 + match simplified 1 + link reference 1 + others 10). 21 file / +94 -110. 자동 fix + manual fix (test code false positive 4 file 복구). cargo clippy --workspace --all-targets = 0 warning. 437 tests / 0 fail 회귀 없음",
+      "D-71 LLM Wiki v1.5 mass ingest (2026-06-10) — 49 wiki pages + 303 raw files. 3 commit dual-push (58554c5+090ff11+e529bef). lint 0/69/0. vault = `~/wiki/` Gitea private, Keychain 자동. 다음: query 운영 (사용자가 Obsidian graph view 진입) + 주기적 lint"
     ],
     "blocked_items": [
       "TASK-002: 도메인별 명령 가이드 (yklee 인프라 정보 의존)",
@@ -230,6 +231,12 @@
         "decision": "TASK-005-2 v1.5 종료 선언 (2026-06-10) — v1.5 phase 완전 종료. **v1.5 누적 결정 8개**: D-60 (W17 비대화형 add-local) + D-61 (W18 R-4 backup + Confirm + --yes) + D-62 (W19-1 AuthStore 주입 + W17 누락분 정정) + D-63 (W20 Ollama native cascade) + D-64 (W21 sha256_8 + sort fix) + D-65 (v1.5 1차 종료) + D-69 (안정화 3 작업) + **D-70 (v1.5.1 lint cleanup)**. **D-70 작업**: cargo clippy --workspace --all-targets 결과 21 style lint 모두 정리. (1) **자동 fix 처리** (15+건): unused_imports 5 (auth/{flow,manager,store}.rs, context/budget.rs, llm/lib.rs:18) + needless_borrows 2 (cli/refreshing_client.rs, llm/paths.rs) + redundant_clone 2 (std::slice::from_ref) + manual_pattern_char_comparison 1 + len_zero 2 (&& 체이닝) + useless_format 1 + derivable_impls 1 (impl Default → #[derive(Default)]) + redundant_clone 2. (2) **manual fix** (7건): non_binding_let_on_future 3 (let _ = mock_task → drop(mock_task)) + manual_clamp 1 (max(1).min(10) → clamp(1, 10)) + collapsible_if 6 (let-else / nested if 유지 / #[allow] for fn resolve_llm_client) + match simplified 1 (match unwrap_or_default) + link reference 1 (intra-doc link) + unused_assignments 1. (3) **test code false positive 복구** 4 file: auth/src/manager.rs 의 `tokio::io::AsyncWriteExt` + `TokenPoll`, llm/src/client_openai_compat.rs 의 `Message`, tui/src/app.rs 의 `Terminal` + closure type annotation, tui/src/loop_mode.rs 의 let-chain → nested if (stable Rust 1.94 let_chains unstable). **검증**: cargo clippy --workspace --all-targets = **0 warning**, cargo test --workspace = 437 / 0 fail / 2 ignored, 1 commit dual-push (79f38b8, Gitea + GitHub), main = 79f38b8. **v1.5 phase 누적 성과**: 8 결정 + 17 신규 test + 21 file lint cleanup + 4 commit code (W19-1 + W20 + W21 + D-70) + 4 commit memory (D-66~D-70) + 437 tests / 0 fail / 2 ignored. binary 13MB 유지. **v2.0 진입 결정 대기**: yklee 결정 시 (Plugin 4-계층 / Kompress-back / 외부 blocker 해결).",
         "ref": "D-70 (2026-06-10)",
         "section": "§6 (TASK-005-2 v1.5 phase 종료) + §11.3 (lint 안정화)"
+      },
+      {
+        "id": "D-71",
+        "decision": "LLM Wiki v1.5 (second brain vault) — `~/wiki/` Obsidian + Gitea. v1.5 = schema+lint only. 3 결정: (1) vault 위치 = `~/wiki/` (out-of-repo, Obsidian 직접 open, public repo 노출 회피), (2) v1.5 범위 = schema + lint (full compile v2.5 TASK-005-4 로 연기), (3) ai-workflow 관계 = consumer (raw/ai-workflow/ sync, SSOT 아님). 디자인 DETAILED_DESIGN_LLM_WIKI.md (§0~§11, 11 섹션, 결정 3 + 위험 7). lint L01~L10 (frontmatter, link, orphan, dup, stale, sources, 모순, index, log, 출처) — wiki-lint 스킬 구현 (stdlib only, 26/26 tests). session-start 확장 (wiki_vault_status.py, 13/13 tests, vault 발견 + lint 통합, 부재 시 graceful null). 49 wiki 페이지 (concepts 6, entities 18, topics 6, sources 15, comparisons 1, meta 1) + 303 raw 파일 (md 120, py 93, rs 75, toml 11, json 4 = 303, +5 .MiniMax agents) mass ingest. Gitea `yklee/wiki` private repo, Keychain 자동 인증 (osxkeychain helper), Obsidian Git plugin (autoCommit 30분, manual push). wiki-sync.sh + wiki-sync-ai-workflow.sh 2 helper. 3 commit dual-push (58554c5 design, 090ff11 wiki-lint, e529bef session-start). vault = derived, CONCEPT.md = SSOT (R-4).",
+        "ref": "D-71 (2026-06-10)",
+        "section": "§5.13 (LLM Wiki memory v1.5) + §11.2 (second brain 패턴)"
       }
     ],
     "deferred": [
@@ -333,23 +340,23 @@
   },
   "next_documents": [
     "docs/CONCEPT.md",
-    "docs/development_log.md",
     "docs/PROJECT_PROFILE.md",
-    "docs/references/README.md",
-    "docs/skills/provider-auto-config/SKILL.md",
+    "docs/architecture/DETAILED_DESIGN_LLM_WIKI.md",
     "ai-workflow/memory/session_handoff.md",
     "ai-workflow/memory/work_backlog.md",
     "ai-workflow/memory/state.json",
-    "ai-workflow/memory/backlog/2026-06-09.md"
+    "ai-workflow/skills/session-start/SKILL.md",
+    "ai-workflow/skills/wiki-lint/SKILL.md"
   ],
   "next_actions": [
-    "TASK-005-2 v2.0 진입 결정 — yklee 결정 시. 후보: (1) ONNX 3-commit (ort + CCR semantic + Kompress ONNX) / (2) Plugin 4-계층 (큰 사이클) / (3) Kompress-back (low priority)",
-    "MiniMax Device OAuth real flow: yklee 가 MiniMax console 에서 device grant 활성화 후 `myharness auth login minimax --no-browser` 실행 (OpenClaw/Hermes 공통 client_id 78257093-7e40-4613-99e0-527b14b39113, W15.b 자동 refresh 도 real test 가능)",
-    "OpenAI/Google 도 동일 패턴 (Authorization Code + PKCE, client_id 등록 후)",
+    "D-71 후속: (1) Obsidian graph view 진입 (사용자) — 49 wiki page 그래프 가시화, (2) 주기적 `wiki-lint` (autoCommit 후 Obsidian 안에서) + `_lint/report_*.md` 검토, (3) 다음 ingest 시 `wiki-sync-ai-workflow.sh` raw/ 갱신",
+    "wiki/ 페이지 cross-reference 자동 보강 (L03/L08 false positive 해소) — 다음 세션의 query 시 LLM 이 [[link]] 자동 추가",
+    "TASK-005-2 v2.0 진입 결정 — yklee 결정 시. 후보: (1) ONNX 3-commit (D-66/67/68 abort 후 tract 안정화 대기) / (2) Plugin 4-계층 / (3) Kompress-back (low priority)",
+    "MiniMax Device OAuth real flow: yklee 가 MiniMax console 에서 device grant 활성화 후 `myharness auth login minimax --no-browser`",
+    "OpenAI/Google 도 동일 패턴 (client_id 등록 후)",
     "ANTHROPIC_API_KEY 주입 시 LLM E2E 테스트 (real-anthropic ignored test 활성화)",
-    "§5.12 디렉토리 자동 생성 (v1 first run 시)",
     "TASK-002 (도메인별 명령): yklee 인프라 정보 수령 시 진행",
-    "Gitea PAT 회전 (이전 세션 노출)"
+    "Gitea PAT 회전"
   ],
   "repository_assessment": {
     "path": null,
