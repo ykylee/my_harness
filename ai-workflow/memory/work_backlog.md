@@ -4,7 +4,7 @@
 - 범위: 전체 태스크 목록, 우선순위, 진행 상태, 날짜별 기록 연결
 - 대상 독자: 개발자, AI 에이전트, 프로젝트 매니저
 - 상태: stable
-- 최종 수정일: 2026-06-10 (D-65 TASK-005-2 v1.5 종료 선언 + **D-66 v2.0 ONNX Commit 1 abort** — ort ecosystem 2026-06 unstable. 1.x 전부 yanked, 2.0.0-rc.9/10/12 모두 빌드 깨짐. v1.5 종료 + v2.0 abort)
+- 최종 수정일: 2026-06-10 (D-65 TASK-005-2 v1.5 종료 + **D-67 v2.0 tract Commit 1** — tract 0.23 Pure Rust + Sonos production. 1차 build 통과. ModelManager skeleton 5 L1 / 0 fail. binary 13MB 유지)
 - 관련 문서: [세션 인계](./session_handoff.md), [프로젝트 프로필](../../docs/PROJECT_PROFILE.md), [CONCEPT.md](../../docs/CONCEPT.md)
 
 ## 1. 운영 원칙
@@ -99,7 +99,8 @@
 - [x] **D-64 W21 F-1+F-2 통합** (2026-06-10) — hash8 (sha256 8-char) util + backup filename `<ts>.<sha256_8>` + cleanup_old_backups sort bug fix. 4 L1 test (TC-W21-001/002/003/004) PASS, 117 llm + 10 w16_add_local + 3 hash8 = 130 / 0 fail
 - [x] **D-65 TASK-005-2 v1.5 종료 선언** (2026-06-10) — v1.5 phase 완전 종료. 5 사이클 + D-62 + 14 신규 test / 0 fail. ONNX v2.0 Planning 으로 연기. binary 13MB 유지
 - [x] **D-66 v2.0 ONNX Commit 1 abort** (2026-06-10) — ort ecosystem unstable (1.x yanked, 2.0.0-rc.9/10/12 빌드 깨짐). 코드/Cargo.toml 모두 revert. v2.0 ONNX 백로그 OOS. **lesson**: ecosystem stability SSOT — library 분석 시 실제 cargo build 검증 필수
-- [ ] **TASK-005-2 v2.0 다음 후보** — yklee 결정 시. 후보: Plugin 4-계층 (큰 사이클) / Kompress-back (low priority) / tract (Pure Rust, ONNX 대안)
+- [x] **D-67 v2.0 tract Commit 1** (2026-06-10) — tract 0.23 (Pure Rust, Sonos production) 전환. 1차 build 통과. ModelManager skeleton 5 L1 / 0 fail. binary 13MB 유지
+- [ ] **TASK-005-2 v2.0 tract Commit 2** — actual `ModelManager::embed()` inference (tokenization + tract run + Runnable 보관 API)
 - [ ] yklee MiniMax Device OAuth real flow 검증 — yklee 가 MiniMax console 에서 device grant 활성화 후 `myharness auth login minimax --no-browser` 실행 (OpenClaw/Hermes 공통 client_id 사용, W15.b 자동 refresh 도 real test 가능)
 - [ ] yklee OpenAI/Google OAuth client_id 등록 후 동일 패턴 검증 (OpenAI: `platform.openai.com` OAuth Apps, Google: Google Cloud Console Credentials OAuth 2.0 Client IDs)
 - [ ] **TASK-005-3** (v2.0) — TUI/IDE/Web hand-off (5 surfaces) + Routines + OAuth + MCP-based discover
@@ -160,6 +161,7 @@
 | **D-64** | **TASK-005-2 W21 F-1+F-2 통합 (2026-06-10)** — `hash8::content_hash_8(content)` SHA-256 8-char util (sha2=0.10, auth crate 재사용, 새 dep 불요). backup filename = `<base>.backup.<ts>.<sha256_8>`. **WHY (3 risk)**: (1) R-5-A 동일 second 내 rapid register 시 backup filename 동일 → 앞 backup 덮어쓰기. (2) R-5-B backup file 식별 불가 (content fingerprint 없음). (3) `cleanup_old_backups` 의 string sort 가 `backup.999` < `backup.10000` 거꾸로 retention. **해결**: hash8 으로 collision 방지 + content 식별. `cleanup_old_backups` 의 sort: `parse unix_ts` numeric sort (string sort → numeric parse on unix_ts). **L1 test 4개**: TC-W21-001 (filename 형식) + 002 (numeric sort) + 003 (sub-second 모두 보존, sleep 없이) + 004 (동일 content 동일 hash). W18 sleep(1100ms) 불요해지지만 back-compat. 117 llm + 10 w16_add_local + 3 hash8 = 130 / 0 fail, cargo build/clippy OK | §5.5 + §6.3 (DD-AddLocal) |
 | **D-65** | **TASK-005-2 v1.5 종료 선언 (2026-06-10)** — v1.5 phase 누적: W17 (D-60, 비대화형 add-local) + W18 (D-61, R-4 backup + Confirm + --yes) + D-62 (W17 누락분 정정) + W19-1 (AuthStore 주입) + W20 (Ollama cascade) + W21 (sha256_8 + sort fix). 누적 test 14 신규 / 0 fail. **v1.5 build phase 완전 종료**. **ONNX 통합 v2.0 Planning 으로 연기** — Initial_design.tt-3 의 '+10-30MB v1.5+' 의도 따름, ort C++ build dep 회피, binary 13MB 유지, Layer 2 opt-in rule-based fallback 으로 기능적 gap 없음. **v2.0 후보 (yklee 결정)**: (1) ONNX 3-commit, (2) Plugin 4-계층, (3) Kompress-back | §6 (TASK-005-2 v1.5 phase) + §11.3 (TT-3 binary size) |
 | **D-66** | **TASK-005-2 v2.0 ONNX Commit 1 abort (2026-06-10)** — ort ecosystem 2026-06 unstable. ort 1.x (1.13.1, 1.16.3) **전부 yanked** (cargo download 불가). ort 2.0.0-rc.9 (Nov 2024), 2.0.0-rc.10 (Jun 2025), 2.0.0-rc.12 (Mar 2026) 모두 빌드 깨짐 — rc.12 는 ureq 3.1 API 변경 (`tls_config` method 없음, `download-binaries` build script 실패), rc.10/9 는 fn pointer 에 `unwrap_or_else` 미구현으로 type annotation error 다수. **abort 결정**: 코드/Cargo.toml 모두 revert, v2.0 ONNX 백로그 OOS. **lesson**: ecosystem stability 는 SSOT (CONCEPT.md §11.3). library 분석 시 crates.io + lib.rs + **실제 cargo build 검증** 필수. library 보고만 의존 ❌. **차후 옵션**: tract (Pure Rust, ort보다 안정적) 검토 또는 ort 안정화 (1-2 RC 후) 까지 보류. v2.0 다음 후보: Plugin 4-계층 / Kompress-back | §11.3 (ecosystem stability) + §6 (v2.0 backlog) |
+| **D-67** | **TASK-005-2 v2.0 tract Commit 1 (W23, 2026-06-10)** — **D-66 abort 후 tract 로 전환** — Pure Rust (no C++ toolchain), Sonos production 검증 (wake-word/ASR/LLM/TTS), 1차 cargo build 즉시 통과 (D-66 lesson). **WHY tract**: ort ecosystem 2026-06 unstable 의 대안, Apache 2.0/MIT dual ↔ myharness 호환. **Commit 1 scope**: `ModelManager` skeleton (OnceLock lazy + Send+Sync + `new()`/`get()` global + `ensure_downloaded` reqwest streaming + sha2 SHA256 verify + `load_runnable` `into_runnable()` verify). **Commit 1 한계**: Runnable(Arc<dyn trait>) type-safe 보관 어려움 → embed() Commit 2 stub. 5 L1 test PASS (cache_path/sha256_of_known_data/model_info_defaults/model_manager_new/embed_stub). 429 workspace tests / 0 fail. **binary size**: 13MB (release lto=thin 효과, dev profile 22-33MB). **다음 Commit 2**: actual `embed()` inference (tokenization + tract run + Runnable 보관 API 정착) | §6 (v2.0 backlog) + §11.3 (ecosystem stability) |
 
 ## 5. 관련 문서 (SSOT)
 
