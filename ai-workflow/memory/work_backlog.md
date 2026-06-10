@@ -101,7 +101,9 @@
 - [x] **D-66 v2.0 ONNX Commit 1 abort** (2026-06-10) — ort ecosystem unstable (1.x yanked, 2.0.0-rc.9/10/12 빌드 깨짐). 코드/Cargo.toml 모두 revert. v2.0 ONNX 백로그 OOS. **lesson**: ecosystem stability SSOT — library 분석 시 실제 cargo build 검증 필수
 - [x] **D-67 v2.0 tract Commit 1** (2026-06-10) — tract 0.23 (Pure Rust, Sonos production) 전환. 1차 build 통과. ModelManager skeleton 5 L1 / 0 fail. binary 13MB 유지
 - [x] **D-68 v2.0 tract Commit 2 abort** (2026-06-10) — tract 0.23 API 한계 (Tensor wrapper, Runnable mismatch). 5+ error 누적. 변경 모두 revert. v2.0 ONNX 백로그 OOS 유지
+- [x] **D-69 v1.5 안정화** (2026-06-10) — 3 작업: (1) tool name uppercase 통일 (LLM contract 정합, 26 곳), (2) §5.12 init_home_dir() (11개 디렉토리 자동 생성, paths.rs +125, integration test 3), (3) clippy 핵심 5건 fix (PI + 4 should_implement_trait allow + 1 useless_format). 3 commit dual-push (6d2a3e8/4891bc6/767c71a), 437 tests pass / 0 fail / 2 ignored
 - [ ] **TASK-005-2 v2.0 다음 후보** — Plugin 4-계층 / Kompress-back / 외부 blocker 해결
+- [ ] **v1.5.1+ 잔여 lint 정리** — 21 style lint (collapsible_if 9 + etc). 기능 영향 0, 다음 사이클
 - [ ] yklee MiniMax Device OAuth real flow 검증 — yklee 가 MiniMax console 에서 device grant 활성화 후 `myharness auth login minimax --no-browser` 실행 (OpenClaw/Hermes 공통 client_id 사용, W15.b 자동 refresh 도 real test 가능)
 - [ ] yklee OpenAI/Google OAuth client_id 등록 후 동일 패턴 검증 (OpenAI: `platform.openai.com` OAuth Apps, Google: Google Cloud Console Credentials OAuth 2.0 Client IDs)
 - [ ] **TASK-005-3** (v2.0) — TUI/IDE/Web hand-off (5 surfaces) + Routines + OAuth + MCP-based discover

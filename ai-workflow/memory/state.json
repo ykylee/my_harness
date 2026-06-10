@@ -25,14 +25,15 @@
   },
   "session": {
     "current_baseline": "**TASK-005-2 v1.5 진입 + W18 backup (R-4 대응) 완료 (D-61, 2026-06-09) + D-62 W17 누락분 = 0건 정정 (2026-06-10)** — W18 = DD-AddLocal §10 신규 (R-4 직접 차단). 4 commit dual-push (feature/v15-add-local-backup, Gitea + GitHub) + W18 cherry-pick main 머지 cleanup (6e925a1) + handoff_D-61 누락분 복구 (91c1e34). 411 tests pass / 0 fail. main = W16 follow-up (140acf9) + W17 merge (336a766, 4 commit) + W18 5 commit (83fa0f7/5ad7021/b4b91ff/3d5a62d/6e925a1/91c1e34). **D-62 정정**: W18 정합성 cross-check 시 'W17 PR 누락분 = fn + TC-W17-001~003 + TC-W17-I01~I02 main 누락' 이라고 결론 내렸으나, 2026-06-10 git log main --grep='W17' 으로 main 직접 검증 시 W17 original 4 commit (766d1b6 register_local_provider_non_interactive, a46f480 TC-W17-I01+I02, f8082bc cli 4 flag, d09a6a1 spec+TC scaffold) 모두 main 머지 확인. cleanup commit (6e925a1) 가 W18 cherry-pick 중복 fn/test 만 제거하고 W17 본진은 유지. **→ W17 누락분 = 0건**, W18 cross-check 가 잘못된 결론.",
-    "current_axis": "**TASK-005-2 v2.0 tract Commit 2 abort (D-68, 2026-06-10)** — tract 0.23 API 의 `Tensor(Arc<InternalTensor>)` wrapper + `Runnable` vs `SimplePlan` mismatch + `plain_view::Tensor` method 가 다른 type 으로 만들어진 차이 등으로 5+ error 누적. 모든 변경 revert. v2.0 ONNX 백로그 OOS 유지. v2.0 다음: Plugin 4-계층 또는 외부 blocker 해결.",
-    "current_focus": "TASK-005-2 v2.0 tract Commit 2 abort (D-68). tract 0.23 API wrapper 한계. v2.0 ONNX 백로그 OOS 유지. 다음: Plugin 4-계층 또는 외부 blocker 해결. R-4 lesson 으로 모든 home-XDG-config-mutate binary test 의 격리 의무화.",
+    "current_axis": "**TASK-005-2 v1.5 안정화 (D-69, 2026-06-10)** — 3 작업 (tool name mismatch 통일 + §5.12 init_home_dir + clippy 핵심 5건 fix) 완료. 3 commit dual-push (6d2a3e8/4891bc6/767c71a). 437 tests pass / 0 fail / 2 ignored. main = 767c71a. v2.0 tract Commit 2 abort (D-68) + tract API 한계 상태 유지.",
+    "current_focus": "TASK-005-2 v1.5 안정화 (D-69) 완료. v2.0 tract OOS + Plugin 4-계층 또는 외부 blocker 결정 대기. R-4 lesson: home-XDG-config-mutate binary test 격리 의무화. 다음 행동: yklee v2.0 후보 결정 또는 v1.5.1+ 안정화 follow-up (residual 24 style lint).",
     "in_progress_items": [
       "TASK-005-1 v1 MVP 종료 선언 (D-59 follow-up, 2026-06-09 22:48) — W3~W16 완료 + dual-push + 브랜치 정리 + main 머지. 388+ tests pass. v1 빌드 phase 완전 종료.",
       "TASK-005-2 v1.5 종료 선언 (D-65, 2026-06-10) — v1.5 phase 완전 종료. 5 사이클 (W17, W18, W19-1, W20, W21) + D-62 정정 + 14 신규 test / 0 fail.",
       "D-66 v2.0 ONNX Commit 1 abort (2026-06-10) — ort ecosystem 2026-06 unstable. v1.x 전부 yanked, v2.0.0-rc.9/10/12 모두 빌드 깨짐 (ureq 3.1 API / fn pointer 호환). 변경 모두 revert. v2.0 ONNX 백로그 OOS. tract (Pure Rust) 대안 검토 가능",
       "D-67 v2.0 tract Commit 1 (2026-06-10) — tract 0.23.0 (Pure Rust, Sonos production) 로 전환. 1차 cargo build 즉시 통과 (D-66 lesson). `ModelManager` skeleton 5 L1 / 0 fail. binary 13MB 유지",
-      "D-68 v2.0 tract Commit 2 abort (2026-06-10) — actual `embed()` inference 시도 후 5+ error 누적. tract 0.23 API 한계. 변경 모두 revert. v2.0 ONNX 백로그 OOS 유지"
+      "D-68 v2.0 tract Commit 2 abort (2026-06-10) — actual `embed()` inference 시도 후 5+ error 누적. tract 0.23 API 한계. 변경 모두 revert. v2.0 ONNX 백로그 OOS 유지",
+      "D-69 v1.5 안정화 (2026-06-10) — (1) tool name uppercase 통일 (LLM contract 정합, v1.5+ dispatch 준비, 26 곳 변경), (2) §5.12 init_home_dir() — 11개 디렉토리 자동 생성 (paths.rs +125, integration test 3), (3) clippy 핵심 5건 fix (PI + 4 should_implement_trait allow + 1 useless_format). 3 commit dual-push. 437 tests pass / 0 fail / 2 ignored"
     ],
     "blocked_items": [
       "TASK-002: 도메인별 명령 가이드 (yklee 인프라 정보 의존)",
@@ -216,6 +217,12 @@
         "decision": "TASK-005-2 v2.0 tract Commit 2 abort (W24, 2026-06-10). **API 한계**: tract 0.23 의 `Tensor(Arc<InternalTensor>)` wrapper field private + Deref 없음 + `to_array_view` 가 `plain_view::Tensor` (다른 type) 의 method + `Runnable` vs `SimplePlan<InferenceFact, Box<InferenceOp>>` direct cast 어려움. **5+ error 누적** (Tensor type mismatch, Runnable trait bound, to_array_view method missing). **abort 결정**: 변경 모두 revert, v2.0 ONNX 백로그 OOS 유지. **lesson**: tract 0.23 의 low-level API 가 high-level inference 에 적합하지 않음 — `tract_onnx` 의 prelude 가 type-safe 한 wrap 을 노출 안 함. v2.0 다음 후보: Plugin 4-계층 또는 Kompress-back 또는 외부 blocker 해결.",
         "ref": "D-68 (2026-06-10)",
         "section": "§6 (v2.0 backlog) + §11.3 (tract API 한계)"
+      },
+      {
+        "id": "D-69",
+        "decision": "TASK-005-2 v1.5 안정화 (2026-06-10) — 3 작업 완료. **(1) tool name uppercase 통일 (LLM contract 정합)**: tools/*.rs 의 `impl Tool::name()` 이 소문자 (read/grep/glob/bash/edit/write) 였으나 ToolSchemaRegistry 와 TUI allowed_tools 는 대문자 사용. v1.5+ sub-agent dispatch 가 `ToolRegistry::get(\"Read\")` 시 None 반환하는 latent bug. **26 곳 변경**: 6 impl name() 대문자 + registry.rs test 8 + permission.rs 의 matches!/if/check 7 + lib.rs test + adapter.rs 의 to_lowercase() 제거 + test 4. **lesson**: 구현 시점에 발견 안 됨 (현재 sub-agent run() 이 format 만 — dispatch 미사용), v1.5+ 에서 surprise 가능. cross-layer (schema/tui/tools) string literal 변경 시 registry dispatch 의 case-sensitivity 즉시 검증 필수. **(2) §5.12 init_home_dir()** (CONCEPT §5.12 SSOT, D-31): v1 first run 시 11개 디렉토리 자동 생성 (7 top-level: config/state/memory/handoff/compression/sub-agents/auth + state subdir state/auth + 2 추가: runtime/cache + root). `init_home_dir()` 단일 entry point, idempotent, cli main() 진입 시 호출. best-effort (filesystem 권한 실패 시 tracing::warn 후 계속). 4 unit test (paths layout) + 3 integration test (serial_test 으로 env race 방지). **(3) clippy 핵심 5건 fix**: (a) `context/compression.rs:316` PI 상수 (`3.141593` → `std::f64::consts::PI`, deny level 로 test 컴파일 차단 해소), (b) `should_implement_trait` 4 file `#[allow]` (의도적 `Option<Self>` 반환 — 표준 `Result<Self, Self::Err>` 와 다른 시맨틱, fn 이름 변경은 광범위 caller 변경 필요), (c) `useless_format` 1 line (`format!(\"...\")` 인자 없음 → `String` literal). 잔여 21 style lint (collapsible_if/needless_borrows/non_binding_let_on_future/redundant_clone/len_zero/unused_imports) v1.5.1+ OOS (기능 영향 0). **검증**: 3 commit dual-push (6d2a3e8/4891bc6/767c71a, Gitea + GitHub), cargo test --workspace = 437 / 0 fail / 2 ignored, cargo build --workspace --tests OK. main = 767c71a.",
+        "ref": "D-69 (2026-06-10)",
+        "section": "§5.2 (명령 가이드) + §5.5 (tool contract) + §5.12 (디렉토리 구조) + §6 (TASK-005-2 v1.5 안정화)"
       }
     ],
     "deferred": [
