@@ -71,6 +71,10 @@ pub fn sub_agents_dir() -> PathBuf {
     home_dir().join("sub-agents")
 }
 
+pub fn plugins_dir() -> PathBuf {
+    home_dir().join("plugins")
+}
+
 pub fn runtime_dir() -> PathBuf {
     home_dir().join("runtime")
 }
@@ -115,6 +119,12 @@ pub fn ensure_sub_agents_dir() -> std::io::Result<PathBuf> {
     Ok(dir)
 }
 
+pub fn ensure_plugins_dir() -> std::io::Result<PathBuf> {
+    let dir = plugins_dir();
+    std::fs::create_dir_all(&dir)?;
+    Ok(dir)
+}
+
 pub fn ensure_runtime_dir() -> std::io::Result<PathBuf> {
     let dir = runtime_dir();
     std::fs::create_dir_all(&dir)?;
@@ -127,7 +137,7 @@ pub fn ensure_cache_dir() -> std::io::Result<PathBuf> {
     Ok(dir)
 }
 
-/// §5.12 spec 의 11개 디렉토리 자동 생성. idempotent.
+/// §5.12 spec 의 11개 + plugins/ 12개 디렉토리 자동 생성. idempotent.
 pub fn init_home_dir() -> std::io::Result<PathBuf> {
     std::fs::create_dir_all(home_dir())?;
     ensure_config_dir()?;
@@ -140,6 +150,7 @@ pub fn init_home_dir() -> std::io::Result<PathBuf> {
     ensure_auth_dir()?;
     ensure_runtime_dir()?;
     ensure_cache_dir()?;
+    ensure_plugins_dir()?;
     Ok(home_dir())
 }
 

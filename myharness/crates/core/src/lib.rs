@@ -7,12 +7,15 @@
 //!   - HandoffDoc (비참조, handoff)
 //! - [`permission`]: 4 permission mode (W11.2)
 //! - [`tool_alias`]: sub-agent ↔ tools crate name alias (W11.3)
+//! - [`plugin`]: Plugin 시스템 (v2.0 §5.7, D-71) — manifest schema + discovery
 
 pub mod permission;
+pub mod plugin;
 pub mod tool_alias;
 pub mod workflow;
 
 pub use permission::{PermissionDecision, PermissionMode, PermissionPolicy, ToolCategory};
+pub use plugin::{Entrypoints, PluginError, PluginLocation, PluginManifest, PluginRegistry};
 pub use tool_alias::{resolve_all_aliases, resolve_tool_alias, KNOWN_TOOL_ALIASES};
 pub use workflow::{
     EventKind, EventLog, EventLogEntry, FollowUpEntry, HandoffDoc, RiskEntry, RiskKind,
