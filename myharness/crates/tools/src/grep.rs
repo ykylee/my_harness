@@ -139,6 +139,6 @@ mod tests {
         assert!(!result.is_error);
 
         let parsed: Vec<serde_json::Value> = serde_json::from_str(&result.output).unwrap();
-        assert!(parsed.len() >= 1);
+        assert!(!parsed.is_empty());
     }
 }

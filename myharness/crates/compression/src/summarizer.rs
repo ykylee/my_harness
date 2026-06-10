@@ -7,7 +7,7 @@
 use async_trait::async_trait;
 use thiserror::Error;
 
-use myharness_llm::client::{CompletionRequest, Message, Role};
+use myharness_llm::client::{CompletionRequest, Message};
 use myharness_llm::LLMClient;
 
 #[derive(Debug, Error)]
@@ -127,7 +127,7 @@ impl Summarizer for TrivialSummarizer {
         // 문장 단위 분리 (간단: '. ', '! ', '? ' 기준)
         let mut sentences: Vec<&str> = Vec::new();
         let mut rest = input;
-        while let Some(idx) = rest.find(|c: char| c == '.' || c == '!' || c == '?')
+        while let Some(idx) = rest.find(['.', '!', '?'])
             .map(|i| (i, rest.as_bytes()[i] as char))
         {
             let (i, _) = idx;
@@ -137,7 +137,6 @@ impl Summarizer for TrivialSummarizer {
                 rest = r;
             } else {
                 sentences.push(rest.trim());
-                rest = "";
                 break;
             }
             if sentences.len() >= self.keep_sentences {

@@ -17,20 +17,11 @@ pub struct ContextConfig {
     pub builtin: BuiltinLayerConfig,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
 pub struct BuiltinLayerConfig {
     pub enabled: bool,
     #[serde(default)]
     pub algorithms: BuiltinConfig,
-}
-
-impl Default for BuiltinLayerConfig {
-    fn default() -> Self {
-        Self {
-            enabled: false, // D-30: 기본 OFF
-            algorithms: BuiltinConfig::default(),
-        }
-    }
 }
 
 #[derive(Debug, Error)]
@@ -111,12 +102,11 @@ impl ContextOrchestrator {
         if !ctx_prompt.is_empty() {
             parts.push(ctx_prompt);
         }
-        if let Some(mem) = &self.auto_memory {
-            if let Ok(s) = mem.to_system_prompt_section(20) {
-                if !s.is_empty() {
-                    parts.push(s);
-                }
-            }
+        if let Some(mem) = &self.auto_memory
+            && let Ok(s) = mem.to_system_prompt_section(20)
+            && !s.is_empty()
+        {
+            parts.push(s);
         }
         let combined = if parts.is_empty() { None } else { Some(parts.join("\n\n")) };
 

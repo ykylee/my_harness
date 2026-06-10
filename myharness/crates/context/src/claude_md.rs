@@ -107,12 +107,12 @@ impl ContextLoader {
         }
 
         // 5) global
-        if self.use_global {
-            if let Some(home) = dirs::home_dir() {
-                let global = home.join(".myharness").join("CLAUDE.md");
-                if let Some(c) = read_if_exists(&global, ContextSource::Global) {
-                    out.push(c);
-                }
+        if self.use_global
+            && let Some(home) = dirs::home_dir()
+        {
+            let global = home.join(".myharness").join("CLAUDE.md");
+            if let Some(c) = read_if_exists(&global, ContextSource::Global) {
+                out.push(c);
             }
         }
 

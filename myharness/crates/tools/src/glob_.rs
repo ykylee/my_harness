@@ -103,7 +103,7 @@ mod tests {
         assert!(!result.is_error);
 
         let parsed: Vec<String> = serde_json::from_str(&result.output).unwrap();
-        assert!(parsed.len() >= 1);
+        assert!(!parsed.is_empty());
         assert!(parsed[0].ends_with("test.txt"));
     }
 }

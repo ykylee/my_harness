@@ -366,7 +366,7 @@ mod tests {
         let client = RefreshingLlmClient::new(
             inner,
             "minimax",
-            &format!("{base}/v1"),
+            format!("{base}/v1").as_str(),
             "MiniMax-M3",
             Arc::new(auth_manager),
             Arc::new(store.clone()),

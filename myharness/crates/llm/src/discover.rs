@@ -43,13 +43,10 @@ pub async fn discover(
     let local_hits = scan_local_servers().await;
 
     // 3) keychain (W7.3 단순화: backend 가 None 이면 empty)
-    let keychain_hits: Vec<ProviderId> = {
-        let store = crate::auth_keyring::KeyringAuthStore::probe();
-        match store.list().await {
-            Ok(v) => v,
-            Err(_) => vec![],
-        }
-    };
+    let keychain_hits: Vec<ProviderId> = crate::auth_keyring::KeyringAuthStore::probe()
+        .list()
+        .await
+        .unwrap_or_default();
 
     // 4) merge: per provider
     let discovered = merge(registry, &env_hits, &keychain_hits, &local_hits);
@@ -72,14 +69,13 @@ pub async fn discover(
 fn scan_env(registry: &ProviderRegistry) -> Vec<EnvVarHit> {
     let mut hits = Vec::new();
     for meta in registry.list() {
-        if let Some(var) = &meta.env_var {
-            if std::env::var(var).is_ok() {
+        if let Some(var) = &meta.env_var
+            && std::env::var(var).is_ok() {
                 hits.push(EnvVarHit {
                     provider: meta.id,
                     env_var: var.clone(),
                 });
             }
-        }
     }
     hits
 }
@@ -114,8 +110,8 @@ fn merge(
             continue;
         }
         // local (local-llm 만)
-        if m.id == ProviderId::LocalLlm {
-            if let Some(_hit) = local.iter().find(|h| h.available) {
+        if m.id == ProviderId::LocalLlm
+            && let Some(_hit) = local.iter().find(|h| h.available) {
                 out.push(DiscoveredProvider {
                     provider: m.id,
                     auth_state: AuthState::LocalDetected,
@@ -123,7 +119,6 @@ fn merge(
                 });
                 continue;
             }
-        }
     }
     out
 }

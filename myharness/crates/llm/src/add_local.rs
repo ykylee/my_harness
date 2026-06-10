@@ -304,7 +304,7 @@ pub async fn register_local_provider_with_store(
             .await
             .map_err(|e| -> RegisterError {
                 // keyring backend 에러 → RegistryError::Io 로 wrap (best-effort)
-                RegistryError::Io(std::io::Error::new(std::io::ErrorKind::Other, e.to_string())).into()
+                RegistryError::Io(std::io::Error::other(e.to_string())).into()
             })?;
         true
     } else {
@@ -816,7 +816,7 @@ mod tests {
             "http://localhost:11434/v1",
             Some("w19-token-abc"),
             &selected,
-            &[selected.clone()],
+            std::slice::from_ref(&selected),
             &store,
         )
         .await
@@ -845,7 +845,7 @@ mod tests {
             "http://localhost:11434/v1",
             None,
             &selected,
-            &[selected.clone()],
+            std::slice::from_ref(&selected),
             &store,
         )
         .await

@@ -14,7 +14,7 @@ use serde::{Deserialize, Serialize};
 use thiserror::Error;
 use url::Url;
 
-use crate::pkce::{generate_pkce, generate_state, PkceMethod, PkcePair};
+use crate::pkce::{generate_pkce, generate_state, PkcePair};
 
 #[derive(Debug, Error)]
 pub enum OAuthError {

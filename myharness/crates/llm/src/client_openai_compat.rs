@@ -11,7 +11,6 @@ use rig_core::client::CompletionClient;
 use rig_core::completion::CompletionModel;
 use rig_core::message::{AssistantContent, Message as RigMessage, UserContent};
 
-use crate::client::Message;
 
 use crate::client::{CompletionRequest, CompletionResponse, LLMClient};
 use crate::error::LlmError;
@@ -122,6 +121,7 @@ fn extract_text(choice: &OneOrMany<AssistantContent>) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::client::Message;
 
     #[test]
     fn openai_compat_provider_builds_with_dummy() {

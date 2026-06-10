@@ -8,11 +8,10 @@ use std::sync::Arc;
 
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
-use tokio::io::AsyncWriteExt;
 
 use crate::browser;
 use crate::callback::CallbackServer;
-use crate::device_flow::{self, DeviceAuthorization, DeviceCodeProvider, DeviceError, DeviceToken, TokenPoll};
+use crate::device_flow::{self, DeviceCodeProvider, DeviceError, DeviceToken};
 use crate::flow::{build_authorize_url, exchange_code, refresh_token, OAuthError, OAuthProvider, OAuthToken};
 use crate::provider::MinimaxDeviceOAuth;
 use crate::store::{StoreError, TokenStore};
@@ -321,9 +320,11 @@ impl AuthManager {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::device_flow::TokenPoll;
     use crate::store::TokenStore;
     use chrono::Utc;
     use tokio::io::AsyncReadExt;
+    use tokio::io::AsyncWriteExt;
 
     fn make_token() -> OAuthToken {
         OAuthToken {
@@ -521,7 +522,7 @@ mod tests {
         assert_eq!(expected, auth_req.state);
 
         // 6) exchange_code 직접 호출 (real flow 의 callback 후 manager 가 호출)
-        let _ = mock_task; // task 살아 있음 (다음 connection 위해)
+        drop(mock_task); // task 살아 있음 (다음 connection 위해)
         let dir = tempfile::tempdir().unwrap();
         let mgr = AuthManager::with_store(TokenStore::with_base(dir.path().to_path_buf()));
         // login 의 non-interactive 모드 우회: build_authorize_url + exchange_code 만 호출.
@@ -664,7 +665,7 @@ mod tests {
         assert_eq!(loaded.access_token, access_token_returned);
         assert!(!loaded.is_expired());
 
-        let _ = mock_task;
+        drop(mock_task);
     }
 
 
@@ -797,6 +798,6 @@ mod tests {
         assert_eq!(loaded.access_token, access_token_returned);
         assert!(!loaded.is_expired());
 
-        let _ = mock_task;
+        drop(mock_task);
     }
 }

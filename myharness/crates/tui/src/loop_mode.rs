@@ -73,10 +73,11 @@ impl LoopRunner {
     /// 휴리스틱 success 평가: response 가 "DONE" 또는 "SUCCESS" word 포함 시 성공.
     /// 또는 success_criteria 가 있고 response 가 그 string 포함 시.
     pub fn is_success(response: &str, criteria: Option<&str>) -> bool {
-        if let Some(c) = criteria {
-            if !c.is_empty() && response.contains(c) {
-                return true;
-            }
+        if let Some(c) = criteria
+            && !c.is_empty()
+            && response.contains(c)
+        {
+            return true;
         }
         // word boundary 검사: "DONE" 또는 "SUCCESS" 가 단어로 등장
         let upper = response.to_ascii_uppercase();

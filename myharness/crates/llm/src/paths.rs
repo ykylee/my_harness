@@ -173,7 +173,7 @@ mod tests {
         // state_dir 은 home 하위, active-providers.toml 은 state_dir 하위
         assert!(s.starts_with(&home), "state_dir {:?} should be under home {:?}", s, home);
         assert!(a.starts_with(&s));
-        assert!(b.starts_with(&s.join("auth")));
+        assert!(b.starts_with(s.join("auth")));
     }
 
     #[test]
@@ -192,7 +192,7 @@ mod tests {
     #[test]
     fn auth_toml_under_top_level_auth() {
         let a = auth_toml("claude");
-        assert!(a.starts_with(&auth_dir()));
+        assert!(a.starts_with(auth_dir()));
         assert!(a.ends_with("claude.toml"));
     }
 

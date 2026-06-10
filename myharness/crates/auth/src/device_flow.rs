@@ -258,7 +258,7 @@ pub async fn poll_until_success(
     interval: u64,
     expired_in_unix: u64,
 ) -> Result<DeviceToken, DeviceError> {
-    let mut cur_interval = interval.max(1).min(10);
+    let mut cur_interval = interval.clamp(1, 10);
     let floor = 1u64;
     let cap = 10u64;
     let mut attempt = 0u32;

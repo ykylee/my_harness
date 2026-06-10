@@ -425,7 +425,7 @@ mod tests {
         // 비참조 원칙: handoff 가 다른 handoff 의 본문을 인용하지 않음
         let h1 = HandoffDoc::new("a", "b");
         let h2 = HandoffDoc::new("b", "c");
-        let s1 = h1.to_korean();
+        let _s1 = h1.to_korean();
         let s2 = h2.to_korean();
         // 서로 file path/token id 같은 cross-reference 없음
         assert!(!s2.contains("see handoff a"));
@@ -446,7 +446,7 @@ mod tests {
 
     #[test]
     fn task_end_with_no_risks_omits_section() {
-        let mut r = TaskEndReport::new("TASK-001", "bootstrap", "done");
+        let r = TaskEndReport::new("TASK-001", "bootstrap", "done");
         assert!(!r.to_korean().contains("## Risk"));
     }
 }

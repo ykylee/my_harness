@@ -15,7 +15,7 @@
 //! - [`auth_store`]: `AuthStore` trait + in-memory 구현
 //! - [`auth_keyring`]: OS keychain 백엔드 (graceful fallback)
 //! - [`paths`]: `~/.myharness/` 경로 헬퍼 + `init_home_dir()` §5.12 자동 생성
-//! - [`error`]: `LlmError` (thiserror)
+//! - `error` 모듈: `LlmError` (thiserror)
 //! - [`add_local`]: W16 `auth add-local` subcommand 의 register API + probe
 
 pub mod add_local;

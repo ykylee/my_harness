@@ -464,6 +464,7 @@ fn print_auth_status(s: &AuthStatus) {
 /// 2. `MINIMAX_API_KEY` env var (regular API key)
 /// 3. `ANTHROPIC_API_KEY` env var
 /// 4. MockClient fallback
+#[allow(clippy::collapsible_if)]
 fn resolve_llm_client() -> Arc<dyn LLMClient> {
     use myharness_auth::TokenStore;
     use myharness_llm::provider::ProviderId;
@@ -473,49 +474,47 @@ fn resolve_llm_client() -> Arc<dyn LLMClient> {
     if let Ok(store) = TokenStore::new() {
         if let Ok(stored) = store.load("minimax") {
             if !stored.token.is_expired() {
-                let base_url = std::env::var("MINIMAX_API_HOST")
-                    .unwrap_or_else(|_| "https://api.minimax.io/v1".into());
-                let model = std::env::var("MINIMAX_MODEL").unwrap_or_else(|_| "MiniMax-M3".into());
-                tracing::info!(
-                    "using MiniMax OAuth token (base_url={}, model={}, expires_at={})",
-                    base_url,
-                    model,
-                    stored
-                        .token
-                        .expires_at
-                        .map(|e| e.format("%Y-%m-%dT%H:%M:%SZ").to_string())
-                        .unwrap_or_else(|| "unknown".into())
-                );
-                let inner: Arc<dyn LLMClient> = Arc::new(
-                    myharness_llm::OpenAiCompatProvider::new(
-                        &base_url,
-                        &stored.token.access_token,
-                        &model,
-                        ProviderId::Minimax,
-                    )
-                    .expect("failed to init MiniMax OpenAI-compat client"),
-                );
+            let base_url = std::env::var("MINIMAX_API_HOST")
+                .unwrap_or_else(|_| "https://api.minimax.io/v1".into());
+            let model = std::env::var("MINIMAX_MODEL").unwrap_or_else(|_| "MiniMax-M3".into());
+            tracing::info!(
+                "using MiniMax OAuth token (base_url={}, model={}, expires_at={})",
+                base_url,
+                model,
+                stored
+                    .token
+                    .expires_at
+                    .map(|e| e.format("%Y-%m-%dT%H:%M:%SZ").to_string())
+                    .unwrap_or_else(|| "unknown".into())
+            );
+            let inner: Arc<dyn LLMClient> = Arc::new(
+                myharness_llm::OpenAiCompatProvider::new(
+                    &base_url,
+                    &stored.token.access_token,
+                    &model,
+                    ProviderId::Minimax,
+                )
+                .expect("failed to init MiniMax OpenAI-compat client"),
+            );
 
-                // W15.b: 401 자동 refresh + 1회 retry 를 위해 RefreshingLlmClient 로 wrap.
-                // store 가 비어있거나 ensure_fresh 실패 시 graceful fallback (W15.a WARN 유지).
-                if let Ok(auth) = AuthManager::new() {
-                    if let Some(provider) = find_provider("minimax") {
-                        return Arc::new(RefreshingLlmClient::new(
-                            inner,
-                            "minimax",
-                            &base_url,
-                            &model,
-                            Arc::new(auth),
-                            Arc::new(store),
-                            provider,
-                        ));
-                    }
-                }
-                // wrap 실패 (provider 못 찾음 / auth init 실패) → inner 그대로 반환
-                // (W15.a 의 동작과 호환, refresh 없이 호출)
-                return inner;
+            // W15.b: 401 자동 refresh + 1회 retry 를 위해 RefreshingLlmClient 로 wrap.
+            if let Ok(auth) = AuthManager::new()
+                && let Some(provider) = find_provider("minimax")
+            {
+                return Arc::new(RefreshingLlmClient::new(
+                    inner,
+                    "minimax",
+                    &base_url,
+                    &model,
+                    Arc::new(auth),
+                    Arc::new(store),
+                    provider,
+                ));
             }
-            tracing::warn!(
+            // wrap 실패 → inner 그대로 반환
+            return inner;
+        }
+        tracing::warn!(
                 "OAuth token for minimax is expired; falling back to env var. \
                  run `myharness auth minimax login` to refresh."
             );

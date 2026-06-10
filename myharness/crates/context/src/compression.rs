@@ -105,10 +105,10 @@ impl BuiltinPipeline {
 /// ContentRouter — content type 분류. 휴리스틱 기반.
 pub fn detect_content_type(content: &str) -> ContentType {
     let trimmed = content.trim_start();
-    if trimmed.starts_with('{') || trimmed.starts_with('[') {
-        if serde_json::from_str::<serde_json::Value>(trimmed).is_ok() {
-            return ContentType::Json;
-        }
+    if (trimmed.starts_with('{') || trimmed.starts_with('['))
+        && serde_json::from_str::<serde_json::Value>(trimmed).is_ok()
+    {
+        return ContentType::Json;
     }
     if looks_like_code(trimmed) {
         return ContentType::Code;

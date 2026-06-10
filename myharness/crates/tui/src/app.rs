@@ -7,7 +7,7 @@ use ratatui::layout::{Constraint, Direction, Layout, Rect};
 use ratatui::style::{Color, Modifier, Style};
 use ratatui::text::{Line, Span};
 use ratatui::widgets::{Block, Borders, List, ListItem, Paragraph, Widget};
-use ratatui::{Frame, Terminal};
+use ratatui::Frame;
 
 use crate::events::AppKey;
 
@@ -243,6 +243,7 @@ pub fn render_to_buffer(area: Rect, app: &mut App) -> Buffer {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use ratatui::Terminal;
     use ratatui::backend::TestBackend;
 
     #[test]

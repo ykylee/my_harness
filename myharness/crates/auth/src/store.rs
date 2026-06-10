@@ -3,7 +3,6 @@
 //! disk 영구 저장 + KeyringAuthStore 의 in-memory cache 와 연동 (set 시 양쪽 update).
 
 use std::path::PathBuf;
-use std::sync::Arc;
 
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
