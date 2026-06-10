@@ -4,7 +4,7 @@
 - 범위: 전체 태스크 목록, 우선순위, 진행 상태, 날짜별 기록 연결
 - 대상 독자: 개발자, AI 에이전트, 프로젝트 매니저
 - 상태: stable
-- 최종 수정일: 2026-06-10 (D-62, **W17 누락분 = 0건 정정** — W18 정합성 cross-check 가 잘못된 결론. W17 original 4 commit (766d1b6 register_local_provider_non_interactive fn / a46f480 TC-W17-I01+I02 / f8082bc cli 4 flag / d09a6a1 spec+TC scaffold) 모두 main 머지 확인. W18 cherry-pick cleanup commit 6e925a1 가 W18 중복 fn/test 만 제거하고 W17 본진 보존. TASK-005-2 v1.5 W17 (D-60) + W18 (D-61) 완료, main 머지 + cleanup 6e925a1 + handoff_D-61 복구 91c1e34. 411 tests pass)
+- 최종 수정일: 2026-06-10 (D-62 + D-62 W19-1, **W17 누락분 = 0건 정정** + **TC-W17-002 test fail 복구 (AuthStore 주입 패턴)**. W18 정합성 cross-check 가 잘못된 결론. W17 original 4 commit 모두 main 머지 확인. W19-1 = `register_local_provider_with_store` + `register_local_provider_non_interactive_with_store` 추가 (caller store lifecycle 제어). 기존 fn 은 thin wrapper. 4 L1 test (TC-W17-002 + TC-W19-001/002/003) PASS, 110 llm tests / 0 fail. cargo build/clippy OK)
 - 관련 문서: [세션 인계](./session_handoff.md), [프로젝트 프로필](../../docs/PROJECT_PROFILE.md), [CONCEPT.md](../../docs/CONCEPT.md)
 
 ## 1. 운영 원칙
@@ -17,6 +17,7 @@
 - [2026-06-06](./backlog/2026-06-06.md) — 5 reference clone + Gitea + 5-doc 분석
 - [2026-06-07](./backlog/2026-06-07.md) — 7-doc 분석 + CONCEPT.md SSOT + 5 결정 (D-22~D-38)
 - [2026-06-09](./backlog/2026-06-09.md) — TASK-005-1 W3~W6.5 (D-43) — 5 tool + 4 permission + 9 sanitizer + JSON schema + 5 provider wire format. 9 commit Gitea push.
+- [2026-06-10](./backlog/2026-06-10.md) — D-62 W17 누락분 = 0건 정정 + D-62 W19-1 TC-W17-002 test fail 복구 (AuthStore 주입 패턴). 110 llm tests / 0 fail. cargo build/clippy OK
 
 ## 3. 전체 작업 상태 요약
 
@@ -93,7 +94,7 @@
 - [x] D-52 follow-up 6 commit dual push (D-53~D-58) ✅
 - [x] **TASK-005-1 v1 MVP 종료 선언** (8/8 waves + D-52 follow-up 6 작업 완료, yklee 결정, 2026-06-09 22:48)
 - [x] **TASK-005-2 v1.5 W17 (D-60) + W18 (D-61) 완료** — auth add-local 비대화형 모드 + R-4 backup + Confirm + --yes flag. main 머지 + cleanup 6e925a1 + handoff_D-61 복구 91c1e34. **D-62 정정**: W17 PR 누락분 = 0건 (W18 cross-check 오류)
-- [ ] **TC-W17-002 test fail 복구** (D-62 식별) — libsecret 부재 환경 BackendUnavailable. KeyringAuthStore::set in-memory fallback bug 또는 mock store 격리
+- [x] **D-62 W19-1 TC-W17-002 test fail 복구** (2026-06-10) — `register_local_provider_with_store` + `register_local_provider_non_interactive_with_store` 추가 (AuthStore 주입 패턴). 4 L1 test PASS, 110 llm tests / 0 fail
 - [ ] **TASK-005-2** (v1.5) — Plugin 4-계층 + marketplace + auto memory + provider-auto-config skill 정식 구현 + CCR/Kompress-base
 - [ ] yklee MiniMax Device OAuth real flow 검증 — yklee 가 MiniMax console 에서 device grant 활성화 후 `myharness auth login minimax --no-browser` 실행 (OpenClaw/Hermes 공통 client_id 사용, W15.b 자동 refresh 도 real test 가능)
 - [ ] yklee OpenAI/Google OAuth client_id 등록 후 동일 패턴 검증 (OpenAI: `platform.openai.com` OAuth Apps, Google: Google Cloud Console Credentials OAuth 2.0 Client IDs)
@@ -150,6 +151,7 @@
 | **D-60** | **TASK-005-2 v1.5 W17 완료 (`myharness auth add-local` 비대화형 모드)** — DD-AddLocal §6.3 OI-1 해소 (v1.5 첫 작업). clap flag 4개 (`--url/--model/--token/--probe-skip`). `myharness-llm::register_local_provider_non_interactive(url, token, model_id)` probe 스킵 helper. `handle_auth_add_local` 3-mode 분기. 4 L1 + 2 L2 TC = 6/6 PASS, 410 workspace tests, 4 commit dual-push (feature/v15-add-local-non-interactive). **R-4 (사용자 home providers.toml 덮어쓰기)**: manual test 중 yklee 의 LM Studio 설정 1회 덮어쓰기 → mavis-trash recovery, F-1 backup / F-2 --yes flag v1.5+ OOS. **PR main merge 안 됨 (W18 정합성 cross-check 에서 W17 일부 main 누락 발견)** | §5.2 + §5.5 + §6.3 (OI-1 ✅) |
 | **D-61** | **TASK-005-2 v1.5 W18 완료 (`myharness auth add-local` 자동 backup + Confirm prompt, R-4 직접 차단)** — DD-AddLocal §10 신규 spec. (1) `myharness-llm::backup_providers_toml(path, max_backups=5)` — register_local_provider 안에 silent fail-soft 호출 연결, providers.toml 덮어쓰기 직전 `.backup.<unix_ts>` 자동 생성 + retention, (2) cli `--yes` flag + `inquire::Confirm` prompt (interactive 모드), (3) W17 PR 누락분 main 재추가 (register_local_provider_non_interactive fn + TC-W17-004). 3 L1 + 2 L2 + W17-004 = 5/5 PASS, 406 workspace tests, 4 commit dual-push (feature/v15-add-local-backup). **복구**: `cp ~/.myharness/providers.toml.backup.<ts> ~/.myharness/providers.toml`. sub-second ts 충돌 / backup corruption R-5, F-1 monotonic_ts, F-2 git-style versioning v1.5+ OOS | §5.2 + §5.5 + §6.3 (R-4 ✅) |
 | **D-62** | **TASK-005-2 W17 PR 누락분 = 0건 정정 (state.json cross-check 오류, 2026-06-10)** — W18 정합성 cross-check 가 'W17 original 4 commit 중 fn + TC-W17-001~003 + TC-W17-I01~I02 main 누락' 으로 결론 내렸으나, `git log main --grep='W17'` + `grep 'register_local_provider_non_interactive\\|tc_w17_'` 검증 시 W17 4 commit (766d1b6 register fn / a46f480 TC-W17-I01+I02 / f8082bc cli 4 flag / d09a6a1 spec+TC scaffold) 모두 main 머지 확인. cleanup commit 6e925a1 가 W18 cherry-pick 중복 fn/test 만 제거하고 W17 본진 보존. **lesson**: cross-check 시 '누락분' 결론은 반드시 git log + file symbol grep 으로 직접 검증, 단순 머지 commit stat 만으로 판단 금지. side effect: TC-W17-002 test fail (libsecret 부재 환경 BackendUnavailable) 별도 식별 | §6 + §11.2 (메모리 정합성 규칙) |
+| **D-62 W19-1** | **TASK-005-2 TC-W17-002 test fail 복구 (AuthStore 주입 패턴, 2026-06-10)** — `register_local_provider_with_store(base_url, token, selected, available, store: &dyn AuthStore)` + `register_local_provider_non_interactive_with_store(...)` 추가. 기존 fn 은 thin wrapper. **WHY**: 기존 fn 의 `KeyringAuthStore::probe()` 가 caller 와 별개 in-memory cache 를 만들어 caller.store.get() 시 cache miss → BackendUnavailable 으로 fail. 해결: caller 가 store 1개 만들어 with_store 에 명시 전달 → cache lifecycle 단일화. **L1 test 4개**: TC-W17-002 수정 (probe 1번 + with_store 호출) + TC-W19-001 (with_store cache hit) + TC-W19-002 (None token 시 cache 무변경) + TC-W19-003 (thin wrapper 별개 store 회귀 방지). 110 llm tests / 0 fail, cargo build/clippy OK. cli caller 변경 없음 (back-compat) | §5.5 + §6.3 (DD-AddLocal) |
 
 ## 5. 관련 문서 (SSOT)
 
