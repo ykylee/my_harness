@@ -40,6 +40,7 @@ pub mod scan_local;
 pub use add_local::{
     ModelInfo, RegisterError, RegisterReport, backup_providers_toml, probe_local_models,
     register_local_provider, register_local_provider_non_interactive,
+    register_local_provider_non_interactive_with_store, register_local_provider_with_store,
 };
 pub use auth_keyring::{KeyringAuthStore, KeyringBackend};
 pub use auth_state::{AuthState, AuthStatus};

@@ -168,18 +168,46 @@ pub async fn probe_local_models(
 /// - `token`: API token (Ollama 는 None, vLLM/LM Studio/llama.cpp 는 Some)
 /// - `selected_model`: 사용자가 선택한 모델
 /// - `available_models`: probe 결과 전체 (selected_model 포함)
+///
+/// # 비고 (W19-1, D-62 follow-up)
+/// - thin wrapper: `KeyringAuthStore::probe()` 1회 → [`register_local_provider_with_store`] 위임
+/// - cli caller 가 store lifecycle 제어하려면 `with_store` 직접 호출 (test 등)
 pub async fn register_local_provider(
     base_url: String,
     token: Option<String>,
     selected_model: ModelInfo,
     available_models: Vec<ModelInfo>,
 ) -> Result<RegisterReport, RegisterError> {
-    // 1. URL 검증
-    url::Url::parse(&base_url).map_err(|_| RegisterError::InvalidUrl(base_url.clone()))?;
+    let store = KeyringAuthStore::probe();
+    register_local_provider_with_store(&base_url, token.as_deref(), &selected_model, &available_models, &store).await
+}
 
-    // 2. token → KeyringAuthStore (W7.2 backend policy)
-    let token_saved = if let Some(t) = token.as_deref() {
-        let store = KeyringAuthStore::probe();
+/// AuthStore 트레이트 객체 주입 변형 (W19-1, D-62 follow-up).
+///
+/// ## WHY
+/// - v1.5 `register_local_provider` 는 내부에서 `KeyringAuthStore::probe()` 1회 — 호출자(store A)
+///   와 함수 내부(store B) 가 **별개 instance** 라 in-memory cache 공유 안 됨
+/// - TC-W17-002 가 libsecret 부재 환경에서 store A.get() 시 BackendUnavailable 로 fail
+/// - 해결: caller 가 만든 store 1개를 명시적으로 전달 → cache lifecycle 단일화
+///
+/// ## 인자
+/// - `base_url`: OpenAI 호환 endpoint
+/// - `token`: API token (optional)
+/// - `selected_model`: 사용자가 선택한 모델
+/// - `available_models`: probe 결과 전체
+/// - `store`: AuthStore 트레이트 객체 (caller lifecycle)
+pub async fn register_local_provider_with_store(
+    base_url: &str,
+    token: Option<&str>,
+    selected_model: &ModelInfo,
+    available_models: &[ModelInfo],
+    store: &dyn AuthStore,
+) -> Result<RegisterReport, RegisterError> {
+    // 1. URL 검증
+    url::Url::parse(base_url).map_err(|_| RegisterError::InvalidUrl(base_url.to_string()))?;
+
+    // 2. token → store (W7.2 backend policy)
+    let token_saved = if let Some(t) = token {
         store
             .set(ProviderId::LocalLlm, t)
             .await
@@ -201,7 +229,7 @@ pub async fn register_local_provider(
 
     let old = ProviderMetadata::builtin(ProviderId::LocalLlm);
     let new = ProviderMetadata {
-        base_url: base_url.clone(),
+        base_url: base_url.to_string(),
         default_model: selected_model.id.clone(),
         available_models: available_models.iter().map(|m| m.id.clone()).collect(),
         ..old
@@ -215,9 +243,9 @@ pub async fn register_local_provider(
     atomic_write(&path, &toml_str).map_err(RegistryError::from)?;
 
     Ok(RegisterReport {
-        base_url,
-        model_id: selected_model.id,
-        available_models: available_models.into_iter().map(|m| m.id).collect(),
+        base_url: base_url.to_string(),
+        model_id: selected_model.id.clone(),
+        available_models: available_models.iter().map(|m| m.id.clone()).collect(),
         token_saved,
     })
 }
@@ -236,17 +264,31 @@ pub async fn register_local_provider(
 /// - `available_models = vec![model_id]` 1개로 hardcode (probe 없으므로)
 /// - `selected_model.owned_by = None` (probe 안 했으니 서버 메타 모름)
 /// - URL 검증 + KeyringAuthStore set + ProviderRegistry 갱신 + atomic write = interactive 와 동일
+/// - thin wrapper: [`register_local_provider_non_interactive_with_store`] 에 위임 (W19-1, D-62 follow-up)
 pub async fn register_local_provider_non_interactive(
     base_url: String,
     token: Option<String>,
     model_id: String,
 ) -> Result<RegisterReport, RegisterError> {
+    let store = KeyringAuthStore::probe();
+    register_local_provider_non_interactive_with_store(&base_url, token.as_deref(), &model_id, &store).await
+}
+
+/// W19-1 (D-62 follow-up) — `register_local_provider_non_interactive` 의 store 주입 변형.
+///
+/// caller 가 store lifecycle 명시적 제어. test / 멀티 store 환경 / mock store 격리에 사용.
+pub async fn register_local_provider_non_interactive_with_store(
+    base_url: &str,
+    token: Option<&str>,
+    model_id: &str,
+    store: &dyn AuthStore,
+) -> Result<RegisterReport, RegisterError> {
     let selected = ModelInfo {
-        id: model_id.clone(),
+        id: model_id.to_string(),
         owned_by: None,
     };
     let available = vec![selected.clone()];
-    register_local_provider(base_url, token, selected, available).await
+    register_local_provider_with_store(base_url, token, &selected, &available, store).await
 }
 
 /// Atomic write — `path.tmp` 에 write → `path` 로 rename.
@@ -603,11 +645,13 @@ mod tests {
         let tmp = tempfile::tempdir().unwrap();
         unsafe { std::env::set_var("MYHARNESS_HOME", tmp.path()); }
 
+        // W19-1 (D-62 follow-up): store 1개 만들어서 with_store 에 전달 — cache lifecycle 단일화
         let store = KeyringAuthStore::probe();
-        let report = register_local_provider_non_interactive(
-            "http://localhost:8000/v1".into(),
-            Some("ci-token-xyz".into()),
-            "qwen2.5:14b".into(),
+        let report = register_local_provider_non_interactive_with_store(
+            "http://localhost:8000/v1",
+            Some("ci-token-xyz"),
+            "qwen2.5:14b",
+            &store,
         )
         .await
         .unwrap();
@@ -616,9 +660,12 @@ mod tests {
         assert_eq!(report.model_id, "qwen2.5:14b");
 
         // backend=None 환경 (CI Linux) → in-memory cache 검증
+        // W19-1: 같은 store instance 라 set → get cache hit
         if store.backend() == crate::KeyringBackend::None {
             let cached = store.get(ProviderId::LocalLlm).await.unwrap();
             assert_eq!(cached.as_deref(), Some("ci-token-xyz"));
+        } else {
+            assert!(report.token_saved);
         }
         unsafe { std::env::remove_var("MYHARNESS_HOME"); }
     }
@@ -634,6 +681,109 @@ mod tests {
         .unwrap_err();
         assert!(matches!(err, RegisterError::InvalidUrl(_)));
         assert!(err.to_string().contains("invalid URL"));
+    }
+
+    // ===== W19-1 (D-62 follow-up): store 주입 변형 검증 =====
+
+    /// TC-W19-001: `register_local_provider_with_store` 에 caller 제공 store 전달 시
+    /// set → get 이 같은 instance 라 cache hit 보장.
+    #[tokio::test]
+    #[serial_test::serial(env)]
+    async fn tc_w19_001_with_store_same_instance_shares_cache() {
+        let tmp = tempfile::tempdir().unwrap();
+        unsafe { std::env::set_var("MYHARNESS_HOME", tmp.path()); }
+
+        let store = KeyringAuthStore::probe();
+        let selected = ModelInfo {
+            id: "llama3.1:8b".into(),
+            owned_by: None,
+        };
+        let report = register_local_provider_with_store(
+            "http://localhost:11434/v1",
+            Some("w19-token-abc"),
+            &selected,
+            &[selected.clone()],
+            &store,
+        )
+        .await
+        .unwrap();
+
+        assert!(report.token_saved);
+        let cached = store.get(ProviderId::LocalLlm).await.unwrap();
+        assert_eq!(cached.as_deref(), Some("w19-token-abc"));
+
+        unsafe { std::env::remove_var("MYHARNESS_HOME"); }
+    }
+
+    /// TC-W19-002: store 주입 변형 + `token = None` 일 때 `token_saved = false` + cache 무변경.
+    #[tokio::test]
+    #[serial_test::serial(env)]
+    async fn tc_w19_002_with_store_none_token_no_save() {
+        let tmp = tempfile::tempdir().unwrap();
+        unsafe { std::env::set_var("MYHARNESS_HOME", tmp.path()); }
+
+        let store = KeyringAuthStore::probe();
+        let selected = ModelInfo {
+            id: "llama3.1:8b".into(),
+            owned_by: None,
+        };
+        let report = register_local_provider_with_store(
+            "http://localhost:11434/v1",
+            None,
+            &selected,
+            &[selected.clone()],
+            &store,
+        )
+        .await
+        .unwrap();
+
+        assert!(!report.token_saved);
+        // Ollama 처럼 token 없는 경우 — cache 에 아무것도 안 들어감
+        // backend=None 환경: cache miss + backend unavailable → Err (의도된 동작)
+        // backend 있는 환경: cache miss + 영구 저장소 미스 → Ok(None)
+        if store.backend() == crate::KeyringBackend::None {
+            let r = store.get(ProviderId::LocalLlm).await;
+            assert!(r.is_err(), "token=None + backend=None → BackendUnavailable, got {r:?}");
+        } else {
+            let cached = store.get(ProviderId::LocalLlm).await.unwrap();
+            assert_eq!(cached, None, "token=None 시 store cache 도 비어있어야");
+        }
+
+        unsafe { std::env::remove_var("MYHARNESS_HOME"); }
+    }
+
+    /// TC-W19-003: store A (caller) 와 별개 store B (wrapper 내부) 는 in-memory cache 공유 안 함.
+    /// `register_local_provider` (with_store 미사용) 의 thin wrapper 동작 검증.
+    /// W19-1 이전의 TC-W17-002 가 같은 이유로 fail 했었음. 이 test 가 회귀 방지.
+    #[tokio::test]
+    #[serial_test::serial(env)]
+    async fn tc_w19_003_thin_wrapper_creates_separate_store() {
+        let tmp = tempfile::tempdir().unwrap();
+        unsafe { std::env::set_var("MYHARNESS_HOME", tmp.path()); }
+
+        let store_outer = KeyringAuthStore::probe();
+        let report = register_local_provider(
+            "http://localhost:11434/v1".into(),
+            Some("w19-wrapper-token".into()),
+            ModelInfo {
+                id: "llama3.1:8b".into(),
+                owned_by: None,
+            },
+            vec![ModelInfo {
+                id: "llama3.1:8b".into(),
+                owned_by: None,
+            }],
+        )
+        .await
+        .unwrap();
+
+        assert!(report.token_saved);
+        if store_outer.backend() == crate::KeyringBackend::None {
+            let r = store_outer.get(ProviderId::LocalLlm).await;
+            assert!(r.is_err(), "outer store 에는 token 이 없어야 (별개 instance), got {r:?}");
+        }
+
+        unsafe { std::env::remove_var("MYHARNESS_HOME"); }
     }
 }
 
