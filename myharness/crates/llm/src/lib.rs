@@ -14,7 +14,7 @@
 //! - [`auth_state`]: per-provider auth 상태 (Unset/EnvVar/Keychain/Manual/LocalDetected/Error)
 //! - [`auth_store`]: `AuthStore` trait + in-memory 구현
 //! - [`auth_keyring`]: OS keychain 백엔드 (graceful fallback)
-//! - [`paths`]: `~/.myharness/` 경로 헬퍼
+//! - [`paths`]: `~/.myharness/` 경로 헬퍼 + `init_home_dir()` §5.12 자동 생성
 //! - [`error`]: `LlmError` (thiserror)
 //! - [`add_local`]: W16 `auth add-local` subcommand 의 register API + probe
 
@@ -55,6 +55,7 @@ pub use client_openai_compat::OpenAiCompatProvider;
 pub use discover::{discover, DiscoverOpts, DiscoverReport, EnvVarHit};
 pub use error::LlmError;
 pub use metadata::{ProviderCapabilities, ProviderMetadata};
+pub use paths::init_home_dir;
 pub use provider::{ProviderId, ProviderKind};
 pub use registry::{ProviderRegistry, RegistryError};
 pub use router::{FallbackRouter, ProviderStatus, RouterResponse};

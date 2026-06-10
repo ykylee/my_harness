@@ -14,6 +14,7 @@ use myharness_core::{
     TaskStartReport, TaskStatus,
 };
 use myharness_llm::LLMClient;
+use myharness_llm::init_home_dir;
 use myharness_tools::ToolRegistry;
 use myharness_tui::{App, AppKey, LoopConfig, LoopRunner, MessageRole, Orchestrator, TtyGuard};
 
@@ -181,6 +182,10 @@ fn main() -> anyhow::Result<()> {
                 .unwrap_or_else(|_| tracing_subscriber::EnvFilter::new("info")),
         )
         .init();
+
+    if let Err(e) = init_home_dir() {
+        tracing::warn!(error = %e, "init_home_dir failed (best-effort, continuing)");
+    }
 
     let args = Args::parse();
     let mode = args.mode.as_str();

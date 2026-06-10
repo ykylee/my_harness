@@ -43,6 +43,106 @@ pub fn ensure_auth_dir() -> std::io::Result<PathBuf> {
     Ok(dir)
 }
 
+pub fn auth_dir() -> PathBuf {
+    home_dir().join("auth")
+}
+
+pub fn auth_toml(provider: &str) -> PathBuf {
+    auth_dir().join(format!("{provider}.toml"))
+}
+
+pub fn config_dir() -> PathBuf {
+    home_dir().join("config")
+}
+
+pub fn memory_dir() -> PathBuf {
+    home_dir().join("memory")
+}
+
+pub fn handoff_dir() -> PathBuf {
+    home_dir().join("handoff")
+}
+
+pub fn compression_dir() -> PathBuf {
+    home_dir().join("compression")
+}
+
+pub fn sub_agents_dir() -> PathBuf {
+    home_dir().join("sub-agents")
+}
+
+pub fn runtime_dir() -> PathBuf {
+    home_dir().join("runtime")
+}
+
+pub fn cache_dir() -> PathBuf {
+    home_dir().join("cache")
+}
+
+pub fn ensure_top_level_auth_dir() -> std::io::Result<PathBuf> {
+    let dir = auth_dir();
+    std::fs::create_dir_all(&dir)?;
+    Ok(dir)
+}
+
+pub fn ensure_config_dir() -> std::io::Result<PathBuf> {
+    let dir = config_dir();
+    std::fs::create_dir_all(&dir)?;
+    Ok(dir)
+}
+
+pub fn ensure_memory_dir() -> std::io::Result<PathBuf> {
+    let dir = memory_dir();
+    std::fs::create_dir_all(&dir)?;
+    Ok(dir)
+}
+
+pub fn ensure_handoff_dir() -> std::io::Result<PathBuf> {
+    let dir = handoff_dir();
+    std::fs::create_dir_all(&dir)?;
+    Ok(dir)
+}
+
+pub fn ensure_compression_dir() -> std::io::Result<PathBuf> {
+    let dir = compression_dir();
+    std::fs::create_dir_all(&dir)?;
+    Ok(dir)
+}
+
+pub fn ensure_sub_agents_dir() -> std::io::Result<PathBuf> {
+    let dir = sub_agents_dir();
+    std::fs::create_dir_all(&dir)?;
+    Ok(dir)
+}
+
+pub fn ensure_runtime_dir() -> std::io::Result<PathBuf> {
+    let dir = runtime_dir();
+    std::fs::create_dir_all(&dir)?;
+    Ok(dir)
+}
+
+pub fn ensure_cache_dir() -> std::io::Result<PathBuf> {
+    let dir = cache_dir();
+    std::fs::create_dir_all(&dir)?;
+    Ok(dir)
+}
+
+/// §5.12 spec 의 11개 디렉토리 자동 생성. idempotent.
+pub fn init_home_dir() -> std::io::Result<PathBuf> {
+    std::fs::create_dir_all(home_dir())?;
+    ensure_config_dir()?;
+    ensure_state_dir()?;
+    ensure_memory_dir()?;
+    ensure_handoff_dir()?;
+    ensure_compression_dir()?;
+    ensure_sub_agents_dir()?;
+    ensure_top_level_auth_dir()?;
+    ensure_auth_dir()?;
+    ensure_runtime_dir()?;
+    ensure_cache_dir()?;
+    Ok(home_dir())
+}
+
 pub fn home_exists(p: &Path) -> bool {
     p.exists()
 }
@@ -74,5 +174,30 @@ mod tests {
         assert!(s.starts_with(&home), "state_dir {:?} should be under home {:?}", s, home);
         assert!(a.starts_with(&s));
         assert!(b.starts_with(&s.join("auth")));
+    }
+
+    #[test]
+    fn new_top_level_dirs_are_under_home() {
+        let home = home_dir();
+        assert!(config_dir().starts_with(&home));
+        assert!(memory_dir().starts_with(&home));
+        assert!(handoff_dir().starts_with(&home));
+        assert!(compression_dir().starts_with(&home));
+        assert!(sub_agents_dir().starts_with(&home));
+        assert!(auth_dir().starts_with(&home));
+        assert!(runtime_dir().starts_with(&home));
+        assert!(cache_dir().starts_with(&home));
+    }
+
+    #[test]
+    fn auth_toml_under_top_level_auth() {
+        let a = auth_toml("claude");
+        assert!(a.starts_with(&auth_dir()));
+        assert!(a.ends_with("claude.toml"));
+    }
+
+    #[test]
+    fn init_home_dir_signature_compiles() {
+        let _: fn() -> std::io::Result<PathBuf> = init_home_dir;
     }
 }
