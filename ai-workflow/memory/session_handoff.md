@@ -4,7 +4,7 @@
 - Scope: current focus, task status, key changes, next actions, risks
 - Audience: yklee, Mavis orchestrator, .MiniMax 워커 에이전트
 - Status: active
-- Updated: 2026-06-10 (D-62 + **W17 누락분 = 0건 정정** + **W19-1 TC-W17-002 test fail 복구** — AuthStore 주입 패턴. `register_local_provider_with_store` + `register_local_provider_non_interactive_with_store` 추가. 110 llm tests / 0 fail. 다음: W19+ 결정)
+- Updated: 2026-06-10 (D-62 + **W17 누락분 = 0건 정정** + **W19-1 TC-W17-002 test fail 복구** + **D-63 W20 F-3 Ollama native cascade** — `probe_local_models` 2-stage (Ollama native → OpenAI compat fallback). scan_local.rs 와 priority 정합. 110 llm + 10 w16_add_local tests / 0 fail. 다음: W21 F-1+F-2 통합 결정)
 - Related docs: [Project Profile](../../docs/PROJECT_PROFILE.md), [Work Backlog](./work_backlog.md), [State Cache](./state.json), [CONCEPT.md](../../docs/CONCEPT.md) (SSOT)
 
 ## Current Focus
@@ -114,7 +114,8 @@
 - [x] **TASK-005-2 v1.5 W17 (D-60) + W18 (D-61) 완료** — auth add-local 비대화형 모드 (--url/--model/--token/--probe-skip) + R-4 backup + Confirm + --yes flag. main 머지 + cleanup (6e925a1) + handoff_D-61 복구 (91c1e34). 411 tests pass
 - [x] **D-62 W17 누락분 = 0건 정정** (2026-06-10) — W18 cross-check 오류였음, W17 original 4 commit 모두 main 머지 확인
 - [x] **D-62 W19-1 TC-W17-002 test fail 복구** (2026-06-10) — `register_local_provider_with_store` + `register_local_provider_non_interactive_with_store` 추가 (AuthStore 주입 패턴). 기존 fn 은 thin wrapper. 4 L1 test (TC-W17-002 수정 + TC-W19-001/002/003) PASS, 110 llm tests / 0 fail. cargo build/clippy OK
-- [ ] **TASK-005-2 W19+ (v1.5)** — F-1 monotonic_ts / F-2 git-style versioning / F-3 Ollama native / Plugin 4-계층 (큰 사이클) / CCR + Kompress-base ONNX
+- [x] **D-63 W20 F-3 Ollama native cascade** (2026-06-10) — `probe_local_models` 2-stage (Ollama native /api/tags → OpenAI compat /v1/models fallback). `parse_ollama_tags` / `parse_openai_models` / `fetch_json_body` helper 분리. W16 7/7 회귀 없음, 3 L2 integration test (TC-W20-I01/I02/I03) PASS, 110 llm + 10 w16_add_local tests / 0 fail. cargo build/clippy OK
+- [ ] **TASK-005-2 W21 (v1.5)** — F-1+F-2 통합 (monotonic_ts + sha256 8-char + cleanup_old_backups sort bug fix) / Plugin 4-계층 (큰 사이클) / CCR + Kompress-base ONNX
 - [ ] **MiniMax Device OAuth real flow** 검증 — yklee 가 MiniMax console 에서 device grant 활성화 후 `myharness auth login minimax --no-browser` 실행 (OpenClaw/Hermes 공통 client_id 78257093-7e40-4613-99e0-527b14b39113, W15.b 자동 refresh 도 real test 가능)
 - [ ] **OpenAI/Google 도 동일 패턴** (Authorization Code + PKCE, client_id 등록 후 검증)
 - [ ] **ANTHROPIC_API_KEY 주입 시 LLM E2E 테스트** (real-anthropic ignored test 활성화)
