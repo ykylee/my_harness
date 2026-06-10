@@ -4,7 +4,7 @@
 - 범위: 전체 태스크 목록, 우선순위, 진행 상태, 날짜별 기록 연결
 - 대상 독자: 개발자, AI 에이전트, 프로젝트 매니저
 - 상태: stable
-- 최종 수정일: 2026-06-10 (D-65 TASK-005-2 v1.5 종료 + **D-67 v2.0 tract Commit 1** — tract 0.23 Pure Rust + Sonos production. 1차 build 통과. ModelManager skeleton 5 L1 / 0 fail. binary 13MB 유지)
+- 최종 수정일: 2026-06-10 (D-65 TASK-005-2 v1.5 종료 + D-67 v2.0 tract Commit 1 + **D-68 v2.0 tract Commit 2 abort** — tract 0.23 API 한계. v2.0 ONNX 백로그 OOS 유지)
 - 관련 문서: [세션 인계](./session_handoff.md), [프로젝트 프로필](../../docs/PROJECT_PROFILE.md), [CONCEPT.md](../../docs/CONCEPT.md)
 
 ## 1. 운영 원칙
@@ -100,7 +100,8 @@
 - [x] **D-65 TASK-005-2 v1.5 종료 선언** (2026-06-10) — v1.5 phase 완전 종료. 5 사이클 + D-62 + 14 신규 test / 0 fail. ONNX v2.0 Planning 으로 연기. binary 13MB 유지
 - [x] **D-66 v2.0 ONNX Commit 1 abort** (2026-06-10) — ort ecosystem unstable (1.x yanked, 2.0.0-rc.9/10/12 빌드 깨짐). 코드/Cargo.toml 모두 revert. v2.0 ONNX 백로그 OOS. **lesson**: ecosystem stability SSOT — library 분석 시 실제 cargo build 검증 필수
 - [x] **D-67 v2.0 tract Commit 1** (2026-06-10) — tract 0.23 (Pure Rust, Sonos production) 전환. 1차 build 통과. ModelManager skeleton 5 L1 / 0 fail. binary 13MB 유지
-- [ ] **TASK-005-2 v2.0 tract Commit 2** — actual `ModelManager::embed()` inference (tokenization + tract run + Runnable 보관 API)
+- [x] **D-68 v2.0 tract Commit 2 abort** (2026-06-10) — tract 0.23 API 한계 (Tensor wrapper, Runnable mismatch). 5+ error 누적. 변경 모두 revert. v2.0 ONNX 백로그 OOS 유지
+- [ ] **TASK-005-2 v2.0 다음 후보** — Plugin 4-계층 / Kompress-back / 외부 blocker 해결
 - [ ] yklee MiniMax Device OAuth real flow 검증 — yklee 가 MiniMax console 에서 device grant 활성화 후 `myharness auth login minimax --no-browser` 실행 (OpenClaw/Hermes 공통 client_id 사용, W15.b 자동 refresh 도 real test 가능)
 - [ ] yklee OpenAI/Google OAuth client_id 등록 후 동일 패턴 검증 (OpenAI: `platform.openai.com` OAuth Apps, Google: Google Cloud Console Credentials OAuth 2.0 Client IDs)
 - [ ] **TASK-005-3** (v2.0) — TUI/IDE/Web hand-off (5 surfaces) + Routines + OAuth + MCP-based discover
@@ -162,6 +163,7 @@
 | **D-65** | **TASK-005-2 v1.5 종료 선언 (2026-06-10)** — v1.5 phase 누적: W17 (D-60, 비대화형 add-local) + W18 (D-61, R-4 backup + Confirm + --yes) + D-62 (W17 누락분 정정) + W19-1 (AuthStore 주입) + W20 (Ollama cascade) + W21 (sha256_8 + sort fix). 누적 test 14 신규 / 0 fail. **v1.5 build phase 완전 종료**. **ONNX 통합 v2.0 Planning 으로 연기** — Initial_design.tt-3 의 '+10-30MB v1.5+' 의도 따름, ort C++ build dep 회피, binary 13MB 유지, Layer 2 opt-in rule-based fallback 으로 기능적 gap 없음. **v2.0 후보 (yklee 결정)**: (1) ONNX 3-commit, (2) Plugin 4-계층, (3) Kompress-back | §6 (TASK-005-2 v1.5 phase) + §11.3 (TT-3 binary size) |
 | **D-66** | **TASK-005-2 v2.0 ONNX Commit 1 abort (2026-06-10)** — ort ecosystem 2026-06 unstable. ort 1.x (1.13.1, 1.16.3) **전부 yanked** (cargo download 불가). ort 2.0.0-rc.9 (Nov 2024), 2.0.0-rc.10 (Jun 2025), 2.0.0-rc.12 (Mar 2026) 모두 빌드 깨짐 — rc.12 는 ureq 3.1 API 변경 (`tls_config` method 없음, `download-binaries` build script 실패), rc.10/9 는 fn pointer 에 `unwrap_or_else` 미구현으로 type annotation error 다수. **abort 결정**: 코드/Cargo.toml 모두 revert, v2.0 ONNX 백로그 OOS. **lesson**: ecosystem stability 는 SSOT (CONCEPT.md §11.3). library 분석 시 crates.io + lib.rs + **실제 cargo build 검증** 필수. library 보고만 의존 ❌. **차후 옵션**: tract (Pure Rust, ort보다 안정적) 검토 또는 ort 안정화 (1-2 RC 후) 까지 보류. v2.0 다음 후보: Plugin 4-계층 / Kompress-back | §11.3 (ecosystem stability) + §6 (v2.0 backlog) |
 | **D-67** | **TASK-005-2 v2.0 tract Commit 1 (W23, 2026-06-10)** — **D-66 abort 후 tract 로 전환** — Pure Rust (no C++ toolchain), Sonos production 검증 (wake-word/ASR/LLM/TTS), 1차 cargo build 즉시 통과 (D-66 lesson). **WHY tract**: ort ecosystem 2026-06 unstable 의 대안, Apache 2.0/MIT dual ↔ myharness 호환. **Commit 1 scope**: `ModelManager` skeleton (OnceLock lazy + Send+Sync + `new()`/`get()` global + `ensure_downloaded` reqwest streaming + sha2 SHA256 verify + `load_runnable` `into_runnable()` verify). **Commit 1 한계**: Runnable(Arc<dyn trait>) type-safe 보관 어려움 → embed() Commit 2 stub. 5 L1 test PASS (cache_path/sha256_of_known_data/model_info_defaults/model_manager_new/embed_stub). 429 workspace tests / 0 fail. **binary size**: 13MB (release lto=thin 효과, dev profile 22-33MB). **다음 Commit 2**: actual `embed()` inference (tokenization + tract run + Runnable 보관 API 정착) | §6 (v2.0 backlog) + §11.3 (ecosystem stability) |
+| **D-68** | **TASK-005-2 v2.0 tract Commit 2 abort (W24, 2026-06-10)** — actual `embed()` inference 시도 후 abort. **API 한계**: tract 0.23 의 `Tensor(Arc<InternalTensor>)` wrapper field private + Deref 없음 + `to_array_view` 가 `plain_view::Tensor` (다른 type) 의 method + `Runnable` vs `SimplePlan<InferenceFact, Box<InferenceOp>>` direct cast 어려움. **5+ error 누적** (Tensor type mismatch, Runnable trait bound, to_array_view method missing). 변경 모두 revert. **lesson**: tract 0.23 의 low-level API 가 high-level inference 에 적합하지 않음 — `tract_onnx` 의 prelude 가 type-safe 한 wrap 을 노출 안 함. **v2.0 ONNX 백로그 OOS 유지**. 대안: Plugin 4-계층 또는 외부 blocker 해결 | §6 (v2.0 backlog) + §11.3 (ecosystem stability) |
 
 ## 5. 관련 문서 (SSOT)
 

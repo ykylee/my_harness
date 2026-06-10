@@ -4,7 +4,7 @@
 - Scope: current focus, task status, key changes, next actions, risks
 - Audience: yklee, Mavis orchestrator, .MiniMax 워커 에이전트
 - Status: active
-- Updated: 2026-06-10 (D-67 + **v2.0 tract Commit 1** — tract 0.23.0 Pure Rust + Sonos production 검증. 1차 build 즉시 통과 (D-66 lesson). ModelManager skeleton (OnceLock + ensure_downloaded + into_runnable verify, embed() 는 Commit 2 stub). 5 L1 test / 0 fail. 429 workspace tests / 0 fail. binary 13MB 유지 (release lto=thin))
+- Updated: 2026-06-10 (D-68 + **v2.0 tract Commit 2 abort** — actual embed() inference 시도 후 5+ error 누적. tract 0.23 API 한계: Tensor(Arc<InternalTensor>) wrapper private + Deref 없음 + Runnable vs SimplePlan mismatch. 모든 변경 revert. v2.0 ONNX 백로그 OOS 유지. 다음: Plugin 4-계층 또는 외부 blocker 해결)
 - Related docs: [Project Profile](../../docs/PROJECT_PROFILE.md), [Work Backlog](./work_backlog.md), [State Cache](./state.json), [CONCEPT.md](../../docs/CONCEPT.md) (SSOT)
 
 ## Current Focus
@@ -119,7 +119,8 @@
 - [x] **D-65 TASK-005-2 v1.5 종료 선언** (2026-06-10) — v1.5 phase 완전 종료. 5 사이클 + D-62 + 누적 14 신규 test / 0 fail. ONNX 통합 v2.0 Planning 으로 연기 (Initial_design.tt-3 의 설계 의도 따름 — '+10-30MB v1.5+' 분류). 424 workspace tests / 0 fail. cargo build/clippy OK. binary 13MB 유지 (ort C++ dep 회피)
 - [x] **D-66 v2.0 ONNX Commit 1 abort** (2026-06-10) — ort ecosystem 2026-06 unstable. ort 1.x (1.13.1, 1.16.3) **전부 yanked**. ort 2.0.0-rc.9/10/12 모두 빌드 깨짐 (ureq 3.1 API 변경 — `tls_config` method 없음, `unwrap_or_else` fn pointer 미구현). 코드/Cargo.toml 모두 revert. v2.0 ONNX 백로그 OOS. **lesson**: ecosystem stability SSOT (CONCEPT.md §11.3) — library 분석 시 crates.io API + lib.rs + **실제 cargo build 검증** 필수. library 보고만 의존 ❌
 - [x] **D-67 v2.0 tract Commit 1** (2026-06-10) — tract 0.23.0 (Pure Rust, Sonos production, MSRV 1.91) 로 전환. 1차 cargo build 즉시 통과 (D-66 lesson). `ModelManager` skeleton (OnceLock lazy + `new()`/`get()` global + `ensure_downloaded` reqwest streaming + sha2 SHA256 verify + `load_runnable` `into_runnable()` verify, `embed()` Commit 2 stub). 5 L1 test / 0 fail. 429 workspace tests. binary 13MB (release lto=thin). **Commit 1 한계**: Runnable(Arc<dyn trait>) type-safe 보관 어려움 → Commit 2 에서 정착
-- [ ] **TASK-005-2 v2.0 tract Commit 2** — actual `ModelManager::embed()` inference (tokenization + tract run + Runnable 보관 API). 다음 cycle.
+- [x] **D-68 v2.0 tract Commit 2 abort** (2026-06-10) — actual `embed()` inference 시도 후 5+ error 누적. **API 한계**: tract 0.23 의 `Tensor(Arc<InternalTensor>)` wrapper field private + Deref 없음 + `to_array_view` 가 `plain_view::Tensor` 의 method (다른 type) + Runnable vs `SimplePlan<InferenceFact, Box<InferenceOp>>` direct cast 어려움. 변경 모두 revert. **lesson**: tract 0.23 low-level API 가 high-level inference 에 부적합. v2.0 ONNX 백로그 OOS 유지
+- [ ] **TASK-005-2 v2.0 다음 후보** — Plugin 4-계층 (큰 사이클, auto memory + provider-auto-config + marketplace) / Kompress-back (low priority) / 외부 blocker 해결 (TASK-002, Gitea PAT, OAuth, API key)
 - [ ] **MiniMax Device OAuth real flow** 검증 — yklee 가 MiniMax console 에서 device grant 활성화 후 `myharness auth login minimax --no-browser` 실행 (OpenClaw/Hermes 공통 client_id 78257093-7e40-4613-99e0-527b14b39113, W15.b 자동 refresh 도 real test 가능)
 - [ ] **OpenAI/Google 도 동일 패턴** (Authorization Code + PKCE, client_id 등록 후 검증)
 - [ ] **ANTHROPIC_API_KEY 주입 시 LLM E2E 테스트** (real-anthropic ignored test 활성화)
