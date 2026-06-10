@@ -30,7 +30,9 @@
     "in_progress_items": [
       "TASK-005-1 v1 MVP 종료 선언 (D-59 follow-up, 2026-06-09 22:48) — W3~W16 완료 + dual-push + 브랜치 정리 + main 머지. 388+ tests pass. v1 빌드 phase 완전 종료.",
       "TASK-005-2 v1.5 종료 선언 (D-65, 2026-06-10) — v1.5 phase 완전 종료. 5 사이클 (W17, W18, W19-1, W20, W21) + D-62 정정 + 14 신규 test / 0 fail.",
-      "D-66 v2.0 ONNX Commit 1 abort (2026-06-10) — ort ecosystem 2026-06 unstable. v1.x 전부 yanked, v2.0.0-rc.9/10/12 모두 빌드 깨짐 (ureq 3.1 API / fn pointer 호환). 변경 모두 revert. v2.0 ONNX 백로그 OOS. tract (Pure Rust) 대안 검토 가능"
+      "D-66 v2.0 ONNX Commit 1 abort (2026-06-10) — ort ecosystem 2026-06 unstable. v1.x 전부 yanked, v2.0.0-rc.9/10/12 모두 빌드 깨짐 (ureq 3.1 API / fn pointer 호환). 변경 모두 revert. v2.0 ONNX 백로그 OOS. tract (Pure Rust) 대안 검토 가능",
+      "D-67 v2.0 tract Commit 1 (2026-06-10) — tract 0.23.0 (Pure Rust, Sonos production) 로 전환. 1차 cargo build 즉시 통과 (D-66 lesson). `ModelManager` skeleton 5 L1 / 0 fail. binary 13MB 유지",
+      "D-68 v2.0 tract Commit 2 abort (2026-06-10) — actual `embed()` inference 시도 후 5+ error 누적. tract 0.23 API 한계. 변경 모두 revert. v2.0 ONNX 백로그 OOS 유지"
     ],
     "blocked_items": [
       "TASK-002: 도메인별 명령 가이드 (yklee 인프라 정보 의존)",
@@ -71,42 +73,212 @@
   },
   "decisions": {
     "decided": [
-      {"id": "TASK-005", "decision": "Rust 1안", "ref": "D-36", "section": "§11.3"},
-      {"id": "TASK-006", "decision": "ratatui + crossterm", "ref": "D-36 (TASK-005 종속)", "section": "§11.3"},
-      {"id": "TASK-007", "decision": "headroom v1 = 3 알고리즘", "ref": "D-37 + D-46 (W8.4: 4 알고리즘 built-in: CacheAligner + ContentRouter + SmartCrusher + CodeCompressor)", "section": "§5.6"},
-      {"id": "TASK-008", "decision": "provider-auto-config skill", "ref": "D-38 + D-45 (W7: v1 simple 구현)", "section": "§5.5"},
-      {"id": "D-42", "decision": "config 포맷 = TOML 통일", "ref": "D-42", "section": "§5.12, §5.5"},
-      {"id": "D-50", "decision": "v1 LLM API key 기반 (MiniMax 우선, api.minimax.io/v1 + MiniMax-M3 + OpenAI-호환)", "ref": "D-50 (W12)", "section": "§5.5"},
-      {"id": "D-51", "decision": "OAuth 2.0 headless auth (PKCE public client, 3 provider: MiniMax/OpenAI/Google)", "ref": "D-51 (W13)", "section": "§5.5"},
-      {"id": "D-52", "decision": "OAuth env override (MYHARNESS_OAUTH_CLIENT_ID_{MINIMAX,OPENAI,GOOGLE} + MINIMAX_API_HOST) + OAUTH_PROVIDERS static LazyLock 제거", "ref": "D-52 (W13.5)", "section": "§5.5"},
-      {"id": "D-53", "decision": "MiniMax OAuth = Device Authorization Grant (OpenClaw/Hermes 공통 client_id 78257093-7e40-4613-99e0-527b14b39113, 기존 Authorization Code+PKCE 는 deprecated 표시만 유지)", "ref": "D-53 (W14)", "section": "§5.5"},
-      {"id": "D-54", "decision": "device flow 3 모드: default / --no-browser / --non-interactive (browser open 여부와 polling 독립)", "ref": "D-54 (W14.4)", "section": "§5.5"},
-      {"id": "D-55", "decision": "device flow polling output 항상 stdout + 1.5x backoff cap 10s + expired_in ms 단위 unix timestamp", "ref": "D-55 (W14.5)", "section": "§5.5"},
-      {"id": "D-57", "decision": "OAuth token 자동 resolve (4 단계 credential chain: ~/.myharness/oauth/<provider>.toml > MINIMAX_API_KEY > ANTHROPIC_API_KEY > MockClient)", "ref": "D-57 (W15.a)", "section": "§5.5"},
-      {"id": "D-58", "decision": "OAuth token 자동 refresh (LlmError::ProviderCall msg 401/unauthorized/auth 키워드 감지 → AuthManager::ensure_fresh → store save → 새 OpenAiCompatProvider 빌드 → retry 1회). is_unauthorized_error 가 oauth 키워드 제외 (false 양성 방지)", "ref": "D-58 (W15.b)", "section": "§5.5"},
-      {"id": "D-59", "decision": "W16 add-local: myharness auth add-local subcommand (inquire 3단계 UI: URL → token(선택) → /v1/models probe → 모델 선택 → providers.toml 갱신). OpenAI 호환 (/v1/models) 4 서버 통합 (Ollama/vLLM/LM Studio/llama.cpp). W16 follow-up: resolve_llm_client 에 LocalLlm 분기 추가 (MYHARNESS_USE_LOCAL_LLM=1 opt-in env, providers.toml 의 LocalLlm entry 자동 사용). live LM Studio 검증: gemma-4-12b-qat '2+2 is 4.' 응답.", "ref": "D-59 (W16 + follow-up)", "section": "§5.2 (12 명령어) + §5.5 (LLM auth)"},
-      {"id": "D-60", "decision": "W17 v1.5 OI-1 해소: myharness auth add-local --url/--model/--token/--probe-skip 비대화형 모드. clap flag 4개 + myharness-llm::register_local_provider_non_interactive(url, token, model_id) (probe 스킵, available_models=[model_id] 1개 hardcode) + handle_auth_add_local 3-mode 분기 (non-interactive / interactive / partial flag error) + print_register_report 공통 출력. 4 L1 + 2 L2 TC, 410 tests (PR main merge 안 됨, W18 정합성 cross-check 에서 W17 일부 누락 발견).", "ref": "D-60 (W17 + DD-AddLocal §9)", "section": "§5.2 + §5.5 + §6.3 OI-1 ✅"},
-      {"id": "D-61", "decision": "W18 v1.5 R-4 직접 차단: (1) myharness-llm::backup_providers_toml(path, max_backups=5) — register_local_provider 안에 silent fail-soft 호출 연결, providers.toml 덮어쓰기 직전 .backup.<unix_ts> 자동 생성 + retention, (2) cli AuthAction::AddLocal 에 --yes flag 추가 + handle_add_local_interactive(skip_confirm) 의 inquire::Confirm prompt, (3) W17 PR 누락분 main 재추가 (register_local_provider_non_interactive fn + TC-W17-004). 3 L1 + 2 L2 + W17-004 = 5/5 PASS, 406 tests, 4 commit dual-push. 복구: `cp ~/.myharness/providers.toml.backup.<ts> ~/.myharness/providers.toml`. sub-second ts 충돌 / backup corruption R-5, F-1 monotonic_ts, F-2 git-style versioning v1.5+ OOS. **D-62 정정**: (3) W17 PR 누락분은 사실 0건 — W17 original 4 commit 모두 main 머지, W18 cherry-pick cleanup (6e925a1) 이 W17 본진 유지 확인. W18 의 'W17 누락분 보강' 자체가 잘못된 cross-check 결론.", "ref": "D-61 (W18 + DD-AddLocal §10) + D-62 정정", "section": "§5.2 + §5.5 + §6.3 R-4 ✅"},
-      {"id": "D-62", "decision": "W17 PR 누락분 = 0건 정정 (state.json cross-check 오류). W17 original 4 commit (766d1b6 register_local_provider_non_interactive fn / a46f480 TC-W17-I01+I02 / f8082bc cli --url/--model/--token/--probe-skip / d09a6a1 spec+TC scaffold) 모두 main 머지 확인 (git log main --grep='W17' + grep 'register_local_provider_non_interactive\\|tc_w17_' 으로 검증). cleanup commit 6e925a1 가 W18 cherry-pick 중복 fn/test 만 제거하고 W17 본진은 보존. lesson: cross-check 시 '누락분' 결론은 반드시 git log + file symbol grep 으로 직접 검증, 단순 머지 commit stat 만으로 판단 금지.", "ref": "D-62 (2026-06-10)", "section": "§6 + §11.2 (메모리 정합성 규칙)"},
-      {"id": "D-62-W19-1", "decision": "TASK-005-2 W19-1 TC-W17-002 test fail 복구 (AuthStore 주입 패턴). `register_local_provider_with_store(base_url, token, selected, available, store: &dyn AuthStore)` + `register_local_provider_non_interactive_with_store(...)` 추가. 기존 fn 은 thin wrapper (KeyringAuthStore::probe() 1회 → with_store 위임). **WHY**: 기존 fn 의 probe() 가 caller 와 별개 in-memory cache 를 만들어 caller.store.get() 시 BackendUnavailable 으로 fail. 해결: caller 가 store 1개 만들어 with_store 에 명시 전달 → cache lifecycle 단일화. **L1 test 4개**: TC-W17-002 수정 (probe 1번 + with_store 호출) + TC-W19-001 (with_store cache hit) + TC-W19-002 (None token 시 cache 무변경) + TC-W19-003 (thin wrapper 별개 store 회귀 방지). 110 llm tests / 0 fail, cargo build/clippy OK. cli caller 변경 없음 (back-compat).", "ref": "D-62 W19-1 (2026-06-10)", "section": "§5.5 + §6.3 (DD-AddLocal)"},
-      {"id": "D-63", "decision": "TASK-005-2 W20 F-3 Ollama native /api/tags cascade. **WHY**: `scan_local.rs` 는 이미 Ollama native `/api/tags` 사용 중 (line 27), `add_local.rs::probe_local_models` 는 OpenAI 호환 `/v1/models` 만 — split-brain. Ollama default (native only) 사용자가 `auth add-local` 시 404 로 fail. **해결**: `probe_local_models` 2-stage cascade: (1) `GET {base}/api/tags` (Ollama native, 2s timeout) → `parse_ollama_tags` (name=id, details.family=owned_by), (2) 실패 시 `GET {base}/v1/models` (OpenAI compat, 3s timeout, back-compat W16 ends_with `/v1` 분기). `parse_ollama_tags` / `parse_openai_models` / `fetch_json_body` helper 분리. **L2 test 3개**: TC-W20-I01 (native only) + I02 (cascade fallback) + I03 (native 우선, OpenAI 미호출). W16 7/7 회귀 없음. scan_local.rs 와 priority 정합. 110 llm + 10 w16_add_local tests / 0 fail, cargo build/clippy OK.", "ref": "D-63 (2026-06-10)", "section": "§5.5 + §6.3 (DD-AddLocal)"},
-      {"id": "D-64", "decision": "TASK-005-2 W21 F-1+F-2 통합. **WHY (3가지 risk)**: (1) R-5-A: 동일 second 내 rapid register 시 backup filename 동일 → 앞 backup 덮어쓰기. (2) R-5-B: backup file 식별 불가 (filename = `<ts>` only, content fingerprint 없음). (3) cleanup_old_backups sort bug: `sort_by_key(|e| e.file_name())` (string sort) → `backup.999` < `backup.10000` 거꾸로 retention. **해결**: (1) `hash8::content_hash_8(content)` SHA-256 8-char util (sha2=0.10, auth crate 재사용) — content fingerprint, 64^8 = 2.8×10^14 space. (2) backup filename = `<base>.backup.<ts>.<hash8>` — collision 방지 + content 식별. (3) cleanup_old_backups sort: `parse unix_ts` numeric sort. **L1 test 4개**: TC-W21-001 (filename 형식) + 002 (numeric sort 검증) + 003 (sub-second 모두 보존, sleep 없이) + 004 (동일 content 동일 hash, deterministic). 기존 W18 sleep(1100ms) 가 불요하지만 back-compat 으로 그대로 동작. 117 llm + 10 w16_add_local + 3 hash8 = 130 / 0 fail, cargo build/clippy OK.", "ref": "D-64 (2026-06-10)", "section": "§5.5 + §6.3 (DD-AddLocal)"},
-      {"id": "D-65", "decision": "TASK-005-2 v1.5 종료 선언 (2026-06-10). **v1.5 phase 누적**: W17 (D-60, 비대화형 add-local) + W18 (D-61, R-4 backup + Confirm + --yes) + D-62 (W17 누락분 정정) + W19-1 (D-62, AuthStore 주입 패턴) + W20 (D-63, Ollama native cascade) + W21 (D-64, sha256_8 + sort bug fix). **누적 test**: 14 신규 (W19-1 4 L1, W20 3 L2, W21 4 L1, hash8 3 L1) / 0 fail. **v1.5 build phase 완전 종료**. **ONNX 통합 (CCR semantic + Kompress ONNX) v2.0 Planning 으로 연기** — Initial_design.tt-3 의 설계 의도 ('+10-30MB v1.5+') 따름, ort C++ build dep 회피, binary 13MB 유지, Layer 2 opt-in rule-based fallback 으로 기능적 gap 없음. **v2.0 후보 (yklee 결정)**: (1) ONNX 3-commit (ort setup + CCR semantic dedup + Kompress ONNX), (2) Plugin 4-계층 (auto memory + provider-auto-config + marketplace), (3) CCR/Kompress-back baseline. **외부 blocker**: TASK-002 (yklee 인프라 정보), Gitea PAT 회전, MiniMax Device OAuth real flow 검증.", "ref": "D-65 (2026-06-10)", "section": "§6 (TASK-005-2 v1.5 phase) + §11.3 (TT-3 binary size)"},
-      {"id": "D-66", "decision": "TASK-005-2 v2.0 ONNX Commit 1 abort (2026-06-10). **ecosystem 문제**: ort 1.x (1.13.1, 1.16.3) 전부 **yanked** (download 불가). ort 2.0.0-rc.9 (Nov 2024), 2.0.0-rc.10 (Jun 2025), 2.0.0-rc.12 (Mar 2026) 모두 빌드 깨짐 — rc.12 는 ureq 3.1 API 변경 (`tls_config` method 없음), rc.10/9 는 fn pointer 에 `unwrap_or_else` 미구현. **abort 결정**: 코드/Cargo.toml 모두 revert, v2.0 ONNX 백로그 OOS. **lesson**: ecosystem stability 는 SSOT (CONCEPT.md §11.3). library 분석 시 crates.io + lib.rs + **실제 cargo build 검증** 필수. **차후**: tract (Pure Rust) 대안 검토 또는 ort 안정화 (1-2 RC 후) 까지 보류. v2.0 다음 후보: Plugin 4-계층 / Kompress-back.", "ref": "D-66 (2026-06-10)", "section": "§11.3 (ecosystem stability) + §6 (v2.0 backlog)"},
-      {"id": "D-67", "decision": "TASK-005-2 v2.0 tract Commit 1 (W23, 2026-06-10). **D-66 abort 후 tract 로 전환** — Pure Rust (no C++ toolchain), Sonos production 검증 (wake-word/ASR/LLM/TTS), 1차 cargo build 즉시 통과 (D-66 lesson). **WHY tract**: ort ecosystem 2026-06 unstable 의 대안, Apache 2.0/MIT dual ↔ myharness 호환. **Commit 1 scope**: `ModelManager` skeleton (OnceLock lazy + Send+Sync + `new()`/`get()` global + `ensure_downloaded` reqwest streaming + sha2 SHA256 verify + `load_runnable` `into_runnable()` verify). **Commit 1 한계**: Runnable(Arc<dyn trait>) type-safe 보관 어려움 → embed() Commit 2 stub. 5 L1 test PASS (cache_path/sha256_of_known_data/model_info_defaults/model_manager_new/embed_stub). 429 workspace tests / 0 fail. **binary size**: 13MB (release lto=thin 효과, dev profile 22-33MB). **다음 Commit 2**: actual `embed()` inference (tokenization + tract run + Runnable 보관 API 정착).", "ref": "D-67 (2026-06-10)", "section": "§6 (v2.0 backlog) + §11.3 (ecosystem stability)"},
-      {"id": "D-68", "decision": "TASK-005-2 v2.0 tract Commit 2 abort (W24, 2026-06-10). **API 한계**: tract 0.23 의 `Tensor(Arc<InternalTensor>)` wrapper field private + Deref 없음 + `to_array_view` 가 `plain_view::Tensor` (다른 type) 의 method + `Runnable` vs `SimplePlan<InferenceFact, Box<InferenceOp>>` direct cast 어려움. **5+ error 누적** (Tensor type mismatch, Runnable trait bound, to_array_view method missing). **abort 결정**: 변경 모두 revert, v2.0 ONNX 백로그 OOS 유지. **lesson**: tract 0.23 의 low-level API 가 high-level inference 에 적합하지 않음 — `tract_onnx` 의 prelude 가 type-safe 한 wrap 을 노출 안 함. v2.0 다음 후보: Plugin 4-계층 또는 Kompress-back 또는 외부 blocker 해결.", "ref": "D-68 (2026-06-10)", "section": "§6 (v2.0 backlog) + §11.3 (tract API 한계)"}
+      {
+        "id": "TASK-005",
+        "decision": "Rust 1안",
+        "ref": "D-36",
+        "section": "§11.3"
+      },
+      {
+        "id": "TASK-006",
+        "decision": "ratatui + crossterm",
+        "ref": "D-36 (TASK-005 종속)",
+        "section": "§11.3"
+      },
+      {
+        "id": "TASK-007",
+        "decision": "headroom v1 = 3 알고리즘",
+        "ref": "D-37 + D-46 (W8.4: 4 알고리즘 built-in: CacheAligner + ContentRouter + SmartCrusher + CodeCompressor)",
+        "section": "§5.6"
+      },
+      {
+        "id": "TASK-008",
+        "decision": "provider-auto-config skill",
+        "ref": "D-38 + D-45 (W7: v1 simple 구현)",
+        "section": "§5.5"
+      },
+      {
+        "id": "D-42",
+        "decision": "config 포맷 = TOML 통일",
+        "ref": "D-42",
+        "section": "§5.12, §5.5"
+      },
+      {
+        "id": "D-50",
+        "decision": "v1 LLM API key 기반 (MiniMax 우선, api.minimax.io/v1 + MiniMax-M3 + OpenAI-호환)",
+        "ref": "D-50 (W12)",
+        "section": "§5.5"
+      },
+      {
+        "id": "D-51",
+        "decision": "OAuth 2.0 headless auth (PKCE public client, 3 provider: MiniMax/OpenAI/Google)",
+        "ref": "D-51 (W13)",
+        "section": "§5.5"
+      },
+      {
+        "id": "D-52",
+        "decision": "OAuth env override (MYHARNESS_OAUTH_CLIENT_ID_{MINIMAX,OPENAI,GOOGLE} + MINIMAX_API_HOST) + OAUTH_PROVIDERS static LazyLock 제거",
+        "ref": "D-52 (W13.5)",
+        "section": "§5.5"
+      },
+      {
+        "id": "D-53",
+        "decision": "MiniMax OAuth = Device Authorization Grant (OpenClaw/Hermes 공통 client_id 78257093-7e40-4613-99e0-527b14b39113, 기존 Authorization Code+PKCE 는 deprecated 표시만 유지)",
+        "ref": "D-53 (W14)",
+        "section": "§5.5"
+      },
+      {
+        "id": "D-54",
+        "decision": "device flow 3 모드: default / --no-browser / --non-interactive (browser open 여부와 polling 독립)",
+        "ref": "D-54 (W14.4)",
+        "section": "§5.5"
+      },
+      {
+        "id": "D-55",
+        "decision": "device flow polling output 항상 stdout + 1.5x backoff cap 10s + expired_in ms 단위 unix timestamp",
+        "ref": "D-55 (W14.5)",
+        "section": "§5.5"
+      },
+      {
+        "id": "D-57",
+        "decision": "OAuth token 자동 resolve (4 단계 credential chain: ~/.myharness/oauth/<provider>.toml > MINIMAX_API_KEY > ANTHROPIC_API_KEY > MockClient)",
+        "ref": "D-57 (W15.a)",
+        "section": "§5.5"
+      },
+      {
+        "id": "D-58",
+        "decision": "OAuth token 자동 refresh (LlmError::ProviderCall msg 401/unauthorized/auth 키워드 감지 → AuthManager::ensure_fresh → store save → 새 OpenAiCompatProvider 빌드 → retry 1회). is_unauthorized_error 가 oauth 키워드 제외 (false 양성 방지)",
+        "ref": "D-58 (W15.b)",
+        "section": "§5.5"
+      },
+      {
+        "id": "D-59",
+        "decision": "W16 add-local: myharness auth add-local subcommand (inquire 3단계 UI: URL → token(선택) → /v1/models probe → 모델 선택 → providers.toml 갱신). OpenAI 호환 (/v1/models) 4 서버 통합 (Ollama/vLLM/LM Studio/llama.cpp). W16 follow-up: resolve_llm_client 에 LocalLlm 분기 추가 (MYHARNESS_USE_LOCAL_LLM=1 opt-in env, providers.toml 의 LocalLlm entry 자동 사용). live LM Studio 검증: gemma-4-12b-qat '2+2 is 4.' 응답.",
+        "ref": "D-59 (W16 + follow-up)",
+        "section": "§5.2 (12 명령어) + §5.5 (LLM auth)"
+      },
+      {
+        "id": "D-60",
+        "decision": "W17 v1.5 OI-1 해소: myharness auth add-local --url/--model/--token/--probe-skip 비대화형 모드. clap flag 4개 + myharness-llm::register_local_provider_non_interactive(url, token, model_id) (probe 스킵, available_models=[model_id] 1개 hardcode) + handle_auth_add_local 3-mode 분기 (non-interactive / interactive / partial flag error) + print_register_report 공통 출력. 4 L1 + 2 L2 TC, 410 tests (PR main merge 안 됨, W18 정합성 cross-check 에서 W17 일부 누락 발견).",
+        "ref": "D-60 (W17 + DD-AddLocal §9)",
+        "section": "§5.2 + §5.5 + §6.3 OI-1 ✅"
+      },
+      {
+        "id": "D-61",
+        "decision": "W18 v1.5 R-4 직접 차단: (1) myharness-llm::backup_providers_toml(path, max_backups=5) — register_local_provider 안에 silent fail-soft 호출 연결, providers.toml 덮어쓰기 직전 .backup.<unix_ts> 자동 생성 + retention, (2) cli AuthAction::AddLocal 에 --yes flag 추가 + handle_add_local_interactive(skip_confirm) 의 inquire::Confirm prompt, (3) W17 PR 누락분 main 재추가 (register_local_provider_non_interactive fn + TC-W17-004). 3 L1 + 2 L2 + W17-004 = 5/5 PASS, 406 tests, 4 commit dual-push. 복구: `cp ~/.myharness/providers.toml.backup.<ts> ~/.myharness/providers.toml`. sub-second ts 충돌 / backup corruption R-5, F-1 monotonic_ts, F-2 git-style versioning v1.5+ OOS. **D-62 정정**: (3) W17 PR 누락분은 사실 0건 — W17 original 4 commit 모두 main 머지, W18 cherry-pick cleanup (6e925a1) 이 W17 본진 유지 확인. W18 의 'W17 누락분 보강' 자체가 잘못된 cross-check 결론.",
+        "ref": "D-61 (W18 + DD-AddLocal §10) + D-62 정정",
+        "section": "§5.2 + §5.5 + §6.3 R-4 ✅"
+      },
+      {
+        "id": "D-62",
+        "decision": "W17 PR 누락분 = 0건 정정 (state.json cross-check 오류). W17 original 4 commit (766d1b6 register_local_provider_non_interactive fn / a46f480 TC-W17-I01+I02 / f8082bc cli --url/--model/--token/--probe-skip / d09a6a1 spec+TC scaffold) 모두 main 머지 확인 (git log main --grep='W17' + grep 'register_local_provider_non_interactive\\|tc_w17_' 으로 검증). cleanup commit 6e925a1 가 W18 cherry-pick 중복 fn/test 만 제거하고 W17 본진은 보존. lesson: cross-check 시 '누락분' 결론은 반드시 git log + file symbol grep 으로 직접 검증, 단순 머지 commit stat 만으로 판단 금지.",
+        "ref": "D-62 (2026-06-10)",
+        "section": "§6 + §11.2 (메모리 정합성 규칙)"
+      },
+      {
+        "id": "D-62-W19-1",
+        "decision": "TASK-005-2 W19-1 TC-W17-002 test fail 복구 (AuthStore 주입 패턴). `register_local_provider_with_store(base_url, token, selected, available, store: &dyn AuthStore)` + `register_local_provider_non_interactive_with_store(...)` 추가. 기존 fn 은 thin wrapper (KeyringAuthStore::probe() 1회 → with_store 위임). **WHY**: 기존 fn 의 probe() 가 caller 와 별개 in-memory cache 를 만들어 caller.store.get() 시 BackendUnavailable 으로 fail. 해결: caller 가 store 1개 만들어 with_store 에 명시 전달 → cache lifecycle 단일화. **L1 test 4개**: TC-W17-002 수정 (probe 1번 + with_store 호출) + TC-W19-001 (with_store cache hit) + TC-W19-002 (None token 시 cache 무변경) + TC-W19-003 (thin wrapper 별개 store 회귀 방지). 110 llm tests / 0 fail, cargo build/clippy OK. cli caller 변경 없음 (back-compat).",
+        "ref": "D-62 W19-1 (2026-06-10)",
+        "section": "§5.5 + §6.3 (DD-AddLocal)"
+      },
+      {
+        "id": "D-63",
+        "decision": "TASK-005-2 W20 F-3 Ollama native /api/tags cascade. **WHY**: `scan_local.rs` 는 이미 Ollama native `/api/tags` 사용 중 (line 27), `add_local.rs::probe_local_models` 는 OpenAI 호환 `/v1/models` 만 — split-brain. Ollama default (native only) 사용자가 `auth add-local` 시 404 로 fail. **해결**: `probe_local_models` 2-stage cascade: (1) `GET {base}/api/tags` (Ollama native, 2s timeout) → `parse_ollama_tags` (name=id, details.family=owned_by), (2) 실패 시 `GET {base}/v1/models` (OpenAI compat, 3s timeout, back-compat W16 ends_with `/v1` 분기). `parse_ollama_tags` / `parse_openai_models` / `fetch_json_body` helper 분리. **L2 test 3개**: TC-W20-I01 (native only) + I02 (cascade fallback) + I03 (native 우선, OpenAI 미호출). W16 7/7 회귀 없음. scan_local.rs 와 priority 정합. 110 llm + 10 w16_add_local tests / 0 fail, cargo build/clippy OK.",
+        "ref": "D-63 (2026-06-10)",
+        "section": "§5.5 + §6.3 (DD-AddLocal)"
+      },
+      {
+        "id": "D-64",
+        "decision": "TASK-005-2 W21 F-1+F-2 통합. **WHY (3가지 risk)**: (1) R-5-A: 동일 second 내 rapid register 시 backup filename 동일 → 앞 backup 덮어쓰기. (2) R-5-B: backup file 식별 불가 (filename = `<ts>` only, content fingerprint 없음). (3) cleanup_old_backups sort bug: `sort_by_key(|e| e.file_name())` (string sort) → `backup.999` < `backup.10000` 거꾸로 retention. **해결**: (1) `hash8::content_hash_8(content)` SHA-256 8-char util (sha2=0.10, auth crate 재사용) — content fingerprint, 64^8 = 2.8×10^14 space. (2) backup filename = `<base>.backup.<ts>.<hash8>` — collision 방지 + content 식별. (3) cleanup_old_backups sort: `parse unix_ts` numeric sort. **L1 test 4개**: TC-W21-001 (filename 형식) + 002 (numeric sort 검증) + 003 (sub-second 모두 보존, sleep 없이) + 004 (동일 content 동일 hash, deterministic). 기존 W18 sleep(1100ms) 가 불요하지만 back-compat 으로 그대로 동작. 117 llm + 10 w16_add_local + 3 hash8 = 130 / 0 fail, cargo build/clippy OK.",
+        "ref": "D-64 (2026-06-10)",
+        "section": "§5.5 + §6.3 (DD-AddLocal)"
+      },
+      {
+        "id": "D-65",
+        "decision": "TASK-005-2 v1.5 종료 선언 (2026-06-10). **v1.5 phase 누적**: W17 (D-60, 비대화형 add-local) + W18 (D-61, R-4 backup + Confirm + --yes) + D-62 (W17 누락분 정정) + W19-1 (D-62, AuthStore 주입 패턴) + W20 (D-63, Ollama native cascade) + W21 (D-64, sha256_8 + sort bug fix). **누적 test**: 14 신규 (W19-1 4 L1, W20 3 L2, W21 4 L1, hash8 3 L1) / 0 fail. **v1.5 build phase 완전 종료**. **ONNX 통합 (CCR semantic + Kompress ONNX) v2.0 Planning 으로 연기** — Initial_design.tt-3 의 설계 의도 ('+10-30MB v1.5+') 따름, ort C++ build dep 회피, binary 13MB 유지, Layer 2 opt-in rule-based fallback 으로 기능적 gap 없음. **v2.0 후보 (yklee 결정)**: (1) ONNX 3-commit (ort setup + CCR semantic dedup + Kompress ONNX), (2) Plugin 4-계층 (auto memory + provider-auto-config + marketplace), (3) CCR/Kompress-back baseline. **외부 blocker**: TASK-002 (yklee 인프라 정보), Gitea PAT 회전, MiniMax Device OAuth real flow 검증.",
+        "ref": "D-65 (2026-06-10)",
+        "section": "§6 (TASK-005-2 v1.5 phase) + §11.3 (TT-3 binary size)"
+      },
+      {
+        "id": "D-66",
+        "decision": "TASK-005-2 v2.0 ONNX Commit 1 abort (2026-06-10). **ecosystem 문제**: ort 1.x (1.13.1, 1.16.3) 전부 **yanked** (download 불가). ort 2.0.0-rc.9 (Nov 2024), 2.0.0-rc.10 (Jun 2025), 2.0.0-rc.12 (Mar 2026) 모두 빌드 깨짐 — rc.12 는 ureq 3.1 API 변경 (`tls_config` method 없음), rc.10/9 는 fn pointer 에 `unwrap_or_else` 미구현. **abort 결정**: 코드/Cargo.toml 모두 revert, v2.0 ONNX 백로그 OOS. **lesson**: ecosystem stability 는 SSOT (CONCEPT.md §11.3). library 분석 시 crates.io + lib.rs + **실제 cargo build 검증** 필수. **차후**: tract (Pure Rust) 대안 검토 또는 ort 안정화 (1-2 RC 후) 까지 보류. v2.0 다음 후보: Plugin 4-계층 / Kompress-back.",
+        "ref": "D-66 (2026-06-10)",
+        "section": "§11.3 (ecosystem stability) + §6 (v2.0 backlog)"
+      },
+      {
+        "id": "D-67",
+        "decision": "TASK-005-2 v2.0 tract Commit 1 (W23, 2026-06-10). **D-66 abort 후 tract 로 전환** — Pure Rust (no C++ toolchain), Sonos production 검증 (wake-word/ASR/LLM/TTS), 1차 cargo build 즉시 통과 (D-66 lesson). **WHY tract**: ort ecosystem 2026-06 unstable 의 대안, Apache 2.0/MIT dual ↔ myharness 호환. **Commit 1 scope**: `ModelManager` skeleton (OnceLock lazy + Send+Sync + `new()`/`get()` global + `ensure_downloaded` reqwest streaming + sha2 SHA256 verify + `load_runnable` `into_runnable()` verify). **Commit 1 한계**: Runnable(Arc<dyn trait>) type-safe 보관 어려움 → embed() Commit 2 stub. 5 L1 test PASS (cache_path/sha256_of_known_data/model_info_defaults/model_manager_new/embed_stub). 429 workspace tests / 0 fail. **binary size**: 13MB (release lto=thin 효과, dev profile 22-33MB). **다음 Commit 2**: actual `embed()` inference (tokenization + tract run + Runnable 보관 API 정착).",
+        "ref": "D-67 (2026-06-10)",
+        "section": "§6 (v2.0 backlog) + §11.3 (ecosystem stability)"
+      },
+      {
+        "id": "D-68",
+        "decision": "TASK-005-2 v2.0 tract Commit 2 abort (W24, 2026-06-10). **API 한계**: tract 0.23 의 `Tensor(Arc<InternalTensor>)` wrapper field private + Deref 없음 + `to_array_view` 가 `plain_view::Tensor` (다른 type) 의 method + `Runnable` vs `SimplePlan<InferenceFact, Box<InferenceOp>>` direct cast 어려움. **5+ error 누적** (Tensor type mismatch, Runnable trait bound, to_array_view method missing). **abort 결정**: 변경 모두 revert, v2.0 ONNX 백로그 OOS 유지. **lesson**: tract 0.23 의 low-level API 가 high-level inference 에 적합하지 않음 — `tract_onnx` 의 prelude 가 type-safe 한 wrap 을 노출 안 함. v2.0 다음 후보: Plugin 4-계층 또는 Kompress-back 또는 외부 blocker 해결.",
+        "ref": "D-68 (2026-06-10)",
+        "section": "§6 (v2.0 backlog) + §11.3 (tract API 한계)"
+      }
     ],
     "deferred": [
-      {"id": "TASK-002", "decision": "도메인별 명령 가이드", "reason": "yklee 인프라 정보 의존", "resume": "v1 Rust 구현 완료 후 yklee 인프라 정보 수령 시"},
-      {"id": "MiniMax-Device-OAuth", "decision": "real device grant 검증", "reason": "mock e2e test 로 흐름 검증 완료 (W13.6 + W15.b). real flow 는 yklee 가 MiniMax console 에서 device grant 활성화 후 가능", "resume": "yklee 의 MiniMax device grant 활성화 후 `myharness auth login minimax --no-browser` 실행"},
-      {"id": "OpenAI-OAuth", "decision": "real OAuth flow 검증", "reason": "yklee 가 platform.openai.com OAuth Apps 에서 client_id 등록 필요", "resume": "client_id 등록 후"},
-      {"id": "Google-OAuth", "decision": "real OAuth flow 검증", "reason": "yklee 가 Google Cloud Console Credentials OAuth 2.0 Client IDs 에서 client_id 등록 필요", "resume": "client_id 등록 후"},
-      {"id": "TASK-005-2-W19+", "decision": "v1.5 후속: Plugin 4-계층 (큰 사이클) / CCR + Kompress-base ONNX / v1.5 종료 선언. W19-1 (TC-W17-002 fail 복구) + W20 F-3 (Ollama cascade) + W21 F-1+F-2 (sha256_8 + sort fix) 완료.", "reason": "W18 + D-62 + W19-1 + W20 + W21 완료 후 yklee 결정", "resume": "v1.5 종료 (D-65 2026-06-10) — v2.0 Planning 으로 이관"},
-      {"id": "TASK-005-2-v2-ONNX", "decision": "v2.0 ONNX 3-commit (ort + CCR semantic + Kompress ONNX). Commit 1: ort = '2' + ModelManager lazy init + reqwest download to ~/.myharness/models/ + SHA256 verify. Commit 2: CcrStore.compress_semantic (all-MiniLM-L6-v2 ONNX, 384 dim, cosine threshold grouping). Commit 3: KompressOnnx (도메인 명사 보존, semantic compression). Fallback to rule-based on init failure. Layer 2 opt-in 유지. 3 commits, 모두 compression crate 작은 사이클.", "reason": "Initial_design.tt-3 의 '+10-30MB v1.5+' 의도 따름. v1.5 종료 선언 (D-65) 으로 v2.0 Planning 으로 이관. ort C++ build dep 회피, binary 13MB 유지, Layer 2 opt-in rule-based fallback 으로 기능적 gap 없음. **D-66 으로 abort** — ort ecosystem 2026-06 unstable (1.x yanked, 2.0.0-rc.9/10/12 빌드 깨짐). **D-67 로 tract 전환** — tract 0.23 Pure Rust, 1차 build 통과, Commit 1 (skeleton) 완료. Commit 2/3 은 tract 기반 진행.", "resume": "tract Commit 2 (actual embed() inference) 진행 시"},
-      {"id": "TASK-005-2-v2-Plugin", "decision": "v2.0 Plugin 4-계층 (큰 사이클) — auto memory + provider-auto-config skill 정식 + marketplace + plugin installer. CONCEPT.md §5.14 Skill/MCP first-class 구현. cross-crate (core/llm/tools/compression/cli 영향). 작은 사이클이 아닌 큰 사이클.", "reason": "v1.5 종료 후 yklee 결정", "resume": "v2.0 진입 시"},
-      {"id": "TASK-005-2-v2-CCR-Kompress-back", "decision": "v2.0 Kompress-back: kompress_v1 의 stemming 1자 제거를 더 정교한 알고리즘 (suffix stripping, porter-stemmer-lite 등) 으로 교체. ONNX 없이도 도메인 명사 stem 문제 일부 완화. 우선순위 낮음 (Layer 2 opt-in, 사용 빈도 낮음).", "reason": "ONNX 가 정공법이지만 binary size 부담. v1.5 종료 후 yklee 결정", "resume": "v2.0 진입 시 (low priority)"},
-      {"id": "TASK-005-2-W17-W18-PR", "decision": "W17 PR (4 commit feature/v15-add-local-non-interactive) + W18 PR (4 commit feature/v15-add-local-backup) 작성 + main merge. 또는 squash merge 단일 PR 도 가능.", "reason": "D-62 정정: W17 PR 누락분 = 0건. W17 4 commit 모두 main 머지 완료 (336a766 merge commit). W18 도 main 머지 완료 (cherry-pick 83fa0f7 + cleanup 6e925a1). feature/v15-add-local-* 브랜치 정리됨. main 깨끗.", "resume": "DONE (D-62 2026-06-10)"},
-      {"id": "MYHARNESS_MINIMAX_CN", "decision": "MiniMax CN endpoint override", "reason": "W14 에서 base_host `MINIMAX_OAUTH_BASE_URL` env override 가능. CN 정식 endpoint 는 v1.5+", "resume": "yklee 의 CN endpoint 가용성 확인 후"}
+      {
+        "id": "TASK-002",
+        "decision": "도메인별 명령 가이드",
+        "reason": "yklee 인프라 정보 의존",
+        "resume": "v1 Rust 구현 완료 후 yklee 인프라 정보 수령 시"
+      },
+      {
+        "id": "MiniMax-Device-OAuth",
+        "decision": "real device grant 검증",
+        "reason": "mock e2e test 로 흐름 검증 완료 (W13.6 + W15.b). real flow 는 yklee 가 MiniMax console 에서 device grant 활성화 후 가능",
+        "resume": "yklee 의 MiniMax device grant 활성화 후 `myharness auth login minimax --no-browser` 실행"
+      },
+      {
+        "id": "OpenAI-OAuth",
+        "decision": "real OAuth flow 검증",
+        "reason": "yklee 가 platform.openai.com OAuth Apps 에서 client_id 등록 필요",
+        "resume": "client_id 등록 후"
+      },
+      {
+        "id": "Google-OAuth",
+        "decision": "real OAuth flow 검증",
+        "reason": "yklee 가 Google Cloud Console Credentials OAuth 2.0 Client IDs 에서 client_id 등록 필요",
+        "resume": "client_id 등록 후"
+      },
+      {
+        "id": "TASK-005-2-W19+",
+        "decision": "v1.5 후속: Plugin 4-계층 (큰 사이클) / CCR + Kompress-base ONNX / v1.5 종료 선언. W19-1 (TC-W17-002 fail 복구) + W20 F-3 (Ollama cascade) + W21 F-1+F-2 (sha256_8 + sort fix) 완료.",
+        "reason": "W18 + D-62 + W19-1 + W20 + W21 완료 후 yklee 결정",
+        "resume": "v1.5 종료 (D-65 2026-06-10) — v2.0 Planning 으로 이관"
+      },
+      {
+        "id": "TASK-005-2-v2-ONNX",
+        "decision": "v2.0 ONNX 3-commit (ort + CCR semantic + Kompress ONNX). Commit 1: ort = '2' + ModelManager lazy init + reqwest download to ~/.myharness/models/ + SHA256 verify. Commit 2: CcrStore.compress_semantic (all-MiniLM-L6-v2 ONNX, 384 dim, cosine threshold grouping). Commit 3: KompressOnnx (도메인 명사 보존, semantic compression). Fallback to rule-based on init failure. Layer 2 opt-in 유지. 3 commits, 모두 compression crate 작은 사이클.",
+        "reason": "Initial_design.tt-3 의 '+10-30MB v1.5+' 의도 따름. v1.5 종료 선언 (D-65) 으로 v2.0 Planning 으로 이관. ort C++ build dep 회피, binary 13MB 유지, Layer 2 opt-in rule-based fallback 으로 기능적 gap 없음. **D-66 으로 abort** — ort ecosystem 2026-06 unstable (1.x yanked, 2.0.0-rc.9/10/12 빌드 깨짐). **D-67 로 tract 전환** — tract 0.23 Pure Rust, 1차 build 통과, Commit 1 (skeleton) 완료. **D-68 으로 Commit 2 abort** — tract 0.23 API 한계 (Tensor wrapper, Runnable vs SimplePlan mismatch, plain_view::Tensor method). v2.0 ONNX 백로그 OOS 유지.",
+        "resume": "tract 0.24+ 안정화 후 재시도 또는 Plugin 4-계층 전환"
+      },
+      {
+        "id": "TASK-005-2-v2-Plugin",
+        "decision": "v2.0 Plugin 4-계층 (큰 사이클) — auto memory + provider-auto-config skill 정식 + marketplace + plugin installer. CONCEPT.md §5.14 Skill/MCP first-class 구현. cross-crate (core/llm/tools/compression/cli 영향). 작은 사이클이 아닌 큰 사이클.",
+        "reason": "v1.5 종료 후 yklee 결정",
+        "resume": "v2.0 진입 시"
+      },
+      {
+        "id": "TASK-005-2-v2-CCR-Kompress-back",
+        "decision": "v2.0 Kompress-back: kompress_v1 의 stemming 1자 제거를 더 정교한 알고리즘 (suffix stripping, porter-stemmer-lite 등) 으로 교체. ONNX 없이도 도메인 명사 stem 문제 일부 완화. 우선순위 낮음 (Layer 2 opt-in, 사용 빈도 낮음).",
+        "reason": "ONNX 가 정공법이지만 binary size 부담. v1.5 종료 후 yklee 결정",
+        "resume": "v2.0 진입 시 (low priority)"
+      },
+      {
+        "id": "TASK-005-2-W17-W18-PR",
+        "decision": "W17 PR (4 commit feature/v15-add-local-non-interactive) + W18 PR (4 commit feature/v15-add-local-backup) 작성 + main merge. 또는 squash merge 단일 PR 도 가능.",
+        "reason": "D-62 정정: W17 PR 누락분 = 0건. W17 4 commit 모두 main 머지 완료 (336a766 merge commit). W18 도 main 머지 완료 (cherry-pick 83fa0f7 + cleanup 6e925a1). feature/v15-add-local-* 브랜치 정리됨. main 깨끗.",
+        "resume": "DONE (D-62 2026-06-10)"
+      },
+      {
+        "id": "MYHARNESS_MINIMAX_CN",
+        "decision": "MiniMax CN endpoint override",
+        "reason": "W14 에서 base_host `MINIMAX_OAUTH_BASE_URL` env override 가능. CN 정식 endpoint 는 v1.5+",
+        "resume": "yklee 의 CN endpoint 가용성 확인 후"
+      }
     ]
   },
   "backlog": {
@@ -157,17 +329,7 @@
     "ai-workflow/memory/backlog/2026-06-09.md"
   ],
   "next_actions": [
-    "**TASK-005-1 v1 MVP 종료 선언 완료 (2026-06-09 22:48)** — W3~W16 + dual-push + 브랜치 정리 + main 머지. 다음 TASK 결정 대기",
-    "**D-62 W17 누락분 = 0건 정정 완료 (2026-06-10)** — state.json / handoff / backlog / 2026-06-09.md 정정. W17 original 4 commit 모두 main 머지 확인. W18 cross-check 오류였음",
-    "TASK-005-2 v1.5 종료 선언 완료 (D-65, 2026-06-10) — 5 사이클 + D-62 + 14 신규 test / 0 fail. 다음 TASK-005-2 v2.0 Planning 결정 대기",
     "TASK-005-2 v2.0 진입 결정 — yklee 결정 시. 후보: (1) ONNX 3-commit (ort + CCR semantic + Kompress ONNX) / (2) Plugin 4-계층 (큰 사이클) / (3) Kompress-back (low priority)",
-    "**D-62 W19-1 TC-W17-002 test fail 복구 완료 (2026-06-10)** — `register_local_provider_with_store` + `register_local_provider_non_interactive_with_store` 추가 (AuthStore 주입 패턴). 기존 fn 은 thin wrapper. 110 llm tests / 0 fail. cargo build/clippy OK",
-    "**D-63 W20 F-3 Ollama native /api/tags cascade 완료 (2026-06-10)** — `probe_local_models` 2-stage cascade (Ollama native → OpenAI compat fallback). W16 7/7 회귀 없음. 110 llm + 10 w16_add_local tests / 0 fail",
-    "**D-64 W21 F-1+F-2 통합 완료 (2026-06-10)** — hash8 (sha256 8-char) util + backup filename `<ts>.<sha256_8>` + cleanup_old_backups sort bug fix. R-5-A (sub-second collision) + R-5-B (content 식별) + sort bug 동시 해결. 117 llm + 10 w16_add_local + 3 hash8 = 130 / 0 fail",
-    "**D-65 TASK-005-2 v1.5 종료 선언 (2026-06-10)** — v1.5 phase 완전 종료. 5 사이클 (W17/W18/W19-1/W20/W21) + D-62 + 누적 14 신규 test / 0 fail. ONNX v2.0 Planning 으로 연기 (Initial_design.tt-3 의 v1.5+ 의도 따름)",
-    "**D-66 v2.0 ONNX Commit 1 abort (2026-06-10)** — ort ecosystem unstable (1.x 전부 yanked, 2.0.0-rc.9/10/12 빌드 깨짐). 코드/Cargo.toml 모두 revert. v2.0 ONNX 백로그 OOS. **lesson**: ecosystem stability SSOT (CONCEPT.md §11.3) — library 분석 시 실제 cargo build 검증 필수. v2.0 다음 후보: Plugin 4-계층 / Kompress-back / tract (Pure Rust) 대안",
-    "**D-67 v2.0 tract Commit 1 (2026-06-10)** — tract 0.23.0 (Pure Rust, Sonos production, MSRV 1.91) 로 전환. 1차 cargo build 즉시 통과 (D-66 lesson). `ModelManager` skeleton (OnceLock lazy + `ensure_downloaded` + `load_runnable` into_runnable verify, `embed()` Commit 2 stub). 5 L1 test / 0 fail. 429 workspace tests. binary 13MB (release lto=thin)",
-    "**D-68 v2.0 tract Commit 2 abort (W24, 2026-06-10)** — actual `embed()` inference 시도 후 abort. **API 한계**: tract 0.23 의 `Tensor(Arc<InternalTensor>)` wrapper field private + Deref 없음 + `to_array_view` 가 `plain_view::Tensor` (다른 type) 의 method + Runnable vs `SimplePlan<InferenceFact, Box<InferenceOp>>` direct cast 어려움. **5+ error 누적** (Tensor type mismatch, Runnable trait bound, to_array_view method missing). 변경 모두 revert. **lesson**: tract 0.23 의 low-level API 가 high-level inference 에 적합하지 않음 — `tract_onnx` 의 prelude 가 type-safe 한 wrap 을 노출 안 함. **v2.0 ONNX 백로그 OOS 유지**. 대안: Plugin 4-계층 또는 외부 blocker 해결",
     "MiniMax Device OAuth real flow: yklee 가 MiniMax console 에서 device grant 활성화 후 `myharness auth login minimax --no-browser` 실행 (OpenClaw/Hermes 공통 client_id 78257093-7e40-4613-99e0-527b14b39113, W15.b 자동 refresh 도 real test 가능)",
     "OpenAI/Google 도 동일 패턴 (Authorization Code + PKCE, client_id 등록 후)",
     "ANTHROPIC_API_KEY 주입 시 LLM E2E 테스트 (real-anthropic ignored test 활성화)",
