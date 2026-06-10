@@ -4,7 +4,7 @@
 - Scope: current focus, task status, key changes, next actions, risks
 - Audience: yklee, Mavis orchestrator, .MiniMax 워커 에이전트
 - Status: active
-- Updated: 2026-06-09 (D-61 + **TASK-005-2 v1.5 W18 완료 (R-4 직접 차단)** — `auth add-local` 자동 backup + Confirm prompt + --yes flag. 4 commit dual-push, 406 tests pass. 다음: W17 PR main merge + W19+ 결정 대기)
+- Updated: 2026-06-10 (D-62 + **W17 누락분 = 0건 정정** — W18 정합성 cross-check 가 잘못된 결론. W17 original 4 commit 모두 main 머지 확인, W18 cherry-pick cleanup (6e925a1) 이 W17 본진 유지. 다음: TC-W17-002 test fail 조사 + W19+ 결정)
 - Related docs: [Project Profile](../../docs/PROJECT_PROFILE.md), [Work Backlog](./work_backlog.md), [State Cache](./state.json), [CONCEPT.md](../../docs/CONCEPT.md) (SSOT)
 
 ## Current Focus
@@ -33,8 +33,9 @@
 - **W14.6 산출물 (D-56)**: `device_token_to_oauth` 응답의 `expired_in` ms → s 변환 (`TokenStore::save` 초 단위 `expires_at` 와 일관성)
 - **W15.a 산출물 (D-57)**: cli LLM client builder `resolve_llm_client()` helper 추출. **4 단계 credential chain**: (1) `~/.myharness/oauth/minimax.toml` OAuth access_token (env var 보다 우선) → (2) `MINIMAX_API_KEY` env → (3) `ANTHROPIC_API_KEY` env → (4) MockClient fallback. token 만료 시 WARN + env var fallback.
 - **W15.b 산출물 (D-58)**: cli crate 에 `RefreshingLlmClient` wrapper 추가. `LlmError::ProviderCall(msg)` 의 `msg.to_lowercase()` 에 **"401"** / **"unauthorized"** / **"auth"** (단 "oauth" 제외) 키워드 감지 → `AuthManager::ensure_fresh(Arc<dyn OAuthProvider>)` 호출 → store 갱신 → 새 `OpenAiCompatProvider` 빌드 → **retry 1회**. retry 1회 한정 (무한루프 방지). `resolve_llm_client()` 의 OAuth 경로(1번)에만 wrap (env var / MockClient 경로는 불요). `TokenStore` / `AuthManager` 에 `#[derive(Clone)]` 추가. `cli/Cargo.toml` 에 `async-trait` + `tempfile` (dev) + `chrono` (dev) + `serde_json` (dev) 추가. 9 cli tests 추가 (`is_unauthorized_*` 6 + `with_no_stored_token` 1 + `without_refresh_token` 1 + `e2e_401_refresh_retry_200` 1). 388 workspace tests pass
-- **누적 38+ commit dual-push** (D-44~D-58). **Workspace 388 tests pass, 0 fail, 2 ignored** (real API smoke)
-- **다음**: TASK-005-1 v1 MVP 종료 또는 TASK-005-2 (v1.5) 진입. MiniMax device grant real flow 검증 (W15.b 자동 refresh 도 real test 가능)
+- **누적 38+ commit dual-push** (D-44~D-58) + W17 PR main merge (336a766) + W18 cherry-pick main merge + cleanup (6e925a1) + handoff_D-61 복구 (91c1e34). **Workspace 411 tests pass, 0 fail, 2 ignored** (real API smoke)
+- **D-62 정정 (2026-06-10)**: **W18 의 'W17 PR 누락분' 보강 자체가 잘못된 cross-check 였음**. W17 original 4 commit (766d1b6 register_local_provider_non_interactive fn / a46f480 TC-W17-I01+I02 / f8082bc cli --url/--model/--token/--probe-skip / d09a6a1 spec+TC scaffold) 모두 main 머지 확인 (git log main --grep='W17' + grep 'register_local_provider_non_interactive\\|tc_w17_' 으로 검증). W18 cherry-pick cleanup commit `6e925a1` 가 W18 중복 fn/test 만 제거하고 W17 본진은 보존. **→ W17 누락분 = 0건**, state.json / handoff / backlog / 2026-06-09.md 정정. lesson: cross-check 시 '누락분' 결론은 반드시 git log + file symbol grep 으로 직접 검증, 단순 머지 commit stat 만으로 판단 금지
+- **다음**: TC-W17-002 test fail 조사 (KeyringAuthStore::set libsecret 부재 BackendUnavailable) 또는 TASK-005-2 W19+ 결정. MiniMax device grant real flow 검증 (W15.b 자동 refresh 도 real test 가능)
 
 ## Work Status
 
@@ -110,7 +111,10 @@
 - [x] **D-52 follow-up 6 commit dual push (D-53~D-58)** ✅
 - [ ] **Gitea PAT 회전** (이전 세션 노출 회전 권고) — yklee 가 회전 시 통지
 - [x] **TASK-005-1 v1 MVP 종료 선언** (W3~W16 완료, 8/8 waves + D-52 follow-up 6 작업 + W16 add-local, 388+ tests pass, dual-push 완료, 2026-06-09 22:48)
-- [ ] **TASK-005-2 (v1.5)** 진입 — Plugin 4-계층 + marketplace + auto memory + provider-auto-config skill 정식 + CCR/Kompress-base ONNX
+- [x] **TASK-005-2 v1.5 W17 (D-60) + W18 (D-61) 완료** — auth add-local 비대화형 모드 (--url/--model/--token/--probe-skip) + R-4 backup + Confirm + --yes flag. main 머지 + cleanup (6e925a1) + handoff_D-61 복구 (91c1e34). 411 tests pass
+- [x] **D-62 W17 누락분 = 0건 정정** (2026-06-10) — W18 cross-check 오류였음, W17 original 4 commit 모두 main 머지 확인
+- [ ] **TC-W17-002 test fail 복구** — `add_local::tests::tc_w17_002_non_interactive_with_token` 가 libsecret 부재 환경 BackendUnavailable. KeyringAuthStore::set 의 in-memory fallback bug 가능성. mock store 격리 권장
+- [ ] **TASK-005-2 W19+ (v1.5)** — F-1 monotonic_ts / F-2 git-style versioning / F-3 Ollama native / Plugin 4-계층 (큰 사이클) / CCR + Kompress-base ONNX
 - [ ] **MiniMax Device OAuth real flow** 검증 — yklee 가 MiniMax console 에서 device grant 활성화 후 `myharness auth login minimax --no-browser` 실행 (OpenClaw/Hermes 공통 client_id 78257093-7e40-4613-99e0-527b14b39113, W15.b 자동 refresh 도 real test 가능)
 - [ ] **OpenAI/Google 도 동일 패턴** (Authorization Code + PKCE, client_id 등록 후 검증)
 - [ ] **ANTHROPIC_API_KEY 주입 시 LLM E2E 테스트** (real-anthropic ignored test 활성화)
@@ -136,5 +140,7 @@
 - **OpenAI/Google OAuth 미검증**: mock e2e test 로 흐름 검증 완료 (W13.6). real flow 는 client_id 등록 후 검증
 - **CN endpoint 미구현** (D-52 → D-53 일부 해소): W14 에서 `MINIMAX_OAUTH_BASE_URL` env override 가능 (region 전환). CN 정식 endpoint (`api.minimaxi.com`) 는 v1.5+
 - **W15.b 자동 refresh 완료** (D-58): OAuth token 만료 시 401 감지 → ensure_fresh → store save → 새 OpenAiCompatProvider → retry 1회. refresh_token 없으면 expired token 그대로 retry
+- **TC-W17-002 test fail** (D-62 식별): `add_local::tests::tc_w17_002_non_interactive_with_token` 가 libsecret 부재 환경 BackendUnavailable Err. `KeyringAuthStore::set` 의 in-memory fallback 이 BackendUnavailable 를 잘못 반환할 가능성, 또는 `register_local_provider_non_interactive` 함수가 `with_token` 경로에서 AuthStore::set 호출하는 구조. mock store DI 또는 env MYHARNESS_LOCAL_LLM_KEY 주입으로 격리 가능
+- **cross-check 정확성** (D-62 lesson): 머지 commit stat 만 보고 '누락분' 결론 내리지 말 것. 반드시 `git log main --grep='WAVE'` + `grep '<symbol>'` 로 file 직접 검증
 
 (End of file - total 102 lines)

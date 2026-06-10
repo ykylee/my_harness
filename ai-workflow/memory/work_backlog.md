@@ -4,7 +4,7 @@
 - 범위: 전체 태스크 목록, 우선순위, 진행 상태, 날짜별 기록 연결
 - 대상 독자: 개발자, AI 에이전트, 프로젝트 매니저
 - 상태: stable
-- 최종 수정일: 2026-06-09 (D-58, TASK-005-1 v1 MVP 8/8 waves + D-52 follow-up 6 작업 완료 — W3~W6.5 tools + W7 llm + W8 context + W9 compression + W10 tui + W11 core + W12 MiniMax LLM API + W13 OAuth 2.0 headless auth + W14 Device Authorization Grant + W14.4 --no-browser 3 모드 + W14.5 polling output + W14.6 token 단위 + W15.a OAuth 자동 resolve + W15.b OAuth 자동 refresh. 38+ commit dual-push)
+- 최종 수정일: 2026-06-10 (D-62, **W17 누락분 = 0건 정정** — W18 정합성 cross-check 가 잘못된 결론. W17 original 4 commit (766d1b6 register_local_provider_non_interactive fn / a46f480 TC-W17-I01+I02 / f8082bc cli 4 flag / d09a6a1 spec+TC scaffold) 모두 main 머지 확인. W18 cherry-pick cleanup commit 6e925a1 가 W18 중복 fn/test 만 제거하고 W17 본진 보존. TASK-005-2 v1.5 W17 (D-60) + W18 (D-61) 완료, main 머지 + cleanup 6e925a1 + handoff_D-61 복구 91c1e34. 411 tests pass)
 - 관련 문서: [세션 인계](./session_handoff.md), [프로젝트 프로필](../../docs/PROJECT_PROFILE.md), [CONCEPT.md](../../docs/CONCEPT.md)
 
 ## 1. 운영 원칙
@@ -91,11 +91,12 @@
 - [x] W15.a OAuth token 자동 resolve (4 단계 credential chain: oauth store > env var > MockClient) (D-57) ✅
 - [x] W15.b OAuth token 자동 refresh (LlmError::ProviderCall msg 401/unauthorized/auth 키워드 감지 → AuthManager::ensure_fresh → store save → 새 OpenAiCompatProvider 빌드 → retry 1회) (D-58) ✅
 - [x] D-52 follow-up 6 commit dual push (D-53~D-58) ✅
-- [ ] **TASK-005-1 v1 MVP 종료 선언** (8/8 waves + D-52 follow-up 6 작업 완료, yklee 결정 대기)
+- [x] **TASK-005-1 v1 MVP 종료 선언** (8/8 waves + D-52 follow-up 6 작업 완료, yklee 결정, 2026-06-09 22:48)
+- [x] **TASK-005-2 v1.5 W17 (D-60) + W18 (D-61) 완료** — auth add-local 비대화형 모드 + R-4 backup + Confirm + --yes flag. main 머지 + cleanup 6e925a1 + handoff_D-61 복구 91c1e34. **D-62 정정**: W17 PR 누락분 = 0건 (W18 cross-check 오류)
+- [ ] **TC-W17-002 test fail 복구** (D-62 식별) — libsecret 부재 환경 BackendUnavailable. KeyringAuthStore::set in-memory fallback bug 또는 mock store 격리
 - [ ] **TASK-005-2** (v1.5) — Plugin 4-계층 + marketplace + auto memory + provider-auto-config skill 정식 구현 + CCR/Kompress-base
 - [ ] yklee MiniMax Device OAuth real flow 검증 — yklee 가 MiniMax console 에서 device grant 활성화 후 `myharness auth login minimax --no-browser` 실행 (OpenClaw/Hermes 공통 client_id 사용, W15.b 자동 refresh 도 real test 가능)
 - [ ] yklee OpenAI/Google OAuth client_id 등록 후 동일 패턴 검증 (OpenAI: `platform.openai.com` OAuth Apps, Google: Google Cloud Console Credentials OAuth 2.0 Client IDs)
-- [ ] **TASK-005-2** (v1.5) — Plugin 4-계층 + marketplace + auto memory + provider-auto-config skill 정식 구현 + CCR/Kompress-base
 - [ ] **TASK-005-3** (v2.0) — TUI/IDE/Web hand-off (5 surfaces) + Routines + OAuth + MCP-based discover
 - [ ] **TASK-005-4** (v2.5) — Multi-agent parallel + confidence scoring
 - [ ] **TASK-005-5** (v3.0) — Computer Use + Multi-user + RBAC
@@ -148,6 +149,7 @@
 | **D-59 follow-up** | **TASK-005-1 v1 MVP 종료 선언** (2026-06-09 22:48, yklee 결정) — W3~W16 40+ commit dual-push, 브랜치 정리 (feature/w16-add-local local/origin/upstream 모두 삭제), main = 140acf9. 보존: `local/d-43-47-tc-scaffold`. handoff + state + decisions + next_actions 갱신 | — |
 | **D-60** | **TASK-005-2 v1.5 W17 완료 (`myharness auth add-local` 비대화형 모드)** — DD-AddLocal §6.3 OI-1 해소 (v1.5 첫 작업). clap flag 4개 (`--url/--model/--token/--probe-skip`). `myharness-llm::register_local_provider_non_interactive(url, token, model_id)` probe 스킵 helper. `handle_auth_add_local` 3-mode 분기. 4 L1 + 2 L2 TC = 6/6 PASS, 410 workspace tests, 4 commit dual-push (feature/v15-add-local-non-interactive). **R-4 (사용자 home providers.toml 덮어쓰기)**: manual test 중 yklee 의 LM Studio 설정 1회 덮어쓰기 → mavis-trash recovery, F-1 backup / F-2 --yes flag v1.5+ OOS. **PR main merge 안 됨 (W18 정합성 cross-check 에서 W17 일부 main 누락 발견)** | §5.2 + §5.5 + §6.3 (OI-1 ✅) |
 | **D-61** | **TASK-005-2 v1.5 W18 완료 (`myharness auth add-local` 자동 backup + Confirm prompt, R-4 직접 차단)** — DD-AddLocal §10 신규 spec. (1) `myharness-llm::backup_providers_toml(path, max_backups=5)` — register_local_provider 안에 silent fail-soft 호출 연결, providers.toml 덮어쓰기 직전 `.backup.<unix_ts>` 자동 생성 + retention, (2) cli `--yes` flag + `inquire::Confirm` prompt (interactive 모드), (3) W17 PR 누락분 main 재추가 (register_local_provider_non_interactive fn + TC-W17-004). 3 L1 + 2 L2 + W17-004 = 5/5 PASS, 406 workspace tests, 4 commit dual-push (feature/v15-add-local-backup). **복구**: `cp ~/.myharness/providers.toml.backup.<ts> ~/.myharness/providers.toml`. sub-second ts 충돌 / backup corruption R-5, F-1 monotonic_ts, F-2 git-style versioning v1.5+ OOS | §5.2 + §5.5 + §6.3 (R-4 ✅) |
+| **D-62** | **TASK-005-2 W17 PR 누락분 = 0건 정정 (state.json cross-check 오류, 2026-06-10)** — W18 정합성 cross-check 가 'W17 original 4 commit 중 fn + TC-W17-001~003 + TC-W17-I01~I02 main 누락' 으로 결론 내렸으나, `git log main --grep='W17'` + `grep 'register_local_provider_non_interactive\\|tc_w17_'` 검증 시 W17 4 commit (766d1b6 register fn / a46f480 TC-W17-I01+I02 / f8082bc cli 4 flag / d09a6a1 spec+TC scaffold) 모두 main 머지 확인. cleanup commit 6e925a1 가 W18 cherry-pick 중복 fn/test 만 제거하고 W17 본진 보존. **lesson**: cross-check 시 '누락분' 결론은 반드시 git log + file symbol grep 으로 직접 검증, 단순 머지 commit stat 만으로 판단 금지. side effect: TC-W17-002 test fail (libsecret 부재 환경 BackendUnavailable) 별도 식별 | §6 + §11.2 (메모리 정합성 규칙) |
 
 ## 5. 관련 문서 (SSOT)
 
