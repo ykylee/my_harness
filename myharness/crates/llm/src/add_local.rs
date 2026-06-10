@@ -394,13 +394,19 @@ pub(crate) fn atomic_write(path: &Path, content: &str) -> std::io::Result<()> {
     Ok(())
 }
 
-/// W18 (v1.5 R-4 대응) — providers.toml 덮어쓰기 직전 자동 backup.
+/// W18 (v1.5 R-4 대응) + W21 (D-64 F-1+F-2) — providers.toml 덮어쓰기 직전 자동 backup.
 ///
 /// # 동작
-/// 1. `path` 가 존재하지 않으면 `None` 반환 (신규 write case, backup 불요)
-/// 2. `path` 가 존재하면 `path.with_extension("toml.backup.<unix_ts>")` 으로 copy
+/// 1. `path` 가 존재하지 않으면 `Some(path)` 반환 (신규 write case, backup 불요)
+/// 2. `path` 가 존재하면 content 읽기 → SHA-256 hash8 계산 → `path.backup.<ts>.<hash8>` 으로 copy
 /// 3. **실패 시 warn 만, register_local_provider 는 계속 진행** (graceful, R-4 fail-soft)
 /// 4. `max_backups` 개수 초과 시 가장 오래된 것부터 삭제 (default 5)
+///
+/// # W21 변경 (D-64 F-1+F-2)
+/// - filename 에 content hash 8-char 추가: `<ts>.<sha256_8>`
+/// - **WHY**: 동일 second 내 rapid register (R-5-A) 시 hash 가 달라 filename 충돌 방지
+/// - 동시에 backup file 식별 (R-5-B) — content snapshot fingerprint 역할
+/// - sha2 = 0.10 (auth crate 에 이미 존재, 새 dep 추가 불요)
 ///
 /// # WHY silent fail
 /// - 사용자가 R-4 사고에도 register 가 성공해야 LLM 사용 가능
@@ -415,13 +421,21 @@ pub fn backup_providers_toml(
     max_backups: usize,
 ) -> Option<std::path::PathBuf> {
     if !path.exists() {
-        return Some(path.to_path_buf()); // 신규 write — backup 불요, path 그대로 반환
+        return Some(path.to_path_buf());
     }
+    let content = match std::fs::read(path) {
+        Ok(c) => c,
+        Err(e) => {
+            eprintln!("⚠  providers.toml 읽기 실패 ({e}). backup 스킵.");
+            return None;
+        }
+    };
+    let hash8 = crate::hash8::content_hash_8(&content);
     let ts = std::time::SystemTime::now()
         .duration_since(std::time::UNIX_EPOCH)
         .map(|d| d.as_secs())
         .unwrap_or(0);
-    let backup = with_backup_suffix(path, ts);
+    let backup = with_backup_suffix(path, ts, &hash8);
     if let Err(e) = std::fs::copy(path, &backup) {
         eprintln!(
             "⚠  providers.toml backup 실패 ({e}). register 는 계속 진행 — 수동으로 `cp {} {{}}.backup` 권고.",
@@ -429,21 +443,24 @@ pub fn backup_providers_toml(
         );
         return None;
     }
-    // cleanup: max_backups 초과 시 가장 오래된 것부터 삭제
     if let Err(e) = cleanup_old_backups(path, max_backups) {
         eprintln!("⚠  backup cleanup 실패 ({e}). 수동 정리 권고.");
     }
     Some(backup)
 }
 
-/// `providers.toml` → `providers.toml.backup.<ts>` 경로 생성.
-fn with_backup_suffix(path: &Path, ts: u64) -> std::path::PathBuf {
+/// `providers.toml` → `providers.toml.backup.<ts>.<hash8>` 경로 생성 (W21, D-64).
+fn with_backup_suffix(path: &Path, ts: u64, hash8: &str) -> std::path::PathBuf {
     let mut s = path.as_os_str().to_os_string();
-    s.push(format!(".backup.{ts}"));
+    s.push(format!(".backup.{ts}.{hash8}"));
     std::path::PathBuf::from(s)
 }
 
 /// backup 파일들 중 가장 오래된 것부터 삭제하여 `max_backups` 개 이하로 유지.
+///
+/// W21 (D-64) sort fix: filename string sort 는 `backup.999` 와 `backup.10000` 비교 시
+/// '9' > '1' 으로 retention 거꾸로 동작. **numeric parse** 로 unix_ts 추출 후 정렬.
+/// hash suffix 는 tie-breaker (동일 ts 시 stable sort) — 동일 ts 내 여러 backup 보존.
 fn cleanup_old_backups(path: &Path, max_backups: usize) -> std::io::Result<()> {
     let parent = match path.parent() {
         Some(p) => p,
@@ -462,11 +479,17 @@ fn cleanup_old_backups(path: &Path, max_backups: usize) -> std::io::Result<()> {
                 .unwrap_or(false)
         })
         .collect();
-    // 오래된 순 (file name 의 timestamp suffix 기준)
-    backups.sort_by_key(|e| e.file_name());
+    // numeric sort on unix_ts (D-64 fix): "backup.999.a1b2" < "backup.10000.c3d4"
+    backups.sort_by_key(|e| {
+        e.file_name()
+            .to_str()
+            .and_then(|n| n.strip_prefix(&prefix))
+            .and_then(|s| s.split('.').next())
+            .and_then(|s| s.parse::<u64>().ok())
+    });
     let excess = backups.len().saturating_sub(max_backups);
     for e in backups.iter().take(excess) {
-        let _ = std::fs::remove_file(e.path()); // best-effort cleanup
+        let _ = std::fs::remove_file(e.path());
     }
     Ok(())
 }
@@ -873,6 +896,146 @@ mod tests {
             let r = store_outer.get(ProviderId::LocalLlm).await;
             assert!(r.is_err(), "outer store 에는 token 이 없어야 (별개 instance), got {r:?}");
         }
+
+        unsafe { std::env::remove_var("MYHARNESS_HOME"); }
+    }
+
+    // ── W21 (v1.5 D-64 F-1+F-2) backup filename + sort fix ─────────────────────
+
+    /// TC-W21-001 — backup filename 이 `.<ts>.<hash8>` 형식 검증 (D-64)
+    #[tokio::test]
+    #[serial_test::serial(env)]
+    async fn tc_w21_001_backup_filename_includes_hash8() {
+        let tmp = tempfile::tempdir().unwrap();
+        unsafe { std::env::set_var("MYHARNESS_HOME", tmp.path()); }
+
+        let toml_path = tmp.path().join("providers.toml");
+        std::fs::write(&toml_path, "[placeholder]\n").unwrap();
+
+        let backup = backup_providers_toml(&toml_path, 5).unwrap();
+
+        let name = backup.file_name().unwrap().to_str().unwrap();
+        let prefix = "providers.toml.backup.";
+        assert!(name.starts_with(prefix), "expected prefix, got {name}");
+        let suffix = &name[prefix.len()..];
+        let parts: Vec<_> = suffix.split('.').collect();
+        assert_eq!(parts.len(), 2, "expected <ts>.<hash8>, got {suffix}");
+        assert!(parts[0].parse::<u64>().is_ok(), "ts not numeric: {}", parts[0]);
+        assert_eq!(parts[1].len(), 8, "hash8 must be 8-char, got {}", parts[1]);
+        assert!(parts[1].chars().all(|c| c.is_ascii_hexdigit()), "hash8 not hex: {}", parts[1]);
+
+        unsafe { std::env::remove_var("MYHARNESS_HOME"); }
+    }
+
+    /// TC-W21-002 — cleanup_old_backups sort 정확도 (D-64 fix)
+    ///
+    /// **WHY**: 기존 string sort 는 `backup.999` < `backup.10000` 거꾸로 동작.
+    /// 수동으로 8개 backup 파일 생성 후 max_backups=5 → 가장 오래된 ts 3개 삭제.
+    #[tokio::test]
+    #[serial_test::serial(env)]
+    async fn tc_w21_002_cleanup_old_backups_uses_numeric_sort() {
+        let tmp = tempfile::tempdir().unwrap();
+        unsafe { std::env::set_var("MYHARNESS_HOME", tmp.path()); }
+
+        // 8개 backup 파일 (ts=100~107) — string sort 와 numeric sort 가 다른 순서를 보이는 구간
+        for ts in 100u64..108 {
+            let name = format!("providers.toml.backup.{ts}.aabbccdd");
+            std::fs::write(tmp.path().join(&name), format!("content-{ts}")).unwrap();
+        }
+
+        let toml_path = tmp.path().join("providers.toml");
+        std::fs::write(&toml_path, "current\n").unwrap();
+
+        let _ = backup_providers_toml(&toml_path, 5);
+
+        let mut remaining: Vec<u64> = std::fs::read_dir(tmp.path())
+            .unwrap()
+            .filter_map(|e| e.ok())
+            .filter(|e| {
+                e.file_name()
+                    .to_string_lossy()
+                    .starts_with("providers.toml.backup.")
+            })
+            .filter_map(|e| {
+                e.file_name()
+                    .to_str()
+                    .and_then(|n| n.strip_prefix("providers.toml.backup."))
+                    .and_then(|s| s.split('.').next())
+                    .and_then(|s| s.parse::<u64>().ok())
+            })
+            .collect();
+        remaining.sort();
+
+        // 8 + 1(current backup) = 9 → max=5 → 가장 오래된 4개 삭제
+        // 100, 101, 102, 103 삭제 → 104~107 + current backup (ts >= 108) 남아야
+        assert_eq!(remaining.len(), 5, "remaining 5개여야, got {remaining:?}");
+        assert_eq!(remaining[0], 104, "104 가 가장 오래된 남은 ts 여야");
+        assert_eq!(remaining[3], 107, "107 가 두번째 신선한 ts 여야");
+        assert!(remaining[4] >= 108, "마지막은 새 backup (ts={}, >= 108)", remaining[4]);
+
+        unsafe { std::env::remove_var("MYHARNESS_HOME"); }
+    }
+
+    /// TC-W21-003 — sub-second 연속 backup (sleep 없이) → 모두 다른 filename 보존 (D-64 F-1+F-2 핵심)
+    ///
+    /// **WHY**: 기존 W18 의 `as_secs()` 만으로는 동일 second 내 rapid register 시 backup
+    /// filename 충돌 → 앞 backup 덮어쓰기. W21 의 hash8 으로 동일 second 내 다른 content
+    /// → 다른 hash → 다른 filename 보장.
+    #[tokio::test]
+    #[serial_test::serial(env)]
+    async fn tc_w21_003_subsecond_backups_all_preserved_with_distinct_hashes() {
+        let tmp = tempfile::tempdir().unwrap();
+        unsafe { std::env::set_var("MYHARNESS_HOME", tmp.path()); }
+
+        let toml_path = tmp.path().join("providers.toml");
+        std::fs::write(&toml_path, "v1\n").unwrap();
+        let _ = backup_providers_toml(&toml_path, 10);
+        std::fs::write(&toml_path, "v2\n").unwrap();
+        let _ = backup_providers_toml(&toml_path, 10);
+        std::fs::write(&toml_path, "v3\n").unwrap();
+        let _ = backup_providers_toml(&toml_path, 10);
+
+        let backups: Vec<_> = std::fs::read_dir(tmp.path())
+            .unwrap()
+            .filter_map(|e| e.ok())
+            .filter(|e| {
+                e.file_name()
+                    .to_string_lossy()
+                    .starts_with("providers.toml.backup.")
+            })
+            .collect();
+        assert_eq!(backups.len(), 3, "3개 backup 모두 보존되어야, got {backups:?}");
+
+        let mut contents: Vec<String> = backups
+            .iter()
+            .map(|e| std::fs::read_to_string(e.path()).unwrap())
+            .collect();
+        contents.sort();
+        assert!(contents.iter().any(|c| c == "v1\n"));
+        assert!(contents.iter().any(|c| c == "v2\n"));
+        assert!(contents.iter().any(|c| c == "v3\n"));
+
+        unsafe { std::env::remove_var("MYHARNESS_HOME"); }
+    }
+
+    /// TC-W21-004 — 동일 content 백업 시 hash 동일 (deterministic)
+    #[tokio::test]
+    #[serial_test::serial(env)]
+    async fn tc_w21_004_same_content_same_hash_deterministic() {
+        let tmp = tempfile::tempdir().unwrap();
+        unsafe { std::env::set_var("MYHARNESS_HOME", tmp.path()); }
+
+        let toml_path = tmp.path().join("providers.toml");
+        std::fs::write(&toml_path, "identical-content\n").unwrap();
+        let b1 = backup_providers_toml(&toml_path, 10).unwrap();
+        std::fs::write(&toml_path, "identical-content\n").unwrap();
+        let b2 = backup_providers_toml(&toml_path, 10).unwrap();
+
+        let n1 = b1.file_name().unwrap().to_str().unwrap();
+        let n2 = b2.file_name().unwrap().to_str().unwrap();
+        let h1 = n1.rsplit('.').next().unwrap();
+        let h2 = n2.rsplit('.').next().unwrap();
+        assert_eq!(h1, h2, "동일 content → 동일 hash8: {n1} vs {n2}");
 
         unsafe { std::env::remove_var("MYHARNESS_HOME"); }
     }

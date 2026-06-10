@@ -30,6 +30,7 @@ pub mod client_mock;
 pub mod client_openai_compat;
 pub mod discover;
 pub mod error;
+pub mod hash8;
 pub mod metadata;
 pub mod paths;
 pub mod provider;
