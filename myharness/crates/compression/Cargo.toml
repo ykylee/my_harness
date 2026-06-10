@@ -15,6 +15,17 @@ tracing = { workspace = true }
 async-trait = { workspace = true }
 tokio = { workspace = true }
 myharness-llm = { path = "../llm" }
+reqwest = { workspace = true }
+sha2 = { workspace = true }
+# W23 (D-67) v2.0 ONNX Commit 1 — tract 0.23 (Pure Rust, Sonos production)
+# D-66 abort: ort 1.x 전부 yanked, 2.0.0-rc.x 전부 ureq 3.1 API 변경으로 빌드 깨짐
+# tract 0.23: Pure Rust (no C++ toolchain), Sonos production 검증 (wake-word/streaming ASR)
+# License: Apache 2.0 / MIT dual ↔ myharness MIT/Apache-2.0 호환
+# Trade-off: binary 13MB → 35-46MB (3.5x, Pure Rust compiled)
+tract = "0.23"
+tract-onnx = "0.23"
+dirs = { workspace = true }
+tokio-stream = "0.1"
 
 [dev-dependencies]
 tempfile = "3"
