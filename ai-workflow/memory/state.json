@@ -24,9 +24,9 @@
     "v1_mvp_build": "TASK-005-1 v1 MVP 8/8 waves 완료 (D-49~D-52) + Device Authorization Grant (D-53) + --no-browser 3 모드 (D-54) + polling output/expired_in 단위 (D-55) + token 단위 변환 (D-56) + OAuth 자동 resolve (D-57) + OAuth 자동 refresh (D-58, W15.b) + W16 auth add-local subcommand (D-59) + W16 follow-up LocalLlm 라우팅 분기. **v1 MVP 종료 선언 (2026-06-09 22:48)**. 40+ commit dual push. 388+ tests pass, 0 fail, 2 ignored."
   },
   "session": {
-    "current_baseline": "**TASK-005-2 v1.5 진입 + W18 backup (R-4 대응) 완료 (D-61, 2026-06-09) + D-62 W17 누락분 = 0건 정정 (2026-06-10)** — W18 = DD-AddLocal §10 신규 (R-4 직접 차단). 4 commit dual-push (feature/v15-add-local-backup, Gitea + GitHub) + W18 cherry-pick main 머지 cleanup (6e925a1) + handoff_D-61 누락분 복구 (91c1e34). 411 tests pass / 0 fail. main = W16 follow-up (140acf9) + W17 merge (336a766, 4 commit) + W18 5 commit (83fa0f7/5ad7021/b4b91ff/3d5a62d/6e925a1/91c1e34). **D-62 정정**: W18 정합성 cross-check 시 'W17 PR 누락분 = fn + TC-W17-001~003 + TC-W17-I01~I02 main 누락' 이라고 결론 내렸으나, 2026-06-10 git log main --grep='W17' 으로 main 직접 검증 시 W17 original 4 commit (766d1b6 register_local_provider_non_interactive, a46f480 TC-W17-I01+I02, f8082bc cli 4 flag, d09a6a1 spec+TC scaffold) 모두 main 머지 확인. cleanup commit (6e925a1) 가 W18 cherry-pick 중복 fn/test 만 제거하고 W17 본진은 유지. **→ W17 누락분 = 0건**, W18 cross-check 가 잘못된 결론.",
+    "current_baseline": "**TASK-005-2 v1.5 종료 (D-70, 2026-06-10) + D-73 T-v5-sync-1 plan_3c8c4a49 cancel + 4-plan split 결정 (2026-06-11)** — v1.5 phase 완전 종료 (8 결정). my_harness 메모리 3 entries 추가 (T-v5-sync-1 실패 분석 + prompt 3원칙 + cross-session grep 1-liner). 4 plan = batch 1개씩. plan_3c8c4a49 cancel 완료 (0 deliverable bytes, scope 3x underestimate, 25min exploration 후 0 write). T-SAW-1 (plan_9b7a6333, standard_ai_workflow wiki) 별도 owner 운영 중. async ops 0건. main = 79f38b8",
     "current_axis": "**TASK-005-2 v1.5 종료 선언 (D-70, 2026-06-10)** — v1.5 phase 완전 종료. v1.5 누적 결정 8 (D-60 W17 + D-61 W18 + D-62 W19-1/정정 + D-63 W20 + D-64 W21 + D-65 종료 + D-69 안정화 + D-70 lint cleanup). 1 commit dual-push (79f38b8). 437 tests pass / 0 fail / 2 ignored. cargo clippy --workspace --all-targets = 0 warning. main = 79f38b8.",
-    "current_focus": "TASK-005-2 v1.5 종료 (D-70). v2.0 tract OOS + Plugin 4-계층 또는 외부 blocker 결정 대기. R-4 lesson: home-XDG-config-mutate binary test 격리 의무화. v1.5.1+ 잔여 lint 0 (D-70 완료). 다음 행동: yklee v2.0 후보 결정 (ONNX 3-commit / Plugin 4-계층 / Kompress-back) 또는 외부 blocker 해결.",
+    "current_focus": "D-73 T-v5-sync-1 plan_3c8c4a49 cancel + 4-plan split 결정 (2026-06-11). my_harness 의 v0.5.0-beta → v0.5.11-beta upstream standard_ai_workflow 11 minor 동기화. 다음 행동: yklee 결정 (4 plan A/B/C/D vs 5 plan Plan B sub-split) → Plan A prompt 작성 + launch (5.1 only, ~5 files, 3 commits, 가장 작은 batch warm-up). Plan B 가 가장 위험 (73 files / 7,941 ins / 5,070 del). R-4 SSOT drift = Plan D 의 마지막 chunk.",
     "in_progress_items": [
       "TASK-005-1 v1 MVP 종료 선언 (D-59 follow-up, 2026-06-09 22:48) — W3~W16 완료 + dual-push + 브랜치 정리 + main 머지. 388+ tests pass. v1 빌드 phase 완전 종료.",
       "TASK-005-2 v1.5 종료 선언 (D-70, 2026-06-10) — v1.5 phase 완전 종료. 8 결정 (D-60~D-65 + D-69 + D-70). 437 tests pass / 0 fail / 2 ignored + clippy 0 warning. main = 79f38b8",
@@ -36,7 +36,8 @@
       "D-69 v1.5 안정화 (2026-06-10) — (1) tool name uppercase 통일 (LLM contract 정합, v1.5+ dispatch 준비, 26 곳 변경), (2) §5.12 init_home_dir() — 11개 디렉토리 자동 생성 (paths.rs +125, integration test 3), (3) clippy 핵심 5건 fix (PI + 4 should_implement_trait allow + 1 useless_format). 3 commit dual-push. 437 tests pass / 0 fail / 2 ignored",
       "D-70 v1.5.1 lint cleanup (2026-06-10) — 21 style lint → 0 warning (collapsible_if 7 + redundant_clone 2 + match simplified 1 + link reference 1 + others 10). 21 file / +94 -110. 자동 fix + manual fix (test code false positive 4 file 복구). cargo clippy --workspace --all-targets = 0 warning. 437 tests / 0 fail 회귀 없음",
       "D-71 LLM Wiki v1.5 mass ingest (2026-06-10) — 49 wiki pages + 303 raw files. 3 commit dual-push (58554c5+090ff11+e529bef). lint 0/69/0. vault = `~/wiki/` Gitea private, Keychain 자동. 다음: query 운영 (사용자가 Obsidian graph view 진입) + 주기적 lint",
-      "D-72 LLM Wiki cross-project 통합 (2026-06-10) — 단일 ~/wiki/ + wiki/projects/{my-harness,devhub}/ + wiki/cross/ 동거. 72 wiki pages (49+21+2), 0/98/0 lint. 4 wiki commit + 5 my_harness commit dual-push. 다음: Obsidian graph view 에서 cross-project 탐색 + 정기 lint"
+      "D-72 LLM Wiki cross-project 통합 (2026-06-10) — 단일 ~/wiki/ + wiki/projects/{my-harness,devhub}/ + wiki/cross/ 동거. 72 wiki pages (49+21+2), 0/98/0 lint. 4 wiki commit + 5 my_harness commit dual-push. 다음: Obsidian graph view 에서 cross-project 탐색 + 정기 lint",
+      "D-73 T-v5-sync-1 plan_3c8c4a49 cancel + 4-plan split 결정 (2026-06-11) — v0.5.0→v0.5.11 sync 11 minor 24 commit 을 4 plan (A/B/C/D) 으로 분리. 1 plan = 1 batch 의 1 sub-task 원칙. Plan A: 5.1 MCP per-harness + round-trip (3 commit, ~5 files). Plan B: 5.2 bootstrap_lib refactor (1 commit, 73 files / 7,941+ ins / 5,070 del, 가장 큰 batch, 9 chunk + 800줄 cap). Plan C: 5.3-5.4 antigravity MCP + contract v1 (2 commit, ~5 files + Rust caller 갱신, API breaking). Plan D: 5.5-5.11 + R-4 SSOT drift (12 commit, ~10 files + R-4). 3 memory entries 추가 (T-v5-sync-1 실패 분석 + Worker prompt 3원칙 + cross-session grep 1-liner). plan_3c8c4a49 = cancelled (0 deliverable bytes, 25min exploration 후 0 write, scope 3x underestimate)"
     ],
     "blocked_items": [
       "TASK-002: 도메인별 명령 가이드 (yklee 인프라 정보 의존)",
@@ -239,13 +240,19 @@
         "ref": "D-71 (2026-06-10)",
         "section": "§5.13 (LLM Wiki memory v1.5) + §11.2 (second brain 패턴)"
       },
-      {
-        "id": "D-72",
-        "decision": "LLM Wiki cross-project 통합 (v1.5). 단일 `~/wiki/` vault + `wiki/projects/{my-harness,devhub}/` + `wiki/cross/` 동거. **3 결정 (yklee)**: (1) vault 위치 = `~/wiki/` 단일 (out-of-repo, Obsidian 직접 open, **wiki 는 개인 Gitea private repo 만** → 사내 노출 위험 0), (2) v1.5 범위 = schema + lint (full compile v2.5+), (3) ai-workflow 관계 = consumer (per-project 격리). wiki-lint v0.2.0: `--project`, `--project-config` 옵션 + `_iter_wiki_dirs()` (wiki/projects/<project>/<sub>/ + wiki/cross/<sub>/ 자동 walk) + `Page.project` 필드 + `rule_l07_one` per-page variant + `[rules.L07].skip_paths` glob 매칭 (DevHub ADR 의도적 supersede 면제). wiki-sync-devhub.sh (BSD-rsync safe, my_harness 의 그것과 같은 패턴). 72 wiki pages (49 my-harness + 21 devhub + 2 cross). 1261 raw files (DevHub 11MB, my_harness 303). lint 0 error / 98 warn (L03 orphan + L08 unindexed false positive). 5 commit dual-push (D-71: 58554c5+090ff11+e529bef+8f70bf0, D-72: 011ca9a). DevHub 의 3-tier 정책 (사외/사내/공용) 은 DevHub repo 의 push 정책이며 wiki 자체는 모든 tier 흡수 (yklee 결정). lint L11 (사내 패턴 검출) 불요 — wiki 가 Gitea private 만.",
-        "ref": "D-72 (2026-06-10)",
-        "section": "§5.13 (LLM Wiki v1.5 cross-project) + §11.2 (SSOT cross-project) + §11.4 (per-project lint)"
-      }
-    ],
+    {
+      "id": "D-72",
+      "decision": "LLM Wiki cross-project 통합 (v1.5). 단일 `~/wiki/` vault + `wiki/projects/{my-harness,devhub}/` + `wiki/cross/` 동거. **3 결정 (yklee)**: (1) vault 위치 = `~/wiki/` 단일 (out-of-repo, Obsidian 직접 open, **wiki 는 개인 Gitea private repo 만** → 사내 노출 위험 0), (2) v1.5 범위 = schema + lint (full compile v2.5+), (3) ai-workflow 관계 = consumer (per-project 격리). wiki-lint v0.2.0: `--project`, `--project-config` 옵션 + `_iter_wiki_dirs()` (wiki/projects/<project>/<sub>/ + wiki/cross/<sub>/ 자동 walk) + `Page.project` 필드 + `rule_l07_one` per-page variant + `[rules.L07].skip_paths` glob 매칭 (DevHub ADR 의도적 supersede 면제). wiki-sync-devhub.sh (BSD-rsync safe, my_harness 의 그것과 같은 패턴). 72 wiki pages (49 my-harness + 21 devhub + 2 cross). 1261 raw files (DevHub 11MB, my_harness 303). lint 0 error / 98 warn (L03 orphan + L08 unindexed false positive). 5 commit dual-push (D-71: 58554c5+090ff11+e529bef+8f70bf0, D-72: 011ca9a). DevHub 의 3-tier 정책 (사외/사내/공용) 은 DevHub repo 의 push 정책이며 wiki 자체는 모든 tier 흡수 (yklee 결정). lint L11 (사내 패턴 검출) 불요 — wiki 가 Gitea private 만.",
+      "ref": "D-72 (2026-06-10)",
+      "section": "§5.13 (LLM Wiki v1.5 cross-project) + §11.2 (SSOT cross-project) + §11.4 (per-project lint)"
+    },
+    {
+      "id": "D-73",
+      "decision": "T-v5-sync-1 (my_harness v0.5.0→v0.5.11 sync) plan_3c8c4a49 cancel + 4-plan split. **WHY 4 split**: 1 plan = 6 batch × 11 minor = scope 3x underestimate (실제 upstream diff v0.5.0→v0.5.2 = 73 files / 7,941 insertions / 5,070 deletions). 31min cap 도달 시 25min = exploration (read 12+ files) + 0 write. Worker death 패턴 확정. **4 plan**: Plan A (5.1 only, MCP per-harness + round-trip, ~5 files, 3 commit, 워커 warm-up) + Plan B (5.2 only, bootstrap_lib refactor, **73 files / 7,941+ ins / 5,070 del**, 8 modules 3,710 lines, 9 chunk + 800줄 cap, 필요 시 2 plan sub-split) + Plan C (5.3-5.4 antigravity MCP + contract v1 도입, ~5 files + Rust caller 갱신, API breaking) + Plan D (5.5-5.11 12 commit + R-4 SSOT drift, ~10 files + R-4, smart update + Mavis engine hook + MCP fix). **3 memory entries** (mavis memory): (1) T-v5-sync-1 실패 분석 — scope 3x underestimate + 25min exploration 후 0 write + module name 오류. (2) Worker prompt 3원칙 — first-chunk-largest / JSON split / Edit-last + Write fallback. (3) Cross-session memory grep 1-liner — worker prompt 머리에 `grep 'Type: critical failure' ~/.mavis/agents/coder/memory/MEMORY.md | head -20` 박기. **async audit**: plan_3c8c4a49 cancelled, 워커 idle, T-SAW-1 별도 owner session 운영 중, pending ops 0건. **다음**: yklee 결정 (4 plan A/B/C/D vs 5 plan Plan B sub-split) → Plan A prompt 작성 (5.1 only, 가장 작은 batch) → launch → Plan A 완료 시 Plan B (가장 큰 batch) → R-4 SSOT drift = Plan D 마지막 chunk.",
+      "ref": "D-73 (2026-06-11)",
+      "section": "§6 (TASK-005-2 v1.5 phase 잔여 — major version sync) + §11.3 (ecosystem stability + scope 측정)"
+    }
+  ],
     "deferred": [
       {
         "id": "TASK-002",
@@ -310,8 +317,8 @@
     ]
   },
   "backlog": {
-    "latest_backlog_path": "ai-workflow/memory/backlog/2026-06-09.md",
-    "task_count": 17,
+    "latest_backlog_path": "ai-workflow/memory/backlog/2026-06-11.md",
+    "task_count": 18,
     "in_progress_items": [
       "TASK-005-1: v1 MVP Rust 빌드 (8/8 waves + D-52 follow-up 5 작업 완료, 종료 선언 또는 v1.5 진입 대기)"
     ],
@@ -356,6 +363,9 @@
     "ai-workflow/skills/wiki-lint/SKILL.md"
   ],
   "next_actions": [
+    "D-73 후속 1순위: yklee 결정 (4 plan A/B/C/D vs 5 plan Plan B sub-split) — T-v5-sync-1 v0.5.0→v0.5.11 sync. 4 plan 추천",
+    "D-73 후속 2순위: Plan A prompt 작성 (5.1 only, ~5 files, 3 commits) — tag `v0.5.1-beta` + commit hash (c3c9a90/73f8f2f/...) + per-batch file:line 박기",
+    "D-73 후속 3순위: Plan A launch (5.1 only, 가장 작은 batch, 워커 warm-up)",
     "D-72 후속: (1) Obsidian graph view 에서 72 wiki page 의 cross-project 시각화, (2) 정기 wiki-lint (D-71 autoCommit 후) + per-project _lint/<project>/report_*.md 검토, (3) `wiki-sync-devhub.sh` raw/ 갱신 자동화 (cron 또는 hook, v2.0+)",
     "wiki/ 페이지 cross-reference 자동 보강 (L03/L08 false positive 해소) — 다음 세션의 query 시 LLM 이 [[link]] 자동 추가",
     "TASK-005-2 v2.0 진입 결정 — yklee 결정 시. 후보: (1) ONNX 3-commit (D-66/67/68 abort 후 tract 안정화 대기) / (2) Plugin 4-계층 / (3) Kompress-back (low priority)",
