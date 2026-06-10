@@ -4,7 +4,7 @@
 - Scope: current focus, task status, key changes, next actions, risks
 - Audience: yklee, Mavis orchestrator, .MiniMax 워커 에이전트
 - Status: active
-- Updated: 2026-06-10 (D-62 + **W17 누락분 = 0건 정정** + **W19-1 TC-W17-002 test fail 복구** + **D-63 W20 F-3 Ollama native cascade** + **D-64 W21 F-1+F-2 통합** — hash8 (sha256 8-char) + backup filename `<ts>.<sha256_8>` + cleanup_old_backups sort bug fix. R-5-A/B + sort bug 동시 해결. 117 llm + 10 w16_add_local + 3 hash8 = 130 / 0 fail. 다음: TASK-005-2 v1.5 종료 또는 Plugin 4-계층 / CCR)
+- Updated: 2026-06-10 (D-65 + **TASK-005-2 v1.5 종료 선언** — 5 사이클 (W17, W18, W19-1, W20, W21) + D-62 + 누적 14 신규 test / 0 fail. v1.5 build phase 완전 종료. ONNX 통합 v2.0 Planning 으로 연기 (Initial_design.tt-3 의 설계 의도 따름). 다음: TASK-005-2 v2.0 Planning 결정 대기)
 - Related docs: [Project Profile](../../docs/PROJECT_PROFILE.md), [Work Backlog](./work_backlog.md), [State Cache](./state.json), [CONCEPT.md](../../docs/CONCEPT.md) (SSOT)
 
 ## Current Focus
@@ -116,7 +116,8 @@
 - [x] **D-62 W19-1 TC-W17-002 test fail 복구** (2026-06-10) — `register_local_provider_with_store` + `register_local_provider_non_interactive_with_store` 추가 (AuthStore 주입 패턴). 기존 fn 은 thin wrapper. 4 L1 test (TC-W17-002 수정 + TC-W19-001/002/003) PASS, 110 llm tests / 0 fail. cargo build/clippy OK
 - [x] **D-63 W20 F-3 Ollama native cascade** (2026-06-10) — `probe_local_models` 2-stage (Ollama native /api/tags → OpenAI compat /v1/models fallback). `parse_ollama_tags` / `parse_openai_models` / `fetch_json_body` helper 분리. W16 7/7 회귀 없음, 3 L2 integration test (TC-W20-I01/I02/I03) PASS, 110 llm + 10 w16_add_local tests / 0 fail. cargo build/clippy OK
 - [x] **D-64 W21 F-1+F-2 통합** (2026-06-10) — `hash8::content_hash_8(content)` SHA-256 8-char util (sha2=0.10, auth crate 재사용). backup filename = `<base>.backup.<ts>.<sha256_8>` 으로 변경. `cleanup_old_backups` **sort bug fix** (string sort → numeric parse on unix_ts). R-5-A (sub-second collision) + R-5-B (content 식별) + sort bug 동시 해결. 4 L1 test (TC-W21-001/002/003/004) PASS, 117 llm + 10 w16_add_local + 3 hash8 = 130 / 0 fail. cargo build/clippy OK
-- [ ] **TASK-005-2 v1.5 종료 선언** — yklee 결정. 후보: Plugin 4-계층 (큰 사이클) / CCR + Kompress-base ONNX / v1.5 종료
+- [x] **D-65 TASK-005-2 v1.5 종료 선언** (2026-06-10) — v1.5 phase 완전 종료. 5 사이클 + D-62 + 누적 14 신규 test / 0 fail. ONNX 통합 v2.0 Planning 으로 연기 (Initial_design.tt-3 의 설계 의도 따름 — '+10-30MB v1.5+' 분류). 424 workspace tests / 0 fail. cargo build/clippy OK. binary 13MB 유지 (ort C++ dep 회피)
+- [ ] **TASK-005-2 v2.0 Planning** — yklee 결정 시. v2.0 후보: (1) ONNX 3-commit (ort + CCR semantic + Kompress ONNX), (2) Plugin 4-계층 (큰 사이클), (3) Kompress-back (low priority)
 - [ ] **MiniMax Device OAuth real flow** 검증 — yklee 가 MiniMax console 에서 device grant 활성화 후 `myharness auth login minimax --no-browser` 실행 (OpenClaw/Hermes 공통 client_id 78257093-7e40-4613-99e0-527b14b39113, W15.b 자동 refresh 도 real test 가능)
 - [ ] **OpenAI/Google 도 동일 패턴** (Authorization Code + PKCE, client_id 등록 후 검증)
 - [ ] **ANTHROPIC_API_KEY 주입 시 LLM E2E 테스트** (real-anthropic ignored test 활성화)
