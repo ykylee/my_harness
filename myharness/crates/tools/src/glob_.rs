@@ -11,7 +11,7 @@ pub struct GlobTool;
 #[async_trait]
 impl Tool for GlobTool {
     fn name(&self) -> &'static str {
-        "glob"
+        "Glob"
     }
 
     async fn execute(

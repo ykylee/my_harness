@@ -12,7 +12,7 @@ pub struct EditTool;
 #[async_trait]
 impl Tool for EditTool {
     fn name(&self) -> &'static str {
-        "edit"
+        "Edit"
     }
 
     async fn execute(

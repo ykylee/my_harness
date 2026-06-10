@@ -60,21 +60,21 @@ mod tests {
     fn test_default_tools_have_all_names() {
         let reg = ToolRegistry::default_tools();
         let names = reg.names();
-        assert!(names.contains(&"bash".to_string()));
-        assert!(names.contains(&"edit".to_string()));
-        assert!(names.contains(&"glob".to_string()));
-        assert!(names.contains(&"grep".to_string()));
-        assert!(names.contains(&"read".to_string()));
-        assert!(names.contains(&"write".to_string()));
+        assert!(names.contains(&"Bash".to_string()));
+        assert!(names.contains(&"Edit".to_string()));
+        assert!(names.contains(&"Glob".to_string()));
+        assert!(names.contains(&"Grep".to_string()));
+        assert!(names.contains(&"Read".to_string()));
+        assert!(names.contains(&"Write".to_string()));
         assert_eq!(names.len(), 6);
     }
 
     #[test]
     fn test_get_returns_tool() {
         let reg = ToolRegistry::default_tools();
-        let tool = reg.get("read");
+        let tool = reg.get("Read");
         assert!(tool.is_some());
-        assert_eq!(tool.unwrap().name(), "read");
+        assert_eq!(tool.unwrap().name(), "Read");
     }
 
     #[test]

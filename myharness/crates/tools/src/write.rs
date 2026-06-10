@@ -12,7 +12,7 @@ pub struct WriteTool;
 #[async_trait]
 impl Tool for WriteTool {
     fn name(&self) -> &'static str {
-        "write"
+        "Write"
     }
 
     async fn execute(

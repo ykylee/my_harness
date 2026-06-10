@@ -52,7 +52,7 @@ mod tests {
         let reg = registry::ToolRegistry::default_tools();
         let names = reg.names();
         assert_eq!(names.len(), 6);
-        for name in &["bash", "edit", "glob", "grep", "read", "write"] {
+        for name in &["Bash", "Edit", "Glob", "Grep", "Read", "Write"] {
             assert!(names.contains(&name.to_string()), "missing tool: {name}");
         }
     }

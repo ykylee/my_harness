@@ -12,7 +12,7 @@ pub struct BashTool;
 #[async_trait]
 impl Tool for BashTool {
     fn name(&self) -> &'static str {
-        "bash"
+        "Bash"
     }
 
     async fn execute(

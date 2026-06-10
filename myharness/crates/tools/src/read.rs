@@ -11,7 +11,7 @@ pub struct ReadTool;
 #[async_trait]
 impl Tool for ReadTool {
     fn name(&self) -> &'static str {
-        "read"
+        "Read"
     }
 
     async fn execute(

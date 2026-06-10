@@ -9,7 +9,7 @@ pub async fn execute_by_name(
 ) -> Result<ToolResult, ToolError> {
     let registry = ToolRegistry::default_tools();
     let tool = registry
-        .get(&name.to_lowercase())
+        .get(name)
         .ok_or_else(|| ToolError::Other(format!("unknown tool: {}", name)))?;
     tool.execute(ctx, input).await
 }
@@ -27,7 +27,7 @@ mod tests {
 
         let ctx = ToolContext::new(dir.path().to_path_buf(), PermissionMode::BypassPermissions);
         let input = serde_json::json!({ "file_path": file.to_str().unwrap() });
-        let result = execute_by_name("read", input, &ctx).await.unwrap();
+        let result = execute_by_name("Read", input, &ctx).await.unwrap();
         assert!(!result.is_error);
         assert!(result.output.contains("hello world"));
     }
@@ -43,7 +43,7 @@ mod tests {
     async fn test_execute_bash_safe() {
         let ctx = ToolContext::new("/tmp".into(), PermissionMode::BypassPermissions);
         let input = serde_json::json!({ "command": "echo hello", "timeout_ms": 5000 });
-        let result = execute_by_name("bash", input, &ctx).await.unwrap();
+        let result = execute_by_name("Bash", input, &ctx).await.unwrap();
         assert!(!result.is_error);
     }
 
@@ -54,11 +54,11 @@ mod tests {
 
         let ctx = ToolContext::new(dir.path().to_path_buf(), PermissionMode::BypassPermissions);
         let write_input = serde_json::json!({ "file_path": file.to_str().unwrap(), "content": "written content" });
-        let write_result = execute_by_name("write", write_input, &ctx).await.unwrap();
+        let write_result = execute_by_name("Write", write_input, &ctx).await.unwrap();
         assert!(!write_result.is_error);
 
         let read_input = serde_json::json!({ "file_path": file.to_str().unwrap() });
-        let read_result = execute_by_name("read", read_input, &ctx).await.unwrap();
+        let read_result = execute_by_name("Read", read_input, &ctx).await.unwrap();
         assert!(!read_result.is_error);
         assert!(read_result.output.contains("written content"));
     }
@@ -75,7 +75,7 @@ mod tests {
             "old_string": "old",
             "new_string": "new",
         });
-        let result = execute_by_name("edit", input, &ctx).await.unwrap();
+        let result = execute_by_name("Edit", input, &ctx).await.unwrap();
         assert!(!result.is_error);
         assert!(result.output.contains("replaced"));
     }

@@ -21,7 +21,7 @@ impl PermissionGuard {
             return Ok(PermissionDecision::Allow);
         }
 
-        if matches!(tool_name, "read" | "grep" | "glob") {
+        if matches!(tool_name, "Read" | "Grep" | "Glob") {
             return Ok(PermissionDecision::Allow);
         }
 
@@ -33,7 +33,7 @@ impl PermissionGuard {
                 Self::prompt(tool_name, detail)
             }
             PermissionMode::AcceptEdits => {
-                if tool_name == "bash" {
+                if tool_name == "Bash" {
                     if confirm_override {
                         return Ok(PermissionDecision::Allow);
                     }
@@ -80,14 +80,14 @@ mod tests {
     #[test]
     fn bypass_allows_everything() {
         assert_eq!(
-            PermissionGuard::check("bash", PermissionMode::BypassPermissions, false, None).unwrap(),
+            PermissionGuard::check("Bash", PermissionMode::BypassPermissions, false, None).unwrap(),
             PermissionDecision::Allow
         );
     }
 
     #[test]
     fn plan_denies_writes() {
-        match PermissionGuard::check("write", PermissionMode::Plan, false, None).unwrap() {
+        match PermissionGuard::check("Write", PermissionMode::Plan, false, None).unwrap() {
             PermissionDecision::Deny(_) => {}
             _ => panic!("expected deny"),
         }
@@ -102,15 +102,15 @@ mod tests {
             PermissionMode::BypassPermissions,
         ] {
             assert_eq!(
-                PermissionGuard::check("read", mode, false, None).unwrap(),
+                PermissionGuard::check("Read", mode, false, None).unwrap(),
                 PermissionDecision::Allow
             );
             assert_eq!(
-                PermissionGuard::check("grep", mode, false, None).unwrap(),
+                PermissionGuard::check("Grep", mode, false, None).unwrap(),
                 PermissionDecision::Allow
             );
             assert_eq!(
-                PermissionGuard::check("glob", mode, false, None).unwrap(),
+                PermissionGuard::check("Glob", mode, false, None).unwrap(),
                 PermissionDecision::Allow
             );
         }
@@ -119,7 +119,7 @@ mod tests {
     #[test]
     fn accept_edits_auto_allows_write_with_confirm_override() {
         assert_eq!(
-            PermissionGuard::check("write", PermissionMode::AcceptEdits, true, None).unwrap(),
+            PermissionGuard::check("Write", PermissionMode::AcceptEdits, true, None).unwrap(),
             PermissionDecision::Allow
         );
     }
@@ -127,7 +127,7 @@ mod tests {
     #[test]
     fn confirm_override_skips_prompt_in_default() {
         assert_eq!(
-            PermissionGuard::check("write", PermissionMode::Default, true, None).unwrap(),
+            PermissionGuard::check("Write", PermissionMode::Default, true, None).unwrap(),
             PermissionDecision::Allow
         );
     }
