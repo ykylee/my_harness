@@ -4,7 +4,7 @@
 - Scope: current focus, task status, key changes, next actions, risks
 - Audience: yklee, Mavis orchestrator, .MiniMax 워커 에이전트
 - Status: active
-- Updated: 2026-06-10 (D-65 + **TASK-005-2 v1.5 종료 선언** — 5 사이클 (W17, W18, W19-1, W20, W21) + D-62 + 누적 14 신규 test / 0 fail. v1.5 build phase 완전 종료. ONNX 통합 v2.0 Planning 으로 연기 (Initial_design.tt-3 의 설계 의도 따름). 다음: TASK-005-2 v2.0 Planning 결정 대기)
+- Updated: 2026-06-10 (D-66 + **v2.0 ONNX Commit 1 abort** — ort ecosystem 2026-06 unstable (1.x 전부 yanked, 2.0.0-rc.9/10/12 모두 빌드 깨짐). v1.5 종료 (D-65) + D-66 abort. v2.0 다음 후보: Plugin 4-계층 / Kompress-back / tract (Pure Rust) 대안)
 - Related docs: [Project Profile](../../docs/PROJECT_PROFILE.md), [Work Backlog](./work_backlog.md), [State Cache](./state.json), [CONCEPT.md](../../docs/CONCEPT.md) (SSOT)
 
 ## Current Focus
@@ -117,7 +117,8 @@
 - [x] **D-63 W20 F-3 Ollama native cascade** (2026-06-10) — `probe_local_models` 2-stage (Ollama native /api/tags → OpenAI compat /v1/models fallback). `parse_ollama_tags` / `parse_openai_models` / `fetch_json_body` helper 분리. W16 7/7 회귀 없음, 3 L2 integration test (TC-W20-I01/I02/I03) PASS, 110 llm + 10 w16_add_local tests / 0 fail. cargo build/clippy OK
 - [x] **D-64 W21 F-1+F-2 통합** (2026-06-10) — `hash8::content_hash_8(content)` SHA-256 8-char util (sha2=0.10, auth crate 재사용). backup filename = `<base>.backup.<ts>.<sha256_8>` 으로 변경. `cleanup_old_backups` **sort bug fix** (string sort → numeric parse on unix_ts). R-5-A (sub-second collision) + R-5-B (content 식별) + sort bug 동시 해결. 4 L1 test (TC-W21-001/002/003/004) PASS, 117 llm + 10 w16_add_local + 3 hash8 = 130 / 0 fail. cargo build/clippy OK
 - [x] **D-65 TASK-005-2 v1.5 종료 선언** (2026-06-10) — v1.5 phase 완전 종료. 5 사이클 + D-62 + 누적 14 신규 test / 0 fail. ONNX 통합 v2.0 Planning 으로 연기 (Initial_design.tt-3 의 설계 의도 따름 — '+10-30MB v1.5+' 분류). 424 workspace tests / 0 fail. cargo build/clippy OK. binary 13MB 유지 (ort C++ dep 회피)
-- [ ] **TASK-005-2 v2.0 Planning** — yklee 결정 시. v2.0 후보: (1) ONNX 3-commit (ort + CCR semantic + Kompress ONNX), (2) Plugin 4-계층 (큰 사이클), (3) Kompress-back (low priority)
+- [x] **D-66 v2.0 ONNX Commit 1 abort** (2026-06-10) — ort ecosystem 2026-06 unstable. ort 1.x (1.13.1, 1.16.3) **전부 yanked**. ort 2.0.0-rc.9/10/12 모두 빌드 깨짐 (ureq 3.1 API 변경 — `tls_config` method 없음, `unwrap_or_else` fn pointer 미구현). 코드/Cargo.toml 모두 revert. v2.0 ONNX 백로그 OOS. **lesson**: ecosystem stability SSOT (CONCEPT.md §11.3) — library 분석 시 crates.io API + lib.rs + **실제 cargo build 검증** 필수. library 보고만 의존 ❌
+- [ ] **TASK-005-2 v2.0 다음 후보** — yklee 결정 시. 후보: Plugin 4-계층 (큰 사이클, auto memory + provider-auto-config + marketplace) / Kompress-back (low priority) / tract (Pure Rust, ONNX 대안)
 - [ ] **MiniMax Device OAuth real flow** 검증 — yklee 가 MiniMax console 에서 device grant 활성화 후 `myharness auth login minimax --no-browser` 실행 (OpenClaw/Hermes 공통 client_id 78257093-7e40-4613-99e0-527b14b39113, W15.b 자동 refresh 도 real test 가능)
 - [ ] **OpenAI/Google 도 동일 패턴** (Authorization Code + PKCE, client_id 등록 후 검증)
 - [ ] **ANTHROPIC_API_KEY 주입 시 LLM E2E 테스트** (real-anthropic ignored test 활성화)
