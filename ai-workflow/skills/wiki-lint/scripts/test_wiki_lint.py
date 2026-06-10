@@ -107,7 +107,7 @@ class WikiLintTest(unittest.TestCase):
     # L01
     def test_l01_no_frontmatter(self) -> None:
         write_page(
-            "wiki/concepts/no-frontmatter.md",
+            "wiki/projects/my-harness/concepts/no-frontmatter.md",
             "# No frontmatter\nbody\n",
         )
         r = run_lint("L01")
@@ -117,7 +117,7 @@ class WikiLintTest(unittest.TestCase):
 
     def test_l01_missing_fields(self) -> None:
         write_page(
-            "wiki/concepts/partial.md",
+            "wiki/projects/my-harness/concepts/partial.md",
             frontmatter(title="Partial", type="concept", last_touched="2026-06-10") + "body\n",
         )
         r = run_lint("L01")
@@ -127,7 +127,7 @@ class WikiLintTest(unittest.TestCase):
 
     def test_l01_clean(self) -> None:
         write_page(
-            "wiki/concepts/clean.md",
+            "wiki/projects/my-harness/concepts/clean.md",
             frontmatter(
                 title="Clean",
                 type="concept",
@@ -144,7 +144,7 @@ class WikiLintTest(unittest.TestCase):
     # L02
     def test_l02_broken_related_and_body(self) -> None:
         write_page(
-            "wiki/entities/broken.md",
+            "wiki/projects/my-harness/entities/broken.md",
             frontmatter(
                 title="Broken",
                 type="entity",
@@ -162,7 +162,7 @@ class WikiLintTest(unittest.TestCase):
     def test_l02_resolved_link(self) -> None:
         # 대상 페이지도 함께 생성 → broken 이면 안 됨
         write_page(
-            "wiki/entities/target.md",
+            "wiki/projects/my-harness/entities/target.md",
             frontmatter(
                 title="Target",
                 type="entity",
@@ -174,7 +174,7 @@ class WikiLintTest(unittest.TestCase):
             ) + "body\n",
         )
         write_page(
-            "wiki/entities/source.md",
+            "wiki/projects/my-harness/entities/source.md",
             frontmatter(
                 title="Source",
                 type="entity",
@@ -191,7 +191,7 @@ class WikiLintTest(unittest.TestCase):
     # L03
     def test_l03_orphan(self) -> None:
         write_page(
-            "wiki/topics/orphan.md",
+            "wiki/projects/my-harness/topics/orphan.md",
             frontmatter(
                 title="Orphan",
                 type="topic",
@@ -209,7 +209,7 @@ class WikiLintTest(unittest.TestCase):
     def test_l03_not_orphan_with_inbound(self) -> None:
         # 두 페이지: hub, leaf
         write_page(
-            "wiki/concepts/hub.md",
+            "wiki/projects/my-harness/concepts/hub.md",
             frontmatter(
                 title="Hub",
                 type="concept",
@@ -221,7 +221,7 @@ class WikiLintTest(unittest.TestCase):
             ) + "body\n",
         )
         write_page(
-            "wiki/concepts/leaf.md",
+            "wiki/projects/my-harness/concepts/leaf.md",
             frontmatter(
                 title="Leaf",
                 type="concept",
@@ -233,7 +233,7 @@ class WikiLintTest(unittest.TestCase):
             ) + "body\n",
         )
         # hub 에서 leaf 로 inbound link
-        (FIXTURE / "wiki" / "concepts" / "hub.md").write_text(
+        (FIXTURE / "wiki" / "projects" / "my-harness" / "concepts" / "hub.md").write_text(
             frontmatter(
                 title="Hub",
                 type="concept",
@@ -248,14 +248,14 @@ class WikiLintTest(unittest.TestCase):
         r = run_lint("L03")
         rules = findings_by_rule(r)
         paths = {f["path"] for f in rules.get("L03", [])}
-        self.assertNotIn("wiki/concepts/leaf.md", paths)
-        self.assertIn("wiki/concepts/hub.md", paths)  # hub 도 inbound 없음
+        self.assertNotIn("wiki/projects/my-harness/concepts/leaf.md", paths)
+        self.assertIn("wiki/projects/my-harness/concepts/hub.md", paths)  # hub 도 inbound 없음
 
     # L04
     def test_l04_duplicate_title(self) -> None:
         for name in ("a", "b"):
             write_page(
-                f"wiki/entities/dup-{name}.md",
+                f"wiki/projects/my-harness/entities/dup-{name}.md",
                 frontmatter(
                     title="Duplicate",
                     type="entity",
@@ -273,7 +273,7 @@ class WikiLintTest(unittest.TestCase):
 
     def test_l04_unique(self) -> None:
         write_page(
-            "wiki/entities/single.md",
+            "wiki/projects/my-harness/entities/single.md",
             frontmatter(
                 title="Single",
                 type="entity",
@@ -291,7 +291,7 @@ class WikiLintTest(unittest.TestCase):
     def test_l05_stale(self) -> None:
         old = (datetime.now() - timedelta(days=91)).strftime("%Y-%m-%d")
         write_page(
-            "wiki/concepts/old.md",
+            "wiki/projects/my-harness/concepts/old.md",
             frontmatter(
                 title="Old",
                 type="concept",
@@ -309,7 +309,7 @@ class WikiLintTest(unittest.TestCase):
 
     def test_l05_fresh(self) -> None:
         write_page(
-            "wiki/concepts/fresh.md",
+            "wiki/projects/my-harness/concepts/fresh.md",
             frontmatter(
                 title="Fresh",
                 type="concept",
@@ -326,7 +326,7 @@ class WikiLintTest(unittest.TestCase):
     # L06
     def test_l06_missing_source_path(self) -> None:
         write_page(
-            "wiki/concepts/no-file.md",
+            "wiki/projects/my-harness/concepts/no-file.md",
             frontmatter(
                 title="NoFile",
                 type="concept",
@@ -344,7 +344,7 @@ class WikiLintTest(unittest.TestCase):
 
     def test_l06_existing_source(self) -> None:
         write_page(
-            "wiki/concepts/ok.md",
+            "wiki/projects/my-harness/concepts/ok.md",
             frontmatter(
                 title="OK",
                 type="concept",
@@ -361,7 +361,7 @@ class WikiLintTest(unittest.TestCase):
     def test_l06_url_source_skipped(self) -> None:
         # URL 은 filesystem 검사를 skip — L06 발화 X
         write_page(
-            "wiki/concepts/url.md",
+            "wiki/projects/my-harness/concepts/url.md",
             frontmatter(
                 title="URLSrc",
                 type="concept",
@@ -379,7 +379,7 @@ class WikiLintTest(unittest.TestCase):
     def test_l07_reviewed_duplicates(self) -> None:
         for name in ("a", "b"):
             write_page(
-                f"wiki/entities/dup-{name}.md",
+                f"wiki/projects/my-harness/entities/dup-{name}.md",
                 frontmatter(
                     title="Conflict",
                     type="entity",
@@ -392,12 +392,13 @@ class WikiLintTest(unittest.TestCase):
             )
         r = run_lint("L07")
         rules = findings_by_rule(r)
-        self.assertEqual(len(rules.get("L07", [])), 1)
+        # rule_l07_one fires once per reviewed peer (per-page variant, 2 pages -> 2 findings)
+        self.assertEqual(len(rules.get("L07", [])), 2)
 
     def test_l07_draft_duplicates_no_fire(self) -> None:
         for name in ("a", "b"):
             write_page(
-                f"wiki/entities/dup-{name}.md",
+                f"wiki/projects/my-harness/entities/dup-{name}.md",
                 frontmatter(
                     title="Drafts",
                     type="entity",
@@ -415,7 +416,7 @@ class WikiLintTest(unittest.TestCase):
     # L08
     def test_l08_unindexed(self) -> None:
         write_page(
-            "wiki/meta/unindexed.md",
+            "wiki/projects/my-harness/meta/unindexed.md",
             frontmatter(
                 title="Unindexed",
                 type="meta",
@@ -432,7 +433,7 @@ class WikiLintTest(unittest.TestCase):
 
     def test_l08_indexed(self) -> None:
         write_page(
-            "wiki/meta/indexed.md",
+            "wiki/projects/my-harness/meta/indexed.md",
             frontmatter(
                 title="Indexed",
                 type="meta",
@@ -444,7 +445,7 @@ class WikiLintTest(unittest.TestCase):
             ) + "body\n",
         )
         (FIXTURE / "index.md").write_text(
-            "# Index\n\n- Indexed — `wiki/meta/indexed.md`\n"
+            "# Index\n\n- Indexed — `wiki/projects/my-harness/meta/indexed.md`\n"
         )
         r = run_lint("L08")
         self.assertEqual(findings_by_rule(r).get("L08", []), [])
@@ -478,7 +479,7 @@ class WikiLintTest(unittest.TestCase):
     # L10
     def test_l10_source_no_raw(self) -> None:
         write_page(
-            "wiki/sources/bare.md",
+            "wiki/projects/my-harness/sources/bare.md",
             frontmatter(
                 title="Bare",
                 type="source",
@@ -495,7 +496,7 @@ class WikiLintTest(unittest.TestCase):
 
     def test_l10_source_with_raw_ok(self) -> None:
         write_page(
-            "wiki/sources/good.md",
+            "wiki/projects/my-harness/sources/good.md",
             frontmatter(
                 title="Good",
                 type="source",
@@ -512,7 +513,7 @@ class WikiLintTest(unittest.TestCase):
     def test_l10_concept_no_raw_ok(self) -> None:
         # type=concept 는 L10 면제
         write_page(
-            "wiki/concepts/c.md",
+            "wiki/projects/my-harness/concepts/c.md",
             frontmatter(
                 title="C",
                 type="concept",
@@ -530,7 +531,7 @@ class WikiLintTest(unittest.TestCase):
     def test_full_lint_returns_known_shape(self) -> None:
         # 페이지 1개만 — 깨끗한 케이스
         write_page(
-            "wiki/concepts/only.md",
+            "wiki/projects/my-harness/concepts/only.md",
             frontmatter(
                 title="Only",
                 type="concept",
@@ -541,7 +542,7 @@ class WikiLintTest(unittest.TestCase):
                 status="draft",
             ) + "body\n",
         )
-        (FIXTURE / "index.md").write_text("# Index\n\n- Only — `wiki/concepts/only.md`\n")
+        (FIXTURE / "index.md").write_text("# Index\n\n- Only — `wiki/projects/my-harness/concepts/only.md`\n")
         r = run_lint()
         self.assertEqual(r["status"], "ok")
         self.assertEqual(r["summary"]["pages_scanned"], 1)

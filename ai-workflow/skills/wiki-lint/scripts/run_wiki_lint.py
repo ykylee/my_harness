@@ -1,7 +1,13 @@
 #!/usr/bin/env python3
 """wiki-lint: 검사 ~/wiki/ vault 무결성 (L01~L10).
 
-stdlib only. SSOT: ~/wiki/schema/lint_rules.md
+stdlib only (tomllib 포함, Python 3.11+). SSOT: ~/wiki/schema/lint_rules.md
+
+v1.5 (D-71) — 단일 wiki/ 하위에서 검사.
+D-72 (2026-06-10) — per-project 검사 지원. vault 구조:
+    wiki/projects/<project>/<sub>/...
+    wiki/cross/<sub>/...
+  --project, --project-config CLI flag 추가.
 """
 
 from __future__ import annotations
@@ -10,15 +16,17 @@ import argparse
 import json
 import re
 import sys
+import tomllib
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Iterable
+from typing import Any
 
-TOOL_VERSION = "0.1.0"
+TOOL_VERSION = "0.2.0"
 
-# === 검사 대상 (wiki/ 하위) ===
-WIKI_DIRS = ("concepts", "entities", "topics", "sources", "comparisons", "query", "meta")
+# === 검사 대상 (wiki/ 하위, per-project + cross) ===
+WIKI_SUBDIRS = ("concepts", "entities", "topics", "sources", "comparisons", "query", "meta")
+DEFAULT_PROJECTS = ("my-harness", "devhub")
 
 REQUIRED_FRONTMATTER = ("title", "type", "tags", "last_touched", "related", "status")
 VALID_TYPES = {"concept", "entity", "topic", "source", "comparison", "query"}
@@ -48,6 +56,7 @@ class Page:
     frontmatter: dict[str, Any]
     body: str
     inbound_from: set[str] = field(default_factory=set)
+    project: str = ""  # D-72: per-project 라벨 (e.g. "my-harness", "devhub", "cross")
 
 
 # === frontmatter 파서 (YAML subset, 안전) ===
@@ -99,16 +108,48 @@ def _coerce_scalar(v: str) -> Any:
     if re.fullmatch(r"-?\d+", v):
         return int(v)
     return v
+def _iter_wiki_dirs(vault: Path, projects: list[str] | None) -> list[tuple[Path, str]]:
+    """vault 의 wiki/ 하위 검사 디렉터리 + per-project 라벨 반환.
 
-
-# === 페이지 로드 ===
-def load_pages(vault: Path) -> list[Page]:
-    pages: list[Page] = []
+    projects 가 None 이면 자동 발견 (wiki/projects/*/).
+    결과: [(abs_path, project_label), ...]
+    """
+    out: list[tuple[Path, str]] = []
     wiki_root = vault / "wiki"
-    for sub in WIKI_DIRS:
-        d = wiki_root / sub
-        if not d.is_dir():
-            continue
+    if not wiki_root.is_dir():
+        return out
+
+    # 1) wiki/projects/<project>/<sub>/...
+    projects_root = wiki_root / "projects"
+    if projects_root.is_dir():
+        proj_list = projects if projects is not None else [
+            p.name for p in sorted(projects_root.iterdir()) if p.is_dir()
+        ]
+        for proj in proj_list:
+            proj_root = projects_root / proj
+            if not proj_root.is_dir():
+                continue
+            for sub in WIKI_SUBDIRS:
+                d = proj_root / sub
+                if d.is_dir():
+                    out.append((d, proj))
+
+    # 2) wiki/cross/<sub>/... (project="cross")
+    cross_root = wiki_root / "cross"
+    if cross_root.is_dir():
+        for sub in WIKI_SUBDIRS:
+            d = cross_root / sub
+            if d.is_dir():
+                out.append((d, "cross"))
+
+    return out
+
+
+def load_pages(
+    vault: Path, projects: list[str] | None = None
+) -> list[Page]:
+    pages: list[Page] = []
+    for d, project in _iter_wiki_dirs(vault, projects):
         for p in sorted(d.glob("*.md")):
             try:
                 text = p.read_text(encoding="utf-8")
@@ -122,6 +163,7 @@ def load_pages(vault: Path) -> list[Page]:
                     has_frontmatter=has,
                     frontmatter=fm,
                     body=body,
+                    project=project,
                 )
             )
     return pages
@@ -299,6 +341,39 @@ def rule_l07(pages: list[Page]) -> list[Finding]:
             )
     return findings
 
+def rule_l07_one(p: Page, pages: list[Page]) -> list[Finding]:
+    """rule_l07 의 single-page 변형. skip_paths 가 적용된 page 의 모순만 반환.
+
+    page 가 reviewed 가 아니면 skip. 같은 title 의 reviewed 다른 page 가 있으면
+    그 page 의 L07 finding 만 반환 (이미 다른 page 의 finding 에서 잡혔을 수 있지만,
+    skip_paths 가 적용된 page 의 경우 본인이 직접 검출되어야 함).
+    """
+    if p.frontmatter.get("status") != "reviewed":
+        return []
+    title = p.frontmatter.get("title")
+    if not isinstance(title, str) or not title.strip():
+        return []
+    title_lower = title.strip().lower()
+    reviewed_peers = [
+        other for other in pages
+        if other is not p
+        and other.frontmatter.get("status") == "reviewed"
+        and isinstance(other.frontmatter.get("title"), str)
+        and other.frontmatter.get("title", "").strip().lower() == title_lower
+    ]
+    if not reviewed_peers:
+        return []
+    all_reviewed = [p] + reviewed_peers
+    return [
+        Finding(
+            "L07",
+            "error",
+            p.rel_path,
+            f"동일 title 의 reviewed 페이지 {len(all_reviewed)}개 (모순 가능성)",
+            extra={"all_paths": [x.rel_path for x in all_reviewed], "title": title_lower},
+        )
+    ]
+
 
 def rule_l08(pages: list[Page], index_path: Path) -> list[Finding]:
     if not index_path.is_file():
@@ -377,7 +452,10 @@ def rule_l10(p: Page, vault: Path) -> list[Finding]:
     sources = p.frontmatter.get("sources") or []
     if not isinstance(sources, list):
         sources = []
-    raw_paths = [s for s in sources if isinstance(s, str) and not s.startswith(("http://", "https://"))]
+    raw_paths = [
+        s for s in sources
+        if isinstance(s, str) and not s.startswith(("http://", "https://"))
+    ]
     if raw_paths:
         return []
     return [
@@ -388,11 +466,40 @@ def rule_l10(p: Page, vault: Path) -> list[Finding]:
             f"type={ptype} 인데 raw/ source 가 0개 (1차 출처 부재)",
         )
     ]
+def load_project_config(vault: Path, project: str) -> dict[str, Any]:
+    """`wiki/projects/<project>/.wiki-lint.toml` 자동 로딩.
+
+    형식:
+    ```toml
+    [rules.L07]
+    skip_paths = ["wiki/projects/devhub/sources/ADR-*.md"]
+    ```
+    """
+    config_path = vault / "wiki" / "projects" / project / ".wiki-lint.toml"
+    if not config_path.is_file():
+        return {}
+    try:
+        with open(config_path, "rb") as f:
+            return tomllib.load(f)
+    except (OSError, tomllib.TOMLDecodeError) as exc:
+        return {"_error": f"config load failed: {exc}"}
 
 
-# === 권한 검사 ===
+def is_skipped(rule_id: str, page_path: str, config: dict[str, Any]) -> bool:
+    """config 의 [rules.<ID>].skip_paths glob 패턴 매칭."""
+    if not config:
+        return False
+    rules_cfg = config.get("rules", {})
+    rule_cfg = rules_cfg.get(rule_id, {})
+    skip = rule_cfg.get("skip_paths", [])
+    if not skip:
+        return False
+    import fnmatch
+    return any(fnmatch.fnmatch(page_path, pat) for pat in skip)
+
+
 def check_permission(vault: Path) -> Finding | None:
-    """vault 가 쓰기 가능한 디렉터리이고, _lint 가 쓰기 가능한지 확인."""
+    """vault 가 쓰기 가능한 디렉터리이고, wiki 가 있는지 확인."""
     if not vault.is_dir():
         return Finding("PERM", "error", str(vault), f"vault 경로 부재 또는 디렉터리 아님: {vault}")
     if not (vault / "wiki").is_dir():
@@ -401,7 +508,12 @@ def check_permission(vault: Path) -> Finding | None:
 
 
 # === 메인 ===
-def run_lint(vault: Path, rule_filter: set[str] | None) -> dict[str, Any]:
+def run_lint(
+    vault: Path,
+    rule_filter: set[str] | None,
+    project: str | None = None,
+    project_config: dict[str, Any] | None = None,
+) -> dict[str, Any]:
     today = datetime.now(timezone.utc)
     perm_err = check_permission(vault)
     if perm_err is not None:
@@ -413,10 +525,17 @@ def run_lint(vault: Path, rule_filter: set[str] | None) -> dict[str, Any]:
             "warnings": [],
             "source_context": {"vault_path": str(vault)},
         }
-    pages = load_pages(vault)
+    projects_filter = [project] if project else None
+    pages = load_pages(vault, projects=projects_filter)
+    # project 별 config 자동 발견
+    project_configs: dict[str, dict[str, Any]] = {}
+    for p in pages:
+        if p.project and p.project not in project_configs and p.project != "cross":
+            cfg = project_config if project_config is not None else load_project_config(vault, p.project)
+            project_configs[p.project] = cfg
     idx = index_pages(pages)
     findings: list[Finding] = []
-    active = rule_filter or set(REQUIRED_FRONTMATTER) | {
+    active = rule_filter or {
         "L01", "L02", "L03", "L04", "L05", "L06", "L07", "L08", "L09", "L10"
     }
 
@@ -428,7 +547,6 @@ def run_lint(vault: Path, rule_filter: set[str] | None) -> dict[str, Any]:
         for raw in fm_related:
             t = _strip_link_brackets(raw)
             if t in idx and t != p.abs_path.stem:
-                idx[t] and None
                 target_rel = next(
                     (pp.rel_path for pp in pages if pp.abs_path.stem == t),
                     None,
@@ -443,6 +561,12 @@ def run_lint(vault: Path, rule_filter: set[str] | None) -> dict[str, Any]:
                 for pp in pages:
                     if pp.abs_path.stem == t:
                         pp.inbound_from.add(p.rel_path)
+
+    def _is_skipped(rule_id: str, page: Page) -> bool:
+        if project_config is not None:
+            return is_skipped(rule_id, page.rel_path, project_config)
+        cfg = project_configs.get(page.project, {})
+        return is_skipped(rule_id, page.rel_path, cfg)
 
     if "L01" in active:
         for p in pages:
@@ -462,7 +586,10 @@ def run_lint(vault: Path, rule_filter: set[str] | None) -> dict[str, Any]:
         for p in pages:
             findings.extend(rule_l06(p, vault))
     if "L07" in active:
-        findings.extend(rule_l07(pages))
+        for p in pages:
+            if _is_skipped("L07", p):
+                continue
+            findings.extend(rule_l07_one(p, pages))
     if "L08" in active:
         findings.extend(rule_l08(pages, vault / "index.md"))
     if "L09" in active:
@@ -535,9 +662,13 @@ def render_markdown(result: dict[str, Any]) -> str:
     return "\n".join(lines)
 
 
-def write_report(vault: Path, md: str) -> Path:
-    report_dir = vault / "_lint"
-    report_dir.mkdir(exist_ok=True)
+def write_report(vault: Path, md: str, project: str | None = None) -> Path:
+    """리포트 저장. project 지정 시 `_lint/<project>/report_YYYY-MM-DD.md`."""
+    if project:
+        report_dir = vault / "_lint" / project
+    else:
+        report_dir = vault / "_lint"
+    report_dir.mkdir(parents=True, exist_ok=True)
     fname = f"report_{datetime.now().strftime('%Y-%m-%d')}.md"
     out = report_dir / fname
     out.write_text(md, encoding="utf-8")
@@ -555,9 +686,19 @@ def _strip_link_brackets(raw: Any) -> str:
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(
         prog="wiki-lint",
-        description="LLM Wiki vault 무결성 검사 (L01~L10)",
+        description="LLM Wiki vault 무결성 검사 (L01~L10) — D-72 per-project 지원",
     )
     ap.add_argument("--vault-path", required=True, help="vault 루트 (예: ~/wiki)")
+    ap.add_argument(
+        "--project",
+        default=None,
+        help="특정 project 만 검사 (예: my-harness, devhub). 기본: 전체 project 자동 발견",
+    )
+    ap.add_argument(
+        "--project-config",
+        default=None,
+        help="per-project rule override (TOML). 기본: wiki/projects/<project>/.wiki-lint.toml 자동",
+    )
     ap.add_argument(
         "--rules",
         default="L01,L02,L03,L04,L05,L06,L07,L08,L09,L10",
@@ -569,13 +710,30 @@ def main(argv: list[str] | None = None) -> int:
 
     vault = Path(args.vault_path).expanduser().resolve()
     rule_filter = {r.strip() for r in args.rules.split(",") if r.strip()} or None
-    result = run_lint(vault, rule_filter)
+    project_config: dict[str, Any] | None = None
+    if args.project_config:
+        try:
+            with open(args.project_config, "rb") as f:
+                project_config = tomllib.load(f)
+        except (OSError, tomllib.TOMLDecodeError) as exc:
+            print(json.dumps({
+                "status": "error",
+                "tool_version": TOOL_VERSION,
+                "error": f"config load failed: {exc}",
+                "error_code": "CONFIG_INVALID",
+            }, ensure_ascii=False, indent=2))
+            return 2
+    result = run_lint(
+        vault, rule_filter,
+        project=args.project,
+        project_config=project_config,
+    )
 
     if args.output in ("json", "both"):
         print(json.dumps(result, ensure_ascii=False, indent=2))
     if args.output in ("markdown", "both"):
         md = render_markdown(result)
-        out = write_report(vault, md)
+        out = write_report(vault, md, project=args.project)
         if not args.quiet:
             sys.stderr.write(f"lint report: {out}\n")
 
