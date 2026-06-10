@@ -35,7 +35,8 @@
       "D-68 v2.0 tract Commit 2 abort (2026-06-10) — actual `embed()` inference 시도 후 5+ error 누적. tract 0.23 API 한계. 변경 모두 revert. v2.0 ONNX 백로그 OOS 유지",
       "D-69 v1.5 안정화 (2026-06-10) — (1) tool name uppercase 통일 (LLM contract 정합, v1.5+ dispatch 준비, 26 곳 변경), (2) §5.12 init_home_dir() — 11개 디렉토리 자동 생성 (paths.rs +125, integration test 3), (3) clippy 핵심 5건 fix (PI + 4 should_implement_trait allow + 1 useless_format). 3 commit dual-push. 437 tests pass / 0 fail / 2 ignored",
       "D-70 v1.5.1 lint cleanup (2026-06-10) — 21 style lint → 0 warning (collapsible_if 7 + redundant_clone 2 + match simplified 1 + link reference 1 + others 10). 21 file / +94 -110. 자동 fix + manual fix (test code false positive 4 file 복구). cargo clippy --workspace --all-targets = 0 warning. 437 tests / 0 fail 회귀 없음",
-      "D-71 LLM Wiki v1.5 mass ingest (2026-06-10) — 49 wiki pages + 303 raw files. 3 commit dual-push (58554c5+090ff11+e529bef). lint 0/69/0. vault = `~/wiki/` Gitea private, Keychain 자동. 다음: query 운영 (사용자가 Obsidian graph view 진입) + 주기적 lint"
+      "D-71 LLM Wiki v1.5 mass ingest (2026-06-10) — 49 wiki pages + 303 raw files. 3 commit dual-push (58554c5+090ff11+e529bef). lint 0/69/0. vault = `~/wiki/` Gitea private, Keychain 자동. 다음: query 운영 (사용자가 Obsidian graph view 진입) + 주기적 lint",
+      "D-72 LLM Wiki cross-project 통합 (2026-06-10) — 단일 ~/wiki/ + wiki/projects/{my-harness,devhub}/ + wiki/cross/ 동거. 72 wiki pages (49+21+2), 0/98/0 lint. 4 wiki commit + 5 my_harness commit dual-push. 다음: Obsidian graph view 에서 cross-project 탐색 + 정기 lint"
     ],
     "blocked_items": [
       "TASK-002: 도메인별 명령 가이드 (yklee 인프라 정보 의존)",
@@ -237,6 +238,12 @@
         "decision": "LLM Wiki v1.5 (second brain vault) — `~/wiki/` Obsidian + Gitea. v1.5 = schema+lint only. 3 결정: (1) vault 위치 = `~/wiki/` (out-of-repo, Obsidian 직접 open, public repo 노출 회피), (2) v1.5 범위 = schema + lint (full compile v2.5 TASK-005-4 로 연기), (3) ai-workflow 관계 = consumer (raw/ai-workflow/ sync, SSOT 아님). 디자인 DETAILED_DESIGN_LLM_WIKI.md (§0~§11, 11 섹션, 결정 3 + 위험 7). lint L01~L10 (frontmatter, link, orphan, dup, stale, sources, 모순, index, log, 출처) — wiki-lint 스킬 구현 (stdlib only, 26/26 tests). session-start 확장 (wiki_vault_status.py, 13/13 tests, vault 발견 + lint 통합, 부재 시 graceful null). 49 wiki 페이지 (concepts 6, entities 18, topics 6, sources 15, comparisons 1, meta 1) + 303 raw 파일 (md 120, py 93, rs 75, toml 11, json 4 = 303, +5 .MiniMax agents) mass ingest. Gitea `yklee/wiki` private repo, Keychain 자동 인증 (osxkeychain helper), Obsidian Git plugin (autoCommit 30분, manual push). wiki-sync.sh + wiki-sync-ai-workflow.sh 2 helper. 3 commit dual-push (58554c5 design, 090ff11 wiki-lint, e529bef session-start). vault = derived, CONCEPT.md = SSOT (R-4).",
         "ref": "D-71 (2026-06-10)",
         "section": "§5.13 (LLM Wiki memory v1.5) + §11.2 (second brain 패턴)"
+      },
+      {
+        "id": "D-72",
+        "decision": "LLM Wiki cross-project 통합 (v1.5). 단일 `~/wiki/` vault + `wiki/projects/{my-harness,devhub}/` + `wiki/cross/` 동거. **3 결정 (yklee)**: (1) vault 위치 = `~/wiki/` 단일 (out-of-repo, Obsidian 직접 open, **wiki 는 개인 Gitea private repo 만** → 사내 노출 위험 0), (2) v1.5 범위 = schema + lint (full compile v2.5+), (3) ai-workflow 관계 = consumer (per-project 격리). wiki-lint v0.2.0: `--project`, `--project-config` 옵션 + `_iter_wiki_dirs()` (wiki/projects/<project>/<sub>/ + wiki/cross/<sub>/ 자동 walk) + `Page.project` 필드 + `rule_l07_one` per-page variant + `[rules.L07].skip_paths` glob 매칭 (DevHub ADR 의도적 supersede 면제). wiki-sync-devhub.sh (BSD-rsync safe, my_harness 의 그것과 같은 패턴). 72 wiki pages (49 my-harness + 21 devhub + 2 cross). 1261 raw files (DevHub 11MB, my_harness 303). lint 0 error / 98 warn (L03 orphan + L08 unindexed false positive). 5 commit dual-push (D-71: 58554c5+090ff11+e529bef+8f70bf0, D-72: 011ca9a). DevHub 의 3-tier 정책 (사외/사내/공용) 은 DevHub repo 의 push 정책이며 wiki 자체는 모든 tier 흡수 (yklee 결정). lint L11 (사내 패턴 검출) 불요 — wiki 가 Gitea private 만.",
+        "ref": "D-72 (2026-06-10)",
+        "section": "§5.13 (LLM Wiki v1.5 cross-project) + §11.2 (SSOT cross-project) + §11.4 (per-project lint)"
       }
     ],
     "deferred": [
@@ -349,7 +356,7 @@
     "ai-workflow/skills/wiki-lint/SKILL.md"
   ],
   "next_actions": [
-    "D-71 후속: (1) Obsidian graph view 진입 (사용자) — 49 wiki page 그래프 가시화, (2) 주기적 `wiki-lint` (autoCommit 후 Obsidian 안에서) + `_lint/report_*.md` 검토, (3) 다음 ingest 시 `wiki-sync-ai-workflow.sh` raw/ 갱신",
+    "D-72 후속: (1) Obsidian graph view 에서 72 wiki page 의 cross-project 시각화, (2) 정기 wiki-lint (D-71 autoCommit 후) + per-project _lint/<project>/report_*.md 검토, (3) `wiki-sync-devhub.sh` raw/ 갱신 자동화 (cron 또는 hook, v2.0+)",
     "wiki/ 페이지 cross-reference 자동 보강 (L03/L08 false positive 해소) — 다음 세션의 query 시 LLM 이 [[link]] 자동 추가",
     "TASK-005-2 v2.0 진입 결정 — yklee 결정 시. 후보: (1) ONNX 3-commit (D-66/67/68 abort 후 tract 안정화 대기) / (2) Plugin 4-계층 / (3) Kompress-back (low priority)",
     "MiniMax Device OAuth real flow: yklee 가 MiniMax console 에서 device grant 활성화 후 `myharness auth login minimax --no-browser`",

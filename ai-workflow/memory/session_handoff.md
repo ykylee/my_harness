@@ -4,7 +4,7 @@
 - Scope: current focus, task status, key changes, next actions, risks
 - Audience: yklee, Mavis orchestrator, .MiniMax 워커 에이전트
 - Status: active
-- Updated: 2026-06-10 (D-71 LLM Wiki v1.5 mass ingest 완료. wiki/ 49 페이지 + raw/ai-workflow/ 303 파일 mirror. 3 commit dual-push 58554c5+090ff11+e529bef. lint 0 error / 69 warn (의도된 false positive). 이전: D-70 v1.5 종료 — 8 결정 (D-60~D-65 + D-69 + D-70))
+- Updated: 2026-06-10 (D-72 cross-project wiki 통합: my_harness 49 + devhub 21 + cross 2 = 72 pages, lint 0/98/0. wiki-lint v0.2.0 + test_wiki_lint_d72.py 3 tests. 5 commit dual-push. 이전: D-71 LLM Wiki v1.5 mass ingest)
 - Related docs: [Project Profile](../../docs/PROJECT_PROFILE.md), [Work Backlog](./work_backlog.md), [State Cache](./state.json), [CONCEPT.md](../../docs/CONCEPT.md) (SSOT)
 
 ## Current Focus
