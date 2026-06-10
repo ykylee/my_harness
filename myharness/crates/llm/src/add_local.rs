@@ -77,40 +77,104 @@ pub enum RegisterError {
     AtomicWrite(#[from] std::io::Error),
 }
 
-/// `GET {base_url}/models` probe (OpenAI 호환).
+/// 로컬 LLM 서버 probe (D-63 cascade: Ollama native → OpenAI 호환).
 ///
-/// - `url` trailing `/` 자동 trim
-/// - 3s timeout
-/// - `token` 있으면 Bearer auth 부착
-/// - 성공: Vec<ModelInfo> (data[*].id 추출)
-/// - 실패: RegisterError 매칭
+/// # Cascade 순서
+/// 1. `GET {base}/api/tags` (Ollama native) — Ollama default 모드 커버
+/// 2. 실패 시 `GET {base}/v1/models` (OpenAI 호환) — vLLM / LM Studio / llama.cpp / Ollama OpenAI compat
+///
+/// # 인자
+/// - `base_url`: 사용자가 입력한 base URL (`http://localhost:11434` 또는 `http://localhost:11434/v1`)
+/// - `token`: 옵션 Bearer token (Ollama 는 None, vLLM/LM Studio/llama.cpp 는 Some)
+///
+/// # Returns
+/// - 성공 시 `Vec<ModelInfo>` (cascade 첫 번째 성공 endpoint)
+/// - 둘 다 실패 시 cascade 의 마지막 에러 (OpenAI compat 4xx/5xx or connection refused)
 pub async fn probe_local_models(
     base_url: &str,
     token: Option<&str>,
 ) -> Result<Vec<ModelInfo>, RegisterError> {
     let base = base_url.trim_end_matches('/');
-    let url = format!("{base}/models");
 
+    // Stage 1: Ollama native `/api/tags` 시도
+    match probe_ollama_tags(base, token).await {
+        Ok(Some(models)) if !models.is_empty() => return Ok(models),
+        Ok(_) => {
+            tracing::debug!("ollama /api/tags 비어있거나 응답 없음, /v1/models fallback");
+        }
+        Err(e) => {
+            tracing::debug!("ollama /api/tags 실패: {e}, /v1/models fallback");
+        }
+    }
+
+    // Stage 2: OpenAI 호환 `/v1/models` fallback
+    probe_openai_models(base, token).await
+}
+
+/// Ollama native `/api/tags` probe. 성공 시 `Some(Vec<ModelInfo>)`, endpoint 없으면 `Ok(None)`.
+async fn probe_ollama_tags(
+    base: &str,
+    token: Option<&str>,
+) -> Result<Option<Vec<ModelInfo>>, RegisterError> {
+    let url = format!("{base}/api/tags");
+    match fetch_json_body(&url, token, Duration::from_secs(2)).await {
+        Ok(body) => {
+            let models = parse_ollama_tags(&body);
+            Ok(Some(models))
+        }
+        Err(RegisterError::HttpError { status: 404, .. })
+        | Err(RegisterError::HttpError { status: 405, .. }) => Ok(None),
+        Err(e) => Err(e),
+    }
+}
+
+/// OpenAI 호환 `/v1/models` probe. W16 의 원래 동작.
+///
+/// `base` 가 `/v1` 으로 끝나면 `format!("{base}/models")` (back-compat W16 caller),
+/// 아니면 `format!("{base}/v1/models")` (caller 가 bare host 만 전달한 경우).
+async fn probe_openai_models(
+    base: &str,
+    token: Option<&str>,
+) -> Result<Vec<ModelInfo>, RegisterError> {
+    let url = if base.ends_with("/v1") {
+        format!("{base}/models")
+    } else {
+        format!("{base}/v1/models")
+    };
+    let body = fetch_json_body(&url, token, Duration::from_secs(3)).await?;
+    let models = parse_openai_models(&body);
+    if models.is_empty() {
+        return Err(RegisterError::NoModels { url });
+    }
+    Ok(models)
+}
+
+/// 공통 HTTP fetch + status check + JSON parse helper (D-63).
+async fn fetch_json_body(
+    url: &str,
+    token: Option<&str>,
+    timeout: Duration,
+) -> Result<serde_json::Value, RegisterError> {
     let client = reqwest::Client::builder()
-        .timeout(Duration::from_secs(3))
+        .timeout(timeout)
         .build()
         .map_err(|e| RegisterError::HttpError {
-            url: url.clone(),
+            url: url.to_string(),
             status: 0,
             body: e.to_string(),
         })?;
 
-    let mut req = client.get(&url);
+    let mut req = client.get(url);
     if let Some(t) = token {
         req = req.bearer_auth(t);
     }
 
     let resp = req.send().await.map_err(|e| {
         if e.is_connect() || e.is_timeout() {
-            RegisterError::ConnectionRefused { url: url.clone() }
+            RegisterError::ConnectionRefused { url: url.to_string() }
         } else {
             RegisterError::HttpError {
-                url: url.clone(),
+                url: url.to_string(),
                 status: 0,
                 body: e.to_string(),
             }
@@ -121,37 +185,64 @@ pub async fn probe_local_models(
     if !status.is_success() {
         let body = resp.text().await.unwrap_or_default();
         return Err(RegisterError::HttpError {
-            url,
+            url: url.to_string(),
             status: status.as_u16(),
             body,
         });
     }
 
-    let body: serde_json::Value = resp.json().await.map_err(|e| RegisterError::HttpError {
-        url: url.clone(),
+    resp.json().await.map_err(|e| RegisterError::HttpError {
+        url: url.to_string(),
         status: status.as_u16(),
         body: e.to_string(),
-    })?;
+    })
+}
 
-    let models: Vec<ModelInfo> = body
-        .get("data")
+/// Ollama native `/api/tags` 응답 → `Vec<ModelInfo>`.
+///
+/// 응답 형식: `{"models": [{"name": "llama3.1:8b", "details": {"family": "llama"}, ...}]}`
+pub(crate) fn parse_ollama_tags(body: &serde_json::Value) -> Vec<ModelInfo> {
+    body.get("models")
+        .and_then(|m| m.as_array())
+        .map(|arr| {
+            arr.iter()
+                .filter_map(|m| {
+                    m.get("name")
+                        .and_then(|n| n.as_str())
+                        .map(|s| ModelInfo {
+                            id: s.to_string(),
+                            owned_by: m
+                                .get("details")
+                                .and_then(|d| d.get("family"))
+                                .and_then(|f| f.as_str())
+                                .map(String::from),
+                        })
+                })
+                .collect()
+        })
+        .unwrap_or_default()
+}
+
+/// OpenAI 호환 `/v1/models` 응답 → `Vec<ModelInfo>`.
+///
+/// 응답 형식: `{"data": [{"id": "llama3.1:8b", "owned_by": "ollama"}, ...]}`
+pub(crate) fn parse_openai_models(body: &serde_json::Value) -> Vec<ModelInfo> {
+    body.get("data")
         .and_then(|d| d.as_array())
         .map(|arr| {
             arr.iter()
                 .filter_map(|m| {
                     m.get("id").and_then(|id| id.as_str()).map(|s| ModelInfo {
                         id: s.to_string(),
-                        owned_by: m.get("owned_by").and_then(|o| o.as_str()).map(String::from),
+                        owned_by: m
+                            .get("owned_by")
+                            .and_then(|o| o.as_str())
+                            .map(String::from),
                     })
                 })
                 .collect()
         })
-        .unwrap_or_default();
-
-    if models.is_empty() {
-        return Err(RegisterError::NoModels { url });
-    }
-    Ok(models)
+        .unwrap_or_default()
 }
 
 /// 로컬 LLM 등록 — `~/.myharness/providers.toml` 의 LocalLlm entry 갱신 + (옵션) keyring set.

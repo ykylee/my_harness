@@ -286,3 +286,86 @@ async fn tc_w17_i02_non_interactive_with_token_end_to_end() {
 
     unsafe { std::env::remove_var("MYHARNESS_HOME"); }
 }
+
+// ── W20 (v1.5 D-63 F-3) Ollama native /api/tags cascade ─────────────────────
+
+/// TC-W20-I01 — Ollama native `/api/tags` 200 응답 시 cascade stage 1 에서 성공
+#[tokio::test]
+async fn tc_w20_i01_probe_ollama_native_api_tags_succeeds() {
+    let server = MockServer::start().await;
+    Mock::given(method("GET"))
+        .and(path("/api/tags"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(serde_json::json!({
+            "models": [
+                {"name": "llama3.1:8b", "details": {"family": "llama"}},
+                {"name": "qwen2.5:14b", "details": {"family": "qwen2"}}
+            ]
+        })))
+        .mount(&server)
+        .await;
+
+    // base = "http://server" (no /v1 suffix, bare host) — Ollama native 의 canonical
+    let base_url = server.uri();
+    let models = probe_local_models(&base_url, None).await.unwrap();
+
+    assert_eq!(models.len(), 2);
+    assert_eq!(models[0].id, "llama3.1:8b");
+    assert_eq!(models[0].owned_by.as_deref(), Some("llama"));
+    assert_eq!(models[1].id, "qwen2.5:14b");
+    assert_eq!(models[1].owned_by.as_deref(), Some("qwen2"));
+}
+
+/// TC-W20-I02 — `/api/tags` 404 (Ollama OpenAI compat only or vLLM/LM Studio/llama.cpp)
+/// → cascade 가 `/v1/models` 로 fallback 성공
+#[tokio::test]
+async fn tc_w20_i02_probe_cascade_fallback_to_openai_compat() {
+    let server = MockServer::start().await;
+    Mock::given(method("GET"))
+        .and(path("/api/tags"))
+        .respond_with(ResponseTemplate::new(404))
+        .mount(&server)
+        .await;
+    Mock::given(method("GET"))
+        .and(path("/v1/models"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(serde_json::json!({
+            "data": [{"id": "vllm-model", "owned_by": "vllm"}]
+        })))
+        .mount(&server)
+        .await;
+
+    let base_url = server.uri();
+    let models = probe_local_models(&base_url, None).await.unwrap();
+
+    assert_eq!(models.len(), 1);
+    assert_eq!(models[0].id, "vllm-model");
+    assert_eq!(models[0].owned_by.as_deref(), Some("vllm"));
+}
+
+/// TC-W20-I03 — 양쪽 다 200 응답 시 native 가 우선 (early return, OpenAI 미호출)
+#[tokio::test]
+async fn tc_w20_i03_probe_ollama_native_takes_priority_over_openai_compat() {
+    let server = MockServer::start().await;
+
+    // native 가 OpenAI 와 다른 모델을 반환 — OpenAI 가 호출되면 다른 결과로 detect 가능
+    Mock::given(method("GET"))
+        .and(path("/api/tags"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(serde_json::json!({
+            "models": [{"name": "native-model", "details": {"family": "llama"}}]
+        })))
+        .mount(&server)
+        .await;
+    Mock::given(method("GET"))
+        .and(path("/v1/models"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(serde_json::json!({
+            "data": [{"id": "openai-compat-model", "owned_by": "openai"}]
+        })))
+        .mount(&server)
+        .await;
+
+    let base_url = server.uri();
+    let models = probe_local_models(&base_url, None).await.unwrap();
+
+    // native 가 우선 → native-model 만 반환 (openai-compat-model 미반환)
+    assert_eq!(models.len(), 1);
+    assert_eq!(models[0].id, "native-model");
+}
