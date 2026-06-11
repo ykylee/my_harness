@@ -475,7 +475,7 @@ def load_project_config(vault: Path, project: str) -> dict[str, Any]:
     skip_paths = ["wiki/projects/devhub/sources/ADR-*.md"]
     ```
     """
-    config_path = vault / "wiki" / "projects" / project / ".wiki-lint.toml"
+    config_path = vault / "wiki" / ("cross" if project == "cross" else f"projects/{project}") / ".wiki-lint.toml"
     if not config_path.is_file():
         return {}
     try:
@@ -530,7 +530,7 @@ def run_lint(
     # project 별 config 자동 발견
     project_configs: dict[str, dict[str, Any]] = {}
     for p in pages:
-        if p.project and p.project not in project_configs and p.project != "cross":
+        if p.project and p.project not in project_configs:
             cfg = project_config if project_config is not None else load_project_config(vault, p.project)
             project_configs[p.project] = cfg
     idx = index_pages(pages)
@@ -576,6 +576,8 @@ def run_lint(
             findings.extend(rule_l02(p, idx))
     if "L03" in active:
         for p in pages:
+            if _is_skipped("L03", p):
+                continue
             findings.extend(rule_l03(p, idx))
     if "L04" in active:
         findings.extend(rule_l04(pages))

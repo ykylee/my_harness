@@ -99,15 +99,22 @@
 ├── AGENTS.md                           # ★ 스키마 — LLM이 매 세션 시작 시 읽음
 ├── README.md                           # vault 소개 (인간용)
 │
-├── raw/                                # Layer 0 — LLM 읽기 전용
+├── raw/                                # Layer 0 — LLM 읽기 전용 (D-72 cross-project)
 │   ├── _manifest.md                    # 원본 인덱스 (날짜별 추가)
-│   ├── ai-workflow/                    # ← symlink 또는 export (D-71.3)
-│   │   ├── handoff.md                  # ← ~/repos/my_harness/ai-workflow/memory/session_handoff.md
-│   │   ├── backlog-index.md            # ← work_backlog.md
-│   │   ├── state.json                  # ← state.json (raw 보관, 편집 X)
-│   │   └── by-date/                    # ← daily backlog (YYYY-MM-DD.md)
-│   │       ├── 2026-06-05.md
-│   │       └── 2026-06-10.md
+│   ├── projects/                       # ← D-72: per-project 격리
+│   │   ├── my-harness/                 # ← my_harness wiki sync target (D-72)
+│   │   │   ├── ai-workflow/            # ← wiki-sync-ai-workflow.sh mirror
+│   │   │   │   ├── handoff.md          # ← ~/repos/my_harness/ai-workflow/memory/session_handoff.md
+│   │   │   │   ├── backlog-index.md    # ← work_backlog.md
+│   │   │   │   ├── state.json          # ← state.json (raw 보관, 편집 X)
+│   │   │   │   └── by-date/            # ← daily backlog (YYYY-MM-DD.md)
+│   │   │   │       ├── 2026-06-05.md
+│   │   │   │       └── 2026-06-10.md
+│   │   │   ├── docs/                   # ← my_harness/docs/ mirror
+│   │   │   ├── myharness/              # ← my_harness/myharness/ mirror
+│   │   │   └── MiniMax.md              # ← my_harness/MiniMax.md
+│   │   └── devhub/                     # ← DevHub wiki sync target (D-72)
+│   │       └── ...                     # DevHub raw mirror
 │   ├── clippings/                      # Obsidian Web Clipper 출력
 │   │   └── 2026-06-10_karpathy-llm-wiki.md
 │   ├── books/                          # 챕터별 노트
@@ -157,14 +164,14 @@ my_harness 저장소 자체엔 새 위키 디렉터리를 두지 **않는다** (
 
 ### 2.3 ai-workflow 측 (consumer 연동, D-71.3)
 
-`ai-workflow/memory/` 는 **그대로** 유지. `~/wiki/raw/ai-workflow/` 로의 동기화는 두 가지 방식:
+`ai-workflow/memory/` 는 **그대로** 유지. `~/wiki/raw/projects/my-harness/ai-workflow/` 로의 동기화는 두 가지 방식:
 
 | 방식 | 장점 | 단점 | 채택 |
 |---|---|---|---|
 | Symlink | 실시간, 0 cost | Obsidian이 따라오는지 확인 필요, Windows 호환 | macOS 한정 OK |
 | Export script | 명시적, 부서지기 쉬운 결합 없음 | 자동화 안 됨 (또는 별도 훅) | 채택 — 초기엔 수동, v2.0 훅화 |
 
-**v1.5 권장 초기 동작**: `myharness wiki sync` 명령 또는 수동 `cp`/`rsync` — vault 진입 시 `wiki sync` 가 ai-workflow 산출물을 `~/wiki/raw/ai-workflow/` 로 복사 (SSOT 아님, mirror 아님 — **복사**).
+**v1.5 권장 초기 동작**: `myharness wiki sync` 명령 또는 수동 `cp`/`rsync` — vault 진입 시 `wiki sync` 가 ai-workflow 산출물을 `~/wiki/raw/projects/my-harness/ai-workflow/` 로 복사 (SSOT 아님, mirror 아님 — **복사**).
 
 ---
 
@@ -303,7 +310,7 @@ my_harness repo 작업
    │       │  myharness wiki sync (v2.0+)
    │       │  or 수동 cp -r (v1.5)
    │       ▼
-   │  ~/wiki/raw/ai-workflow/   ← "내가 한 일" 의 immutable copy
+   │  ~/wiki/raw/projects/my-harness/ai-workflow/   ← "내가 한 일" 의 immutable copy (D-72)
    │       │
    │       │  LLM ingest
    │       ▼
@@ -402,9 +409,9 @@ CONCEPT 원안 그대로:
 9. `cd ~/wiki && git init && git add -A && git commit -m "init: LLM Wiki vault (D-71)"` — **vault 자체도 git 으로 버전관리**
 
 ### 8.2 ai-workflow 산출물 첫 sync
-- `cp -r ~/repos/my_harness/ai-workflow/memory ~/wiki/raw/ai-workflow`
+- `cp -r ~/repos/my_harness/ai-workflow/memory ~/wiki/raw/projects/my-harness/ai-workflow`
 - `~/wiki/raw/_manifest.md` 첫 줄 작성
-- LLM 한테 "raw/ai-workflow/ 를 ingest 해줘" 요청 → sources/karpathy-...-style 한 줄 + concepts/my-harness.md 등 5~10 페이지 초안
+- LLM 한테 "raw/projects/my-harness/ai-workflow/ 를 ingest 해줘" 요청 → sources/karpathy-...-style 한 줄 + concepts/my-harness.md 등 5~10 페이지 초안
 
 ### 8.3 그 이후 운영
 - **인간** = raw/ 에 노트 drop + Obsidian 으로 wiki/ 탐색
@@ -442,10 +449,12 @@ CONCEPT 원안 그대로:
 - `myharness wiki ingest <source-path>` — raw/ 등록 + LLM 호출
 - `myharness wiki query <question>` — index + qmd 후속
 - `myharness wiki lint` — wiki-lint 스킬 호출
-- `myharness wiki sync` — ai-workflow → raw/ai-workflow/ mirror
+- `myharness wiki sync` — ai-workflow → `raw/projects/my-harness/ai-workflow/` mirror (D-72)
 - `myharness wiki vault init` — §8.1 자동화
 
 ---
 
 ## 변경 이력
 - 2026-06-10 (D-71) — 초안 작성. yklee 와 3 결정 합의 (vault 위치=vault out-of-repo, v1.5 범위=schema+lint, ai-workflow 관계=consumer). CONCEPT §5.13 (D-32) 의 후속.
+
+- 2026-06-11 (D-74) — R-4 SSOT drift 정정: §2.1 tree + §2.3 (167, 174) + §5.1 flow (313) + §8.2 (412, 414) + §11.5 (452) 의 `raw/ai-workflow/` 경로를 `raw/projects/my-harness/ai-workflow/` 로 갱신 (D-72 cross-project 통합 반영). lint L08 fix (index.md full path) + L03 skip patch + 3 project .wiki-lint.toml 보강. lint 0/98/0 → **0/0/0** (pages=72).
