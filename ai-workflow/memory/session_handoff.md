@@ -4,7 +4,7 @@
 - Scope: current focus, task status, key changes, next actions, risks
 - Audience: yklee, Mavis orchestrator, .MiniMax 워커 에이전트
 - Status: active
-- Updated: 2026-06-11 (D-73 T-v5-sync-1 plan_3c8c4a49 cancel + 4-plan split 결정. v0.5.0→v0.5.11 sync 11 minor 24 commit 을 4 plan (A/B/C/D) 으로 분리. 3 memory entries 추가. 이전: D-72 cross-project wiki 통합)
+- Updated: 2026-06-11 (D-74 LLM Wiki 정상화 — lint 0/0/0 + R-4 SSOT drift 정정. 3 sub-task: L08 fix + L03 skip patch + 3 project skip config. wiki commit bd9b108 + my_harness commit 5407f82 dual push. 이전: D-73 T-v5-sync-1 plan_3c8c4a49 cancel + 4-plan split)
 - Related docs: [Project Profile](../../docs/PROJECT_PROFILE.md), [Work Backlog](./work_backlog.md), [State Cache](./state.json), [CONCEPT.md](../../docs/CONCEPT.md) (SSOT)
 
 ## Current Focus
@@ -79,7 +79,7 @@
 - 2026-06-09 — **TASK-005-1 W9 완료 (D-47)**: myharness-compression crate v1. 40 tests pass
 - 2026-06-09 — **TASK-005-1 W10 완료 (D-48)**: myharness-tui crate v1. 51 tests pass
 - 2026-06-09 — **TASK-005-1 W11 완료 (D-49)**: myharness-core crate v1. 32 tests pass
-
+- 2026-06-11 — **D-74 LLM Wiki 정상화** (R-4 SSOT drift = D-73 Plan D 마지막 chunk 보다 먼저 해소). lint 0/98/0 → **0/0/0** (pages=72). 3 sub-task: (1) **L08 fix** — `~/wiki/index.md` entry 마다 backtick-fenced full path 추가 (L08 검사가 backtick 안의 .md 만 인식, 72 page 등록). (2) **L03 skip patch** — `run_wiki_lint.py` L03 호출에 `_is_skipped` 가드 추가 (L07 패턴 정합, 5 line patch). (3) **skip config 보강** — 3 project 의 `.wiki-lint.toml` (my-harness / devhub / cross) + `load_project_config` cross 분기. **R-4 drift 정정**: `docs/architecture/DETAILED_DESIGN_LLM_WIKI.md` 의 §2.1 tree + §2.3 (167, 174) + §5.1 flow (313) + §8.2 (412, 414) + §11.5 (452) 의 `raw/ai-workflow/` 경로를 `raw/projects/my-harness/ai-workflow/` 로 갱신 (D-72 cross-project 통합 반영). 검증: **26/26 wiki-lint unit + 3/3 D-72 cross-project tests pass**. wiki commit `bd9b108` (Gitea push). my_harness commit `5407f82` (dual push Gitea + GitHub). main = 5407f82. 다음: T-v5-sync-1 Plan A launch (yklee 결정 대기).
 ## 다음에 할 일 (Next Actions)
 
 - [x] **v1 컨셉 확립** (D-22~D-38) — 5/5 결정 검토 완료 (4 ✅, 1 ⏸)
