@@ -4,8 +4,8 @@
 - 범위: MCP 프로토타입 디렉터리 구조, 구현 진입점, 초기 도입 후보
 - 대상 독자: AI agent 설계자, 개발자, 운영자
 - 상태: draft
-- 최종 수정일: 2026-04-18
-- 관련 문서: `../core/workflow_mcp_candidate_catalog.md`, `./prototype_layout.md`
+- 최종 수정일: 2026-06-11
+- 관련 문서: `../core/workflow_mcp_candidate_catalog.md`, `./prototype_layout.md`, [../core/mcp_installation_by_harness.md](../core/mcp_installation_by_harness.md) (D-75 Plan A-2 — per-harness MCP install 가이드, codex/opencode config example)
 
 ## 현재 상태
 

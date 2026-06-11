@@ -1,0 +1,48 @@
+# codex MCP config example for my_harness (D-75 Plan A-2)
+#
+# my_harness 의 5 MCP 프로토타입을 codex 에 등록하는 예시.
+# 원본: standard_ai_workflow v0.5.1 workflow-source/examples/mcp_config_examples/codex-mcp.toml
+# (5.1 의 1 server-multi-tools 와 다른 pattern — my_harness 는 5 separate prototype)
+#
+# install:
+#   1. ~/.codex/config.toml 의 끝에 아래 [mcp_servers.*] 섹션 추가
+#      (또는 <workspace>/.codex/config.toml 에 로컬)
+#   2. MYHARNESS_ROOT 환경변수를 my_harness repo root 로 설정
+#      (또는 아래 PYTHONPATH/STANDARD_AI_WORKFLOW_ROOT 를 절대경로로 hardcode)
+#   3. codex restart
+#
+# verify:
+#   codex 재시작 후 /tools 또는 mcp list 로 5 server entry 보이는지 확인
+#
+# uninstall:
+#   ~/.codex/config.toml 에서 [mcp_servers.myharness-*] 섹션 5개 제거
+
+# ==== myharness-latest-backlog ====
+[mcp_servers.myharness-latest-backlog]
+command = "/usr/bin/env"
+args = ["python3", "-m", "ai_workflow.mcp_servers.latest_backlog"]
+env = { PYTHONPATH = "/Users/yklee/repos/my_harness" }
+
+# ==== myharness-check-doc-metadata ====
+[mcp_servers.myharness-check-doc-metadata]
+command = "/usr/bin/env"
+args = ["python3", "-m", "ai_workflow.mcp_servers.check_doc_metadata"]
+env = { PYTHONPATH = "/Users/yklee/repos/my_harness" }
+
+# ==== myharness-check-doc-links ====
+[mcp_servers.myharness-check-doc-links]
+command = "/usr/bin/env"
+args = ["python3", "-m", "ai_workflow.mcp_servers.check_doc_links"]
+env = { PYTHONPATH = "/Users/yklee/repos/my_harness" }
+
+# ==== myharness-create-backlog-entry ====
+[mcp_servers.myharness-create-backlog-entry]
+command = "/usr/bin/env"
+args = ["python3", "-m", "ai_workflow.mcp_servers.create_backlog_entry"]
+env = { PYTHONPATH = "/Users/yklee/repos/my_harness" }
+
+# ==== myharness-suggest-impacted-docs ====
+[mcp_servers.myharness-suggest-impacted-docs]
+command = "/usr/bin/env"
+args = ["python3", "-m", "ai_workflow.mcp_servers.suggest_impacted_docs"]
+env = { PYTHONPATH = "/Users/yklee/repos/my_harness" }

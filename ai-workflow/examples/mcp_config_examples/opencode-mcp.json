@@ -1,0 +1,40 @@
+{
+  "$comment": "opencode MCP config example for my_harness (D-75 Plan A-2). my_harness 의 5 MCP 프로토타입을 opencode 에 등록. 원본: standard_ai_workflow v0.5.1 workflow-source/examples/mcp_config_examples/opencode-mcp.json (5.1 의 1 server-multi-tools 와 다른 pattern — my_harness 는 5 separate prototype).",
+  "mcp": {
+    "myharness-latest-backlog": {
+      "type": "stdio",
+      "command": ["python3", "-m", "ai_workflow.mcp_servers.latest_backlog"],
+      "env": {
+        "PYTHONPATH": "/Users/yklee/repos/my_harness"
+      }
+    },
+    "myharness-check-doc-metadata": {
+      "type": "stdio",
+      "command": ["python3", "-m", "ai_workflow.mcp_servers.check_doc_metadata"],
+      "env": {
+        "PYTHONPATH": "/Users/yklee/repos/my_harness"
+      }
+    },
+    "myharness-check-doc-links": {
+      "type": "stdio",
+      "command": ["python3", "-m", "ai_workflow.mcp_servers.check_doc_links"],
+      "env": {
+        "PYTHONPATH": "/Users/yklee/repos/my_harness"
+      }
+    },
+    "myharness-create-backlog-entry": {
+      "type": "stdio",
+      "command": ["python3", "-m", "ai_workflow.mcp_servers.create_backlog_entry"],
+      "env": {
+        "PYTHONPATH": "/Users/yklee/repos/my_harness"
+      }
+    },
+    "myharness-suggest-impacted-docs": {
+      "type": "stdio",
+      "command": ["python3", "-m", "ai_workflow.mcp_servers.suggest_impacted_docs"],
+      "env": {
+        "PYTHONPATH": "/Users/yklee/repos/my_harness"
+      }
+    }
+  }
+}
