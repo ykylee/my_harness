@@ -44,6 +44,7 @@ scratch/
 .MiniMax/config.json
 .MiniMax/config.local.json
 .mavis/
+.omo/
 
 # Codex local config (in case the user enables codex harness later)
 .codex/config.toml
