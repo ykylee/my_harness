@@ -670,6 +670,8 @@ myharness --mode=loop --goal "fix all TODO comments" --max-iterations=20 .
 
 yklee 환경 검증: 다른 agent 도구 모두 `~/.<toolname>/` 컨벤션 (claude/codex/gemini/headroom/minimax/jules/coderabbit). 우리도 동일.
 
+**v1 구현 범위 (D-69)**: 표의 **11 top-level dirs + root** 가 `init_home_dir()` (paths.rs:141) 가 자동 생성. sub-dir (state/current.toml, memory/auto/, compression/cache/, sub-agents/<name>/, cache/models/, llm-wiki/ 등) 는 v1.5+ 구현. **OAuth token 실제 dir** = `~/.myharness/oauth/{provider}.toml` (`TokenStore::new()`, store.rs:39) — §5.5.2 의 `state/auth/` 와 다름 (해당 경로는 `state_auth_toml()` = auth **state metadata** 용, status/last_login 등).
+
 ```
 ~/.myharness/                          # ROOT (XDG-aware)
 ├── config/                           # 사용자 편집 가능 config
