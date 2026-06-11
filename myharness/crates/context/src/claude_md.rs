@@ -256,7 +256,7 @@ mod tests {
     #[test]
     fn source_priority_ordering() {
         let mut v = vec![ContextSource::Global, ContextSource::ProjectLocal, ContextSource::ProjectParent];
-        v.sort_by_key(|s| s.priority());
+        v.sort_by_key(super::ContextSource::priority);
         assert_eq!(
             v,
             vec![

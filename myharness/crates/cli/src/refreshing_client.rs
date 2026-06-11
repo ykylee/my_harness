@@ -130,13 +130,12 @@ impl RefreshingLlmClient {
             &new_token.access_token,
             &self.model,
             match self.provider_id.as_str() {
-                "minimax" => myharness_llm::provider::ProviderId::Minimax,
                 "openai" => myharness_llm::provider::ProviderId::Codex,
                 "google" => myharness_llm::provider::ProviderId::Gemini,
                 "deepseek" => myharness_llm::provider::ProviderId::Deepseek,
                 "local" => myharness_llm::provider::ProviderId::LocalLlm,
                 "claude" => myharness_llm::provider::ProviderId::Claude,
-                _ => myharness_llm::provider::ProviderId::Minimax, // default
+                _ => myharness_llm::provider::ProviderId::Minimax, // default (minimax 포함)
             },
         )
         .map_err(|e| LlmError::ProviderInit(format!(

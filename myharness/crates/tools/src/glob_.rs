@@ -26,25 +26,23 @@ impl Tool for GlobTool {
 
         let search_path = input
             .get("path")
-            .and_then(|v| v.as_str())
-            .map(|p| {
+            .and_then(|v| v.as_str()).map_or_else(|| ctx.cwd.clone(), |p| {
                 if PathBuf::from(p).is_absolute() {
                     PathBuf::from(p)
                 } else {
                     ctx.cwd.join(p)
                 }
-            })
-            .unwrap_or_else(|| ctx.cwd.clone());
+            });
 
         let glob_pattern = glob::Pattern::new(pattern_str)
-            .map_err(|e| ToolError::InvalidInput(format!("invalid glob pattern: {}", e)))?;
+            .map_err(|e| ToolError::InvalidInput(format!("invalid glob pattern: {e}")))?;
 
         let max_results: usize = 1000;
         let mut matches = Vec::new();
 
         for entry in WalkDir::new(&search_path)
             .into_iter()
-            .filter_map(|e| e.ok())
+            .filter_map(std::result::Result::ok)
         {
             if matches.len() >= max_results {
                 break;
@@ -55,7 +53,7 @@ impl Tool for GlobTool {
         }
 
         let output = serde_json::to_string_pretty(&matches)
-            .map_err(|e| ToolError::Other(format!("serialization error: {}", e)))?;
+            .map_err(|e| ToolError::Other(format!("serialization error: {e}")))?;
 
         Ok(ToolResult {
             output,

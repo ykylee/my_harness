@@ -3,6 +3,8 @@
 //! 모듈:
 //! - [`events`]: crossterm backend + key mapping
 //! - [`app`]: App state + ratatui draw logic
+
+#![allow(clippy::items_after_statements)] // const items at end of module is clearer than scattered at top
 //! - [`agent`]: `SubAgent` trait + 4 구현 (W10.2)
 //! - [`orchestrator`]: 도메인 dispatch + tools/llm 통합 (W10.3)
 //! - [`loop_mode`]: ralph-wiggum 패턴 (W10.4)

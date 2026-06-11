@@ -44,15 +44,22 @@ impl Tool for ReadTool {
 
         let offset = input
             .get("offset")
-            .and_then(|v| v.as_u64())
-            .map(|v| v as usize)
-            .unwrap_or(0);
+            .and_then(serde_json::Value::as_u64)
+            .map(|v| {
+                #[allow(clippy::cast_possible_truncation)]
+                let v = v as usize;
+                v
+            });
+        let offset = offset.unwrap_or(0);
 
         let limit = input
             .get("limit")
-            .and_then(|v| v.as_u64())
-            .map(|v| v as usize);
-
+            .and_then(serde_json::Value::as_u64)
+            .map(|v| {
+                #[allow(clippy::cast_possible_truncation)]
+                let v = v as usize;
+                v
+            });
         let output = if let Some(limit) = limit {
             content
                 .lines()

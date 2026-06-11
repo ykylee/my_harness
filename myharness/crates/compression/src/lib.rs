@@ -3,6 +3,8 @@
 //! 모듈:
 //! - [`summarizer`]: Summarizer trait + `LlmSummarizer` + `MockSummarizer` + `TrivialSummarizer` (W9.1)
 //! - [`ccr`]: CCR (reversible compression with retrieval) (W9.3)
+
+#![allow(clippy::struct_excessive_bools)] // 3-4 bool fields are appropriate for these state structs
 //! - [`kompress`]: Kompress-base v1 simple (W9.4)
 //! - [`registry`]: `BuiltinAlgorithm` registry + `BuiltinConfig` 통합 (W9.5)
 //! - [`onnx_model`]: v2.0 ONNX `ModelManager` (tract 0.23 + all-MiniLM-L6-v2) (W23, D-67)

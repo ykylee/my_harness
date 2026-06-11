@@ -43,8 +43,11 @@ pub struct AutoMemory {
 }
 
 impl AutoMemory {
-    #[must_use]
+    #[must_use = "AutoMemory 인스턴스는 stateful — drop 하면 event log flush 가 누락될 수 있음"]
     /// 기본 경로 `~/.myharness/memory/auto/`. `MYHARNESS_HOME` env 로 override 가능.
+    ///
+    /// # Errors
+    /// `dirs::home_dir()` 를 찾을 수 없으면 `MemoryError::NoHome` 에러 반환.
     pub fn new() -> Result<Self, MemoryError> {
         let base_dir = if let Ok(p) = std::env::var("MYHARNESS_HOME") {
             PathBuf::from(p).join("memory").join("auto")
@@ -67,12 +70,18 @@ impl AutoMemory {
         self.base_dir.join("memory.ndjson")
     }
 
+    ///
+    /// # Errors
+    /// 디렉토리 생성 실패 시 `MemoryError` 반환.
     pub fn ensure_dir(&self) -> Result<(), MemoryError> {
         std::fs::create_dir_all(&self.base_dir)?;
         Ok(())
     }
 
     /// record append. 한 줄 = 1 JSON.
+    ///
+    /// # Errors
+    /// 파일 열기/쓰기 실패, 또는 JSON 직렬화 실패 시 `MemoryError` 반환.
     pub fn append(&self, record: &MemoryRecord) -> Result<(), MemoryError> {
         self.ensure_dir()?;
         let mut f = OpenOptions::new()
@@ -84,6 +93,10 @@ impl AutoMemory {
         Ok(())
     }
 
+    ///
+    /// # Errors
+    /// 파일 저장 실패 시 `MemoryError` 반환.
+    #[allow(clippy::needless_pass_by_value)]
     pub fn append_tool(&self, tool: &str, args: serde_json::Value) -> Result<(), MemoryError> {
         self.append(&MemoryRecord {
             timestamp: Utc::now(),
@@ -92,6 +105,9 @@ impl AutoMemory {
         })
     }
 
+    ///
+    /// # Errors
+    /// 파일 저장 실패 시 `MemoryError` 반환.
     pub fn append_note(&self, text: &str) -> Result<(), MemoryError> {
         self.append(&MemoryRecord {
             timestamp: Utc::now(),
@@ -100,6 +116,9 @@ impl AutoMemory {
         })
     }
 
+    ///
+    /// # Errors
+    /// 파일 저장 실패 시 `MemoryError` 반환.
     pub fn append_error(&self, err: &str) -> Result<(), MemoryError> {
         self.append(&MemoryRecord {
             timestamp: Utc::now(),
@@ -109,6 +128,9 @@ impl AutoMemory {
     }
 
     /// 최근 N 개 read. file 없으면 empty.
+    ///
+    /// # Errors
+    /// 파일 읽기 또는 JSON 역직렬화 실패 시 `MemoryError` 반환.
     pub fn recent(&self, n: usize) -> Result<Vec<MemoryRecord>, MemoryError> {
         if !self.log_path().exists() {
             return Ok(Vec::new());
@@ -130,12 +152,17 @@ impl AutoMemory {
     }
 
     /// kind 필터 + 최근 N
+    ///
+    /// # Errors
+    /// 파일 읽기 실패 시 `MemoryError` 반환.
     pub fn recent_by_kind(&self, kind: MemoryKind, n: usize) -> Result<Vec<MemoryRecord>, MemoryError> {
         Ok(self.recent(usize::MAX)?.into_iter().filter(|r| r.kind == kind).rev().take(n).collect::<Vec<_>>().into_iter().rev().collect())
     }
 
-    #[must_use]
     /// system prompt injection 텍스트. 최근 N (default 20) 를 kind 별 요약.
+    ///
+    /// # Errors
+    /// 파일 읽기 실패 시 `MemoryError` 반환.
     pub fn to_system_prompt_section(&self, max_records: usize) -> Result<String, MemoryError> {
         let recs = self.recent(max_records)?;
         if recs.is_empty() {
@@ -145,9 +172,9 @@ impl AutoMemory {
         out.push_str("## Auto memory (recent activity)\n\n");
         for r in &recs {
             use std::fmt::Write;
-            let _ = write!(
+            let _ = writeln!(
                 out,
-                "- [{}] {}: {}\n",
+                "- [{}] {}: {}",
                 r.timestamp.format("%Y-%m-%dT%H:%M:%SZ"),
                 r.kind_label(),
                 r.payload

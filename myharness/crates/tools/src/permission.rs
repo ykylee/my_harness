@@ -87,6 +87,7 @@ mod tests {
     }
 
     #[test]
+    #[allow(clippy::enum_variant_names)] // matches wildcards future variants of PermissionMode
     fn plan_denies_writes() {
         match PermissionGuard::check("Write", PermissionMode::Plan, false, None).unwrap() {
             PermissionDecision::Deny(_) => {}

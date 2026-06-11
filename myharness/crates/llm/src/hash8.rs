@@ -13,8 +13,11 @@ pub fn content_hash_8(content: &[u8]) -> String {
     Sha256::digest(content)
         .iter()
         .take(4)
-        .map(|b| format!("{b:02x}"))
-        .collect::<String>()
+        .fold(String::with_capacity(8), |mut acc, b| {
+            use std::fmt::Write;
+            let _ = write!(acc, "{b:02x}");
+            acc
+        })
 }
 
 #[cfg(test)]

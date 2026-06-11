@@ -28,29 +28,27 @@ impl Tool for GrepTool {
 
         let search_path = input
             .get("path")
-            .and_then(|v| v.as_str())
-            .map(|p| {
+            .and_then(|v| v.as_str()).map_or_else(|| ctx.cwd.clone(), |p| {
                 if PathBuf::from(p).is_absolute() {
                     PathBuf::from(p)
                 } else {
                     ctx.cwd.join(p)
                 }
-            })
-            .unwrap_or_else(|| ctx.cwd.clone());
+            });
 
         let include_filter = input.get("include").and_then(|v| v.as_str());
 
         let case_insensitive = input
             .get("case_insensitive")
-            .and_then(|v| v.as_bool())
+            .and_then(serde_json::Value::as_bool)
             .unwrap_or(false);
 
         let re = if case_insensitive {
-            Regex::new(&format!("(?i){}", pattern))
-                .map_err(|e| ToolError::InvalidInput(format!("invalid regex: {}", e)))?
+            Regex::new(&format!("(?i){pattern}"))
+                .map_err(|e| ToolError::InvalidInput(format!("invalid regex: {e}")))?
         } else {
             Regex::new(pattern)
-                .map_err(|e| ToolError::InvalidInput(format!("invalid regex: {}", e)))?
+                .map_err(|e| ToolError::InvalidInput(format!("invalid regex: {e}")))?
         };
 
         let max_results: usize = 100;
@@ -58,7 +56,7 @@ impl Tool for GrepTool {
 
         for entry in WalkDir::new(&search_path)
             .into_iter()
-            .filter_map(|e| e.ok())
+            .filter_map(std::result::Result::ok)
         {
             if !entry.file_type().is_file() {
                 continue;
@@ -66,7 +64,7 @@ impl Tool for GrepTool {
 
             if let Some(include) = include_filter {
                 let pat = glob::Pattern::new(include).map_err(|e| {
-                    ToolError::InvalidInput(format!("invalid include pattern: {}", e))
+                    ToolError::InvalidInput(format!("invalid include pattern: {e}"))
                 })?;
                 if !pat.matches_path(entry.path()) {
                     continue;
@@ -94,7 +92,7 @@ impl Tool for GrepTool {
         }
 
         let output = serde_json::to_string_pretty(&results)
-            .map_err(|e| ToolError::Other(format!("serialization error: {}", e)))?;
+            .map_err(|e| ToolError::Other(format!("serialization error: {e}")))?;
 
         Ok(ToolResult {
             output,

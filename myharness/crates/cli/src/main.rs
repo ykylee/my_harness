@@ -199,8 +199,8 @@ fn main() -> anyhow::Result<()> {
     let _guard = rt.enter();
 
     match args.cmd {
-        Some(Cmd::Task { action }) => return run_task(action),
-        Some(Cmd::Handoff { from, to }) => return run_handoff(from, to),
+        Some(Cmd::Task { action }) => { run_task(action); return Ok(()); }
+        Some(Cmd::Handoff { from, to }) => { run_handoff(from, to); return Ok(()); }
         Some(Cmd::Auth { action }) => return rt.block_on(run_auth(action)),
         _ => {}
     }
@@ -256,7 +256,7 @@ fn main() -> anyhow::Result<()> {
                 let report = rt.block_on(runner.run(&orch));
                 println!("loop finished: stop={:?} iterations={}", report.stop, report.total_iterations);
             }
-            "orchestrator" | "single" => {
+            "cli" => {
                 let _tty = TtyGuard::enter()?;
                 let mut app = App::new("myharness", mode);
                 app.push_message(myharness_tui::AppMessage::system(format!(
@@ -304,25 +304,24 @@ fn parse_permission_mode(s: &str) -> PermissionMode {
     }
 }
 
-fn run_task(action: TaskAction) -> anyhow::Result<()> {
+fn run_task(action: TaskAction) {
     match action {
         TaskAction::Start { id, title, intent } => {
             let log = EventLog::new();
-            run_task_start(&id, &title, &intent, log)?;
+            run_task_start(&id, &title, &intent, log);
         }
         TaskAction::End { id, title, summary, risks, follow_up } => {
             let log = EventLog::new();
-            run_task_end(&id, &title, &summary, &risks, &follow_up, log)?;
+            run_task_end(&id, &title, &summary, &risks, &follow_up, log);
         }
     }
-    Ok(())
 }
 
-fn run_task_start(id: &str, title: &str, intent: &str, mut log: EventLog) -> anyhow::Result<()> {
+fn run_task_start(id: &str, title: &str, intent: &str, mut log: EventLog) {
     log.info(format!("task start: {id}"));
     let report = TaskStartReport::new(id, title, intent);
     println!("{}", report.to_korean());
-    Ok(())
+
 }
 
 fn run_task_end(
@@ -332,7 +331,7 @@ fn run_task_end(
     risks: &[String],
     follow_up: &[String],
     mut log: EventLog,
-) -> anyhow::Result<()> {
+) {
     log.info(format!("task end: {id}"));
     let mut report = TaskEndReport::new(id, title, summary).with_status(TaskStatus::Done);
     for r in risks {
@@ -361,13 +360,13 @@ fn run_task_end(
         report.add_follow_up(id, title, desc);
     }
     println!("{}", report.to_korean());
-    Ok(())
+
 }
 
-fn run_handoff(from: String, to: String) -> anyhow::Result<()> {
+fn run_handoff(from: String, to: String) {
     let h = HandoffDoc::new(from, to);
     println!("{}", h.to_korean());
-    Ok(())
+
 }
 
 async fn run_auth(action: AuthAction) -> anyhow::Result<()> {

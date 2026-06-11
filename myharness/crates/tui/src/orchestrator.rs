@@ -42,27 +42,32 @@ impl Default for Orchestrator {
 }
 
 impl Orchestrator {
+    #[must_use]
     pub fn new() -> Self {
         Self { tool_registry: None, llm_client: None, fatal_llm_error: false }
     }
 
+    #[must_use]
     pub fn with_tools(mut self, registry: Arc<ToolRegistry>) -> Self {
         self.tool_registry = Some(registry);
         self
     }
 
+    #[must_use]
     pub fn with_llm(mut self, client: Arc<dyn LLMClient>) -> Self {
         self.llm_client = Some(client);
         self
     }
 
     /// W11.3 (D-49) — LLM err 를 fatal 로 처리. true 면 err 그대로 surface.
+    #[must_use]
     pub fn with_fatal_llm_error(mut self, fatal: bool) -> Self {
         self.fatal_llm_error = fatal;
         self
     }
 
     /// user input → sub-agent dispatch 결정.
+    #[must_use]
     pub fn dispatch(&self, user_input: &str) -> DispatchDecision {
         let lower = user_input.to_ascii_lowercase();
         // 1) prefix 매칭
@@ -124,9 +129,12 @@ impl Orchestrator {
         }
     }
 
-    /// dispatch + sub-agent.run(). tools/llm 통합:
-    /// - tools 가 있으면 def.allowed_tools 와 registry 교집합 검증 (log warn if mismatched)
-    /// - llm_client 가 있으면 system prompt + user input 으로 LLM 호출 추가
+    /// dispatch + `sub-agent.run()`. tools/llm 통합:
+    /// - tools 가 있으면 `def.allowed_tools` 와 registry 교집합 검증 (log warn if mismatched)
+    /// - `llm_client` 가 있으면 system prompt + user input 으로 LLM 호출 추가
+    ///
+    /// # Errors
+    /// 서브 에이전트를 찾을 수 없거나 LLM 호출 중 오류 발생 시 `SubAgentError` 를 반환합니다.
     pub async fn run(&self, user_input: &str) -> Result<String, SubAgentError> {
         let decision = self.dispatch(user_input);
         let agent = SubAgentRegistry::for_kind(decision.kind)
@@ -167,7 +175,8 @@ impl Orchestrator {
                     if self.fatal_llm_error {
                         return Err(SubAgentError::Llm(e));
                     }
-                    response.push_str(&format!("\n\n[LLM-error] {e}"));
+                    use std::fmt::Write as _;
+                    let _ = write!(response, "\n\n[LLM-error] {e}");
                 }
             }
         }

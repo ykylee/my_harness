@@ -63,6 +63,7 @@ pub enum AppKey {
 
 impl AppKey {
     #[must_use] 
+    #[allow(clippy::needless_pass_by_value)]
     pub fn from_crossterm(event: Event) -> Option<Self> {
         match event {
             Event::Key(KeyEvent {

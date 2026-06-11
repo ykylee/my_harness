@@ -45,6 +45,7 @@ pub struct KeyringAuthStore {
 }
 
 impl KeyringAuthStore {
+    #[must_use]
     pub fn probe() -> Self {
         Self {
             backend: detect_backend(),
@@ -57,12 +58,12 @@ impl KeyringAuthStore {
     }
 
     /// W12 — set 시 출력할 hint 메시지. env var 이름 + libsecret 설치 명령.
+    #[must_use]
     pub fn env_hint(provider: ProviderId) -> String {
         let env_var = ENV_HINTS
             .iter()
             .find(|(k, _)| *k == provider.as_str())
-            .map(|(_, v)| *v)
-            .unwrap_or("MYHARNESS_API_KEY");
+            .map_or("MYHARNESS_API_KEY", |(_, v)| *v);
         if cfg!(target_os = "linux") {
             format!(
                 "set {env_var}=<key> env, or install libsecret-1-dev + gnome-keyring for persistent storage"
@@ -96,26 +97,17 @@ impl AuthStore for KeyringAuthStore {
             .lock()
             .unwrap()
             .insert(provider, value.to_string());
-        match self.backend {
-            KeyringBackend::None => Ok(()),
-            _ => Ok(()),
-        }
+        Ok(())
     }
 
     async fn clear(&self, provider: ProviderId) -> Result<(), AuthStoreError> {
         self.cache.lock().unwrap().remove(&provider);
-        match self.backend {
-            KeyringBackend::None => Ok(()),
-            _ => Ok(()),
-        }
+        Ok(())
     }
 
     async fn list(&self) -> Result<Vec<ProviderId>, AuthStoreError> {
         let cache: Vec<_> = self.cache.lock().unwrap().keys().copied().collect();
-        match self.backend {
-            KeyringBackend::None => Ok(cache),
-            _ => Ok(cache),
-        }
+        Ok(cache)
     }
 
     fn backend_name(&self) -> &'static str {

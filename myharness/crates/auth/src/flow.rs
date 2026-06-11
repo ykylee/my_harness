@@ -1,13 +1,15 @@
 //! OAuth 2.0 Authorization Code + PKCE flow (provider-agnostic core).
 //!
 //! 흐름:
+
+#![allow(clippy::needless_lifetimes)] // explicit lifetimes are clearer for these OAuth parameter types
 //! 1) `build_authorize_url(provider, redirect_uri, scopes)` → browser URL
 //! 2) `start_callback_server(port, expected_state)` → await redirect
 //! 3) user 가 provider 로그인 → provider 가 `redirect_uri?code=...&state=...` 로 redirect
 //! 4) `exchange_code(provider, code, pkce_verifier, redirect_uri)` → access token + refresh token
 //! 5) `refresh(provider, refresh_token)` → 새 access token
 //!
-//! 각 provider 가 `OAuthProvider` trait 으로 endpoint + client_id 채움.
+//! 각 provider 가 `OAuthProvider` trait 으로 endpoint + `client_id` 채움.
 
 use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
@@ -47,6 +49,7 @@ pub struct OAuthToken {
 }
 
 impl OAuthToken {
+    #[must_use]
     pub fn is_expired(&self) -> bool {
         match self.expires_at {
             Some(t) => chrono::Utc::now() >= t,
@@ -82,14 +85,14 @@ pub trait OAuthProvider: Send + Sync {
     fn authorize_endpoint(&self) -> &str;
     /// token endpoint base URL.
     fn token_endpoint(&self) -> &str;
-    /// OAuth client_id.
+    /// OAuth `client_id`.
     fn client_id(&self) -> &str;
-    /// OAuth client_secret (없으면 None for PKCE public client).
+    /// OAuth `client_secret` (없으면 None for PKCE public client).
     fn client_secret(&self) -> Option<&str>;
     /// 기본 scope (공백 구분).
     fn default_scopes(&self) -> &[&str];
     /// redirect path (default "/callback").
-    fn redirect_path(&self) -> &str {
+    fn redirect_path(&self) -> &'static str {
         "/callback"
     }
     /// authorize URL 의 추가 parameters (e.g. audience, prompt).
@@ -103,6 +106,9 @@ pub trait OAuthProvider: Send + Sync {
 }
 
 /// 전체 authorize URL 생성.
+///
+/// # Panics
+/// provider 의 `authorize_endpoint` 가 올바른 URL 형식이 아니면 panic 발생합니다.
 pub fn build_authorize_url(
     provider: &dyn OAuthProvider,
     redirect_uri: &str,
@@ -130,6 +136,9 @@ pub fn build_authorize_url(
 }
 
 /// authorization code + PKCE verifier → access token.
+///
+/// # Errors
+/// HTTP 요청 실패, 비정상 응답 (4xx/5xx), 또는 JSON 역직렬화 실패 시 `OAuthError` 를 반환합니다.
 pub async fn exchange_code(
     provider: &dyn OAuthProvider,
     code: &str,
@@ -157,10 +166,13 @@ pub async fn exchange_code(
     if !status.is_success() {
         return Err(OAuthError::Provider(format!("token exchange failed: {body}")));
     }
-    parse_token_response(body)
+    parse_token_response(&body)
 }
 
 /// refresh token 으로 새 access token 발급.
+///
+/// # Errors
+/// HTTP 요청 실패, 비정상 응답 (4xx/5xx), 또는 JSON 역직렬화 실패 시 `OAuthError` 를 반환합니다.
 pub async fn refresh_token(
     provider: &dyn OAuthProvider,
     refresh: &str,
@@ -183,10 +195,10 @@ pub async fn refresh_token(
     if !status.is_success() {
         return Err(OAuthError::Provider(format!("refresh failed: {body}")));
     }
-    parse_token_response(body)
+    parse_token_response(&body)
 }
 
-fn parse_token_response(body: serde_json::Value) -> Result<OAuthToken, OAuthError> {
+fn parse_token_response(body: &serde_json::Value) -> Result<OAuthToken, OAuthError> {
     let access_token = body
         .get("access_token")
         .and_then(|v| v.as_str())
@@ -195,13 +207,14 @@ fn parse_token_response(body: serde_json::Value) -> Result<OAuthToken, OAuthErro
     let refresh_token = body
         .get("refresh_token")
         .and_then(|v| v.as_str())
-        .map(|s| s.to_string());
-    let expires_in = body.get("expires_in").and_then(|v| v.as_u64());
+        .map(std::string::ToString::to_string);
+    let expires_in = body.get("expires_in").and_then(serde_json::Value::as_u64);
+    #[allow(clippy::cast_possible_wrap)]
     let expires_at = expires_in.map(|s| chrono::Utc::now() + chrono::Duration::seconds(s as i64));
     let scope = body
         .get("scope")
         .and_then(|v| v.as_str())
-        .map(|s| s.to_string());
+        .map(std::string::ToString::to_string);
     let token_type = body
         .get("token_type")
         .and_then(|v| v.as_str())
@@ -224,9 +237,9 @@ mod tests {
     impl OAuthProvider for MockProvider {
         fn id(&self) -> &'static str { "mock" }
         fn display_name(&self) -> &'static str { "Mock Provider" }
-        fn authorize_endpoint(&self) -> &str { "https://example.com/authorize" }
-        fn token_endpoint(&self) -> &str { "https://example.com/token" }
-        fn client_id(&self) -> &str { "client-123" }
+        fn authorize_endpoint(&self) -> &'static str { "https://example.com/authorize" }
+        fn token_endpoint(&self) -> &'static str { "https://example.com/token" }
+        fn client_id(&self) -> &'static str { "client-123" }
         fn client_secret(&self) -> Option<&str> { Some("secret-456") }
         fn default_scopes(&self) -> &[&str] { &["read", "write"] }
     }
@@ -249,9 +262,9 @@ mod tests {
         impl OAuthProvider for NoSecret {
             fn id(&self) -> &'static str { "ns" }
             fn display_name(&self) -> &'static str { "No Secret" }
-            fn authorize_endpoint(&self) -> &str { "https://example.com/authorize" }
-            fn token_endpoint(&self) -> &str { "https://example.com/token" }
-            fn client_id(&self) -> &str { "client-789" }
+            fn authorize_endpoint(&self) -> &'static str { "https://example.com/authorize" }
+            fn token_endpoint(&self) -> &'static str { "https://example.com/token" }
+            fn client_id(&self) -> &'static str { "client-789" }
             fn client_secret(&self) -> Option<&str> { None }
             fn default_scopes(&self) -> &[&str] { &[] }
         }
@@ -269,7 +282,7 @@ mod tests {
             "scope": "read write",
             "token_type": "Bearer"
         });
-        let t = parse_token_response(body).unwrap();
+        let t = parse_token_response(&body).unwrap();
         assert_eq!(t.access_token, "at-123");
         assert_eq!(t.refresh_token.as_deref(), Some("rt-456"));
         assert_eq!(t.token_type, "Bearer");
@@ -280,13 +293,13 @@ mod tests {
     #[test]
     fn parse_token_response_no_expiry() {
         let body = serde_json::json!({"access_token": "at"});
-        let t = parse_token_response(body).unwrap();
+        let t = parse_token_response(&body).unwrap();
         assert!(!t.is_expired());
     }
 
     #[test]
     fn parse_token_response_missing_access_token_errors() {
         let body = serde_json::json!({"refresh_token": "rt"});
-        assert!(matches!(parse_token_response(body), Err(OAuthError::Provider(_))));
+        assert!(matches!(parse_token_response(&body), Err(OAuthError::Provider(_))));
     }
 }

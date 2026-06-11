@@ -1,4 +1,4 @@
-//! standard_ai_workflow 6 원칙 native 구현 (CONCEPT §5.9.1).
+//! `standard_ai_workflow` 6 원칙 native 구현 (CONCEPT §5.9.1).
 //!
 //! 6 원칙:
 //! 1. **한국어 보고** — 사용자 직접 노출 텍스트는 한국어
@@ -10,6 +10,7 @@
 //!
 //! Zero coupling: Mavis 파일 없어도 동작. 옵션 Mavis 통합은 v1.5+.
 
+use std::fmt::Write;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
@@ -66,29 +67,32 @@ impl TaskStartReport {
         }
     }
 
+    #[must_use]
     pub fn with_related(mut self, related: Vec<String>) -> Self {
         self.related = related;
         self
     }
 
+    #[must_use]
     pub fn with_scope(mut self, scope: impl Into<String>) -> Self {
         self.scope_ko = scope.into();
         self
     }
 
     /// 한국어 human-readable 직렬화 (한국어 보고 원칙).
+    #[must_use]
     pub fn to_korean(&self) -> String {
         let mut out = String::new();
-        out.push_str(&format!("# Task 시작: {}\n\n", self.title));
-        out.push_str(&format!("- ID: {}\n", self.id));
-        out.push_str(&format!("- 시작: {}\n", self.started_at.format("%Y-%m-%dT%H:%M:%SZ")));
-        out.push_str(&format!("- 상태: {:?}\n", self.status));
+        let _ = writeln!(out, "# Task 시작: {}\n", self.title);
+        let _ = writeln!(out, "- ID: {}", self.id);
+        let _ = writeln!(out, "- 시작: {}", self.started_at.format("%Y-%m-%dT%H:%M:%SZ"));
+        let _ = writeln!(out, "- 상태: {:?}", self.status);
         if !self.related.is_empty() {
-            out.push_str(&format!("- 관련: {}\n", self.related.join(", ")));
+            let _ = writeln!(out, "- 관련: {}", self.related.join(", "));
         }
-        out.push_str(&format!("\n## 의도\n{}\n", self.intent_ko));
+        let _ = writeln!(out, "\n## 의도\n{}", self.intent_ko);
         if !self.scope_ko.is_empty() {
-            out.push_str(&format!("\n## 범위\n{}\n", self.scope_ko));
+            let _ = writeln!(out, "\n## 범위\n{}", self.scope_ko);
         }
         out
     }
@@ -140,11 +144,13 @@ impl TaskEndReport {
         }
     }
 
+    #[must_use] 
     pub fn started_at(mut self, t: DateTime<Utc>) -> Self {
         self.started_at = t;
         self
     }
 
+    #[must_use] 
     pub fn with_status(mut self, s: TaskStatus) -> Self {
         self.status = s;
         self
@@ -163,32 +169,34 @@ impl TaskEndReport {
     }
 
     /// 한국어 직렬화.
+    #[must_use]
     pub fn to_korean(&self) -> String {
         let mut out = String::new();
-        out.push_str(&format!("# Task 종료: {}\n\n", self.title));
-        out.push_str(&format!("- ID: {}\n", self.id));
-        out.push_str(&format!("- 시작: {}\n", self.started_at.format("%Y-%m-%dT%H:%M:%SZ")));
-        out.push_str(&format!("- 종료: {}\n", self.ended_at.format("%Y-%m-%dT%H:%M:%SZ")));
-        out.push_str(&format!("- 상태: {:?}\n", self.status));
+        let _ = writeln!(out, "# Task 종료: {}\n", self.title);
+        let _ = writeln!(out, "- ID: {}", self.id);
+        let _ = writeln!(out, "- 시작: {}", self.started_at.format("%Y-%m-%dT%H:%M:%SZ"));
+        let _ = writeln!(out, "- 종료: {}", self.ended_at.format("%Y-%m-%dT%H:%M:%SZ"));
+        let _ = writeln!(out, "- 상태: {:?}", self.status);
         if !self.summary_ko.is_empty() {
-            out.push_str(&format!("\n## 요약\n{}\n", self.summary_ko));
+            let _ = writeln!(out, "\n## 요약\n{}", self.summary_ko);
         }
         if !self.artifacts.is_empty() {
             out.push_str("\n## 산출물\n");
             for a in &self.artifacts {
-                out.push_str(&format!("- {a}\n"));
+                let _ = writeln!(out, "- {a}");
             }
         }
         if !self.risks.is_empty() {
             out.push_str("\n## Risk\n");
             for r in &self.risks {
-                out.push_str(&format!("- [{}] {}\n", format!("{:?}", r.kind).to_lowercase(), r.description_ko));
+                let kind_str = format!("{:?}", r.kind).to_lowercase();
+                let _ = writeln!(out, "- [{kind_str}] {}", r.description_ko);
             }
         }
         if !self.follow_up.is_empty() {
             out.push_str("\n## Follow-up\n");
             for f in &self.follow_up {
-                out.push_str(&format!("- {} ({}): {}\n", f.id, f.title, f.description_ko));
+                let _ = writeln!(out, "- {} ({}): {}", f.id, f.title, f.description_ko);
             }
         }
         out
@@ -218,6 +226,7 @@ pub struct EventLog {
 }
 
 impl EventLog {
+    #[must_use] 
     pub fn new() -> Self {
         Self::default()
     }
@@ -243,15 +252,18 @@ impl EventLog {
         self.append(EventKind::Decision, msg);
     }
 
+    #[must_use] 
     pub fn len(&self) -> usize {
         self.entries.len()
     }
 
+    #[must_use] 
     pub fn is_empty(&self) -> bool {
         self.entries.is_empty()
     }
 
     /// NDJSON 직렬화 (append-friendly).
+    #[must_use] 
     pub fn to_ndjson(&self) -> String {
         self.entries
             .iter()
@@ -308,42 +320,42 @@ impl HandoffDoc {
     pub fn add_env(&mut self, e: impl Into<String>) {
         self.environment.push(e.into());
     }
-
     /// 한국어 직렬화.
+    #[must_use]
     pub fn to_korean(&self) -> String {
         let mut out = String::new();
         out.push_str("# Handoff\n\n");
-        out.push_str(&format!("- from: {}\n", self.from_session));
-        out.push_str(&format!("- to: {}\n", self.to_session));
-        out.push_str(&format!("- created: {}\n", self.created_at.format("%Y-%m-%dT%H:%M:%SZ")));
+        let _ = writeln!(out, "- from: {}", self.from_session);
+        let _ = writeln!(out, "- to: {}", self.to_session);
+        let _ = writeln!(out, "- created: {}", self.created_at.format("%Y-%m-%dT%H:%M:%SZ"));
         if !self.key_facts.is_empty() {
             out.push_str("\n## 핵심 사실\n");
             for f in &self.key_facts {
-                out.push_str(&format!("- {f}\n"));
+                let _ = writeln!(out, "- {f}");
             }
         }
         if !self.in_progress.is_empty() {
             out.push_str("\n## In Progress\n");
             for t in &self.in_progress {
-                out.push_str(&format!("- {t}\n"));
+                let _ = writeln!(out, "- {t}");
             }
         }
         if !self.blocked.is_empty() {
             out.push_str("\n## Blocked\n");
             for t in &self.blocked {
-                out.push_str(&format!("- {t}\n"));
+                let _ = writeln!(out, "- {t}");
             }
         }
         if !self.next_actions.is_empty() {
             out.push_str("\n## 다음 행동\n");
             for a in &self.next_actions {
-                out.push_str(&format!("- {a}\n"));
+                let _ = writeln!(out, "- {a}");
             }
         }
         if !self.environment.is_empty() {
             out.push_str("\n## 환경\n");
             for e in &self.environment {
-                out.push_str(&format!("- {e}\n"));
+                let _ = writeln!(out, "- {e}");
             }
         }
         out
