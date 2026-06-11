@@ -27,7 +27,7 @@
 
 use std::sync::Arc;
 
-use myharness_auth::{manager::AuthError, AuthManager, OAuthProvider, TokenStore};
+use myharness_auth::{manager::AuthError, AuthManager, OAuthProvider};
 use myharness_llm::{CompletionRequest, CompletionResponse, LlmError, LLMClient};
 
 /// 401 Unauthorized heuristic — `LlmError::ProviderCall(msg)` 의 메시지에
@@ -55,9 +55,6 @@ pub struct RefreshingLlmClient {
     base_url: String,
     model: String,
     auth: Arc<AuthManager>,
-    /// `~/.myharness/oauth/{provider_id}.toml` 의 store. ensure_fresh() 가 사용.
-    #[allow(dead_code)]
-    store: Arc<TokenStore>,
     /// refresh 가능 OAuth provider (MinimaxDeviceOAuth 등). provider_id → provider 매핑.
     provider: Arc<dyn OAuthProvider>,
 }
@@ -69,7 +66,6 @@ impl RefreshingLlmClient {
         base_url: impl Into<String>,
         model: impl Into<String>,
         auth: Arc<AuthManager>,
-        store: Arc<TokenStore>,
         provider: Arc<dyn OAuthProvider>,
     ) -> Self {
         Self {
@@ -78,7 +74,6 @@ impl RefreshingLlmClient {
             base_url: base_url.into(),
             model: model.into(),
             auth,
-            store,
             provider,
         }
     }
@@ -179,6 +174,7 @@ impl LLMClient for RefreshingLlmClient {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use myharness_auth::TokenStore;
     use myharness_llm::provider::ProviderId;
     use serde_json::json;
 
@@ -369,7 +365,6 @@ mod tests {
             format!("{base}/v1").as_str(),
             "MiniMax-M3",
             Arc::new(auth_manager),
-            Arc::new(store.clone()),
             provider,
         );
 
@@ -444,7 +439,6 @@ mod tests {
             "https://api.minimax.io/v1",
             "MiniMax-M3",
             Arc::new(auth_manager),
-            Arc::new(store.clone()),
             provider,
         );
 

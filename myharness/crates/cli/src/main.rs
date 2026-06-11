@@ -507,7 +507,6 @@ fn resolve_llm_client() -> Arc<dyn LLMClient> {
                     &base_url,
                     &model,
                     Arc::new(auth),
-                    Arc::new(store),
                     provider,
                 ));
             }

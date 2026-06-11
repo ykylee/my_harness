@@ -40,7 +40,6 @@ const ENV_HINTS: &[(&str, &str)] = &[
 
 pub struct KeyringAuthStore {
     backend: KeyringBackend,
-    service_prefix: String,
     /// W12 in-memory cache. backend None 일 때 set 한 값 보관.
     cache: Mutex<HashMap<ProviderId, String>>,
 }
@@ -49,18 +48,12 @@ impl KeyringAuthStore {
     pub fn probe() -> Self {
         Self {
             backend: detect_backend(),
-            service_prefix: "myharness".into(),
             cache: Mutex::new(HashMap::new()),
         }
     }
 
     pub fn backend(&self) -> KeyringBackend {
         self.backend
-    }
-
-    #[allow(dead_code)]
-    fn service_name(&self, provider: ProviderId) -> String {
-        format!("{}:{}", self.service_prefix, provider)
     }
 
     /// W12 — set 시 출력할 hint 메시지. env var 이름 + libsecret 설치 명령.

@@ -206,10 +206,6 @@ async fn tc_w16_i03_register_writes_providers_toml_end_to_end() {
     unsafe { std::env::remove_var("MYHARNESS_HOME"); }
 }
 
-// suppress unused import warning
-#[allow(dead_code)]
-fn _suppress_unused_modelinfo(_m: ModelInfo) {}
-
 // ── W17 (v1.5 OI-1) L2 Integration ─────────────────────────────────────────
 
 /// TC-W17-I01 — 비대화형 모드에서 probe 스킵 → register 만 수행 → providers.toml 갱신.
