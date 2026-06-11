@@ -3,9 +3,10 @@
 //! 정책 (D-30):
 //! - 매 message 마다 token 사용량 추적 (chars/4 근사치)
 //! - 한계 80% 도달 시 auto 압축
-//! - 압축 전략: Truncate (keep_recent) / Summarize (stub) / Hybrid (둘 다)
+//! - 압축 전략: Truncate (`keep_recent`) / Summarize (stub) / Hybrid (둘 다)
 //! - /compact slash command 는 user-callable 수동 압축
 
+#![allow(clippy::cast_possible_truncation, clippy::cast_precision_loss, clippy::cast_sign_loss, clippy::cast_possible_wrap)]
 use std::collections::VecDeque;
 
 use serde::{Deserialize, Serialize};
@@ -53,7 +54,7 @@ pub enum CompactStrategy {
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct BudgetConfig {
-    /// 모델 한계 (예: 200_000 for Claude Sonnet 4)
+    /// 모델 한계 (예: `200_000` for Claude Sonnet 4)
     pub max_tokens: u32,
     /// auto trigger 비율 (예: 0.8 = 80%)
     pub warn_ratio: f32,
@@ -109,6 +110,9 @@ impl std::fmt::Debug for ContextManager {
 }
 
 impl ContextManager {
+    /// # Errors
+    ///
+    /// This function returns an error if the underlying operation fails.
     pub fn new(config: BudgetConfig) -> Result<Self, BudgetError> {
         if config.max_tokens == 0 {
             return Err(BudgetError::Invalid("max_tokens must be > 0".into()));
@@ -122,6 +126,7 @@ impl ContextManager {
         Ok(Self { config, history: VecDeque::new(), summarizer: None })
     }
 
+    #[must_use]
     pub fn with_summarizer(mut self, summarizer: std::sync::Arc<dyn Summarizer>) -> Self {
         self.summarizer = Some(summarizer);
         self
@@ -135,6 +140,7 @@ impl ContextManager {
         self.summarizer = None;
     }
 
+    #[must_use] 
     pub fn summarizer_name(&self) -> Option<&'static str> {
         self.summarizer.as_ref().map(|s| s.name())
     }
@@ -143,24 +149,29 @@ impl ContextManager {
         self.history.push_back(msg);
     }
 
+    #[must_use] 
     pub fn history(&self) -> &VecDeque<Message> {
         &self.history
     }
 
+    #[must_use] 
     pub fn len(&self) -> usize {
         self.history.len()
     }
 
+    #[must_use] 
     pub fn is_empty(&self) -> bool {
         self.history.is_empty()
     }
 
-    /// 현재 token 사용량 추정 (모든 message content 의 char 합 / chars_per_token).
+    /// 현재 token 사용량 추정 (모든 message content 의 char 합 / `chars_per_token`).
+    #[must_use] 
     pub fn estimate_tokens(&self) -> u32 {
         let total_chars: usize = self.history.iter().map(|m| m.content.chars().count()).sum();
         (total_chars as u32) / self.config.chars_per_token
     }
 
+    #[must_use] 
     pub fn budget_report(&self) -> BudgetReport {
         let current = self.estimate_tokens();
         let max = self.config.max_tokens;
@@ -206,7 +217,7 @@ impl ContextManager {
     }
 
     /// W9.2 — LLM-driven summarize. summarizer 가 없으면 no-op.
-    /// drop 할 old message 들을 join → summarizer.summarize() → 결과를 단일 assistant message 로
+    /// drop 할 old message 들을 join → `summarizer.summarize()` → 결과를 단일 assistant message 로
     /// history 맨 앞에 삽입. 단, summarizer 없을 때는 기존 truncate 만 fallback.
     fn run_summarize(&mut self) {
         let keep = self.config.keep_recent;
@@ -230,13 +241,10 @@ impl ContextManager {
         let summary = tokio::task::block_in_place(|| {
             tokio::runtime::Handle::current().block_on(summarizer.summarize(&combined))
         });
-        match summary {
-            Ok(s) => {
-                self.history.push_front(Message::assistant(format!("[Summary] {s}")));
-            }
-            Err(_) => {
-                // 실패 시 fallback: drop 만
-            }
+        if let Ok(s) = summary {
+            self.history.push_front(Message::assistant(format!("[Summary] {s}")));
+        } else {
+            // 실패 시 fallback: drop 만
         }
     }
 }

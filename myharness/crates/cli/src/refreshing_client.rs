@@ -5,25 +5,25 @@
 //! **runtime 에 만료** 되면 (예: long-running daemon) 401 Unauthorized 가 떨어짐.
 //! W15.b 에서는 `LLMClient::complete` 호출 후 `LlmError::ProviderCall` 메시지에
 //! 401 / unauthorized / auth 키워드가 있으면 `AuthManager::ensure_fresh()` 로
-//! token store 의 refresh_token 으로 자동 갱신 후 **1회 retry**.
+//! token store 의 `refresh_token` 으로 자동 갱신 후 **1회 retry**.
 //!
 //! # 통합 지점
 //! `cli::main::resolve_llm_client()` 가 OAuth token store 경로(1번)에서
-//! `RefreshingLlmClient::wrap()` 으로 한 번 감싸줌. env var / MockClient 경로는
+//! `RefreshingLlmClient::wrap()` 으로 한 번 감싸줌. env var / `MockClient` 경로는
 //! 그대로 (refresh 의미 없음).
 //!
 //! # 정책
 //! - **401 식별**: `LlmError::ProviderCall(msg)` 의 `msg.to_lowercase()` 에
 //!   "401" 또는 "unauthorized" 또는 "auth" 가 포함되면 만료로 간주.
 //!   (`client_mock.rs:113` 의 `is_success` 와 동일 패턴 — heuristic)
-//! - **refresh_token 없으면**: env var fallback (W15.a WARN 로그 + skip)
+//! - **`refresh_token` 없으면**: env var fallback (W15.a WARN 로그 + skip)
 //! - **refresh 성공 시**: 새 token 으로 1회 retry. retry 도 실패하면 그 에러 surface.
-//! - **retry 1회 한정**: 무한루프 방지 (refresh 후 새 access_token 이 401 이면
+//! - **retry 1회 한정**: 무한루프 방지 (refresh 후 새 `access_token` 이 401 이면
 //!   진짜 invalid → surface)
 //!
 //! # 의존성
-//! - `myharness-auth` (AuthManager, OAuthProvider)
-//! - `myharness-llm` (LLMClient, LlmError)
+//! - `myharness-auth` (`AuthManager`, `OAuthProvider`)
+//! - `myharness-llm` (`LLMClient`, `LlmError`)
 
 use std::sync::Arc;
 
@@ -48,14 +48,14 @@ fn is_unauthorized_error(err: &LlmError) -> bool {
 /// `RefreshingLlmClient` — inner client 호출 + 401 시 자동 refresh + 1회 retry.
 ///
 /// inner client: 보통 `OpenAiCompatProvider` (OAuth Bearer)
-/// provider / base_url / model: refresh 후 새 OpenAiCompatProvider 를 만드는 데 필요
+/// provider / `base_url` / model: refresh 후 새 `OpenAiCompatProvider` 를 만드는 데 필요
 pub struct RefreshingLlmClient {
     inner: Arc<dyn LLMClient>,
     provider_id: String,
     base_url: String,
     model: String,
     auth: Arc<AuthManager>,
-    /// refresh 가능 OAuth provider (MinimaxDeviceOAuth 등). provider_id → provider 매핑.
+    /// refresh 가능 OAuth provider (`MinimaxDeviceOAuth` 등). `provider_id` → provider 매핑.
     provider: Arc<dyn OAuthProvider>,
 }
 
@@ -78,7 +78,7 @@ impl RefreshingLlmClient {
         }
     }
 
-    /// ensure_fresh → 새 token 으로 inner client 교체 후 retry.
+    /// `ensure_fresh` → 새 token 으로 inner client 교체 후 retry.
     /// 성공: 새 `Arc<dyn LLMClient>` 반환. 실패: 원래 에러 반환.
     async fn try_refresh_and_retry(
         &self,
@@ -103,8 +103,7 @@ impl RefreshingLlmClient {
                     oauth_err
                 );
                 return Err(LlmError::ProviderCall(format!(
-                    "401 unauthorized; refresh failed: {}",
-                    oauth_err
+                    "401 unauthorized; refresh failed: {oauth_err}"
                 )));
             }
             Err(e) => {
@@ -114,8 +113,7 @@ impl RefreshingLlmClient {
                     e
                 );
                 return Err(LlmError::ProviderCall(format!(
-                    "401 unauthorized; refresh error: {}",
-                    e
+                    "401 unauthorized; refresh error: {e}"
                 )));
             }
         };
@@ -142,8 +140,7 @@ impl RefreshingLlmClient {
             },
         )
         .map_err(|e| LlmError::ProviderInit(format!(
-            "W15.b: failed to rebuild OpenAiCompatProvider after refresh: {}",
-            e
+            "W15.b: failed to rebuild OpenAiCompatProvider after refresh: {e}"
         )))?;
 
         new_client.complete(req.clone()).await
@@ -215,11 +212,11 @@ mod tests {
         assert!(is_unauthorized_error(&LlmError::AuthMissing(ProviderId::Minimax)));
     }
 
-    /// W15.b.2 — ensure_fresh → refresh 후 새 client 로 retry 시뮬레이션
+    /// W15.b.2 — `ensure_fresh` → refresh 후 새 client 로 retry 시뮬레이션
     ///
     /// 이 테스트는 mock OAuth server 없이도 refresh 로직의 핵심 분기를 검증:
     /// - store 가 비어있으면 → "no stored token" 에러 surface
-    /// - store 에 refresh_token 있으면 → ensure_fresh 호출 (실제 provider 가 없으면 store error)
+    /// - store 에 `refresh_token` 있으면 → `ensure_fresh` 호출 (실제 provider 가 없으면 store error)
     ///
     /// 실제 e2e (mock server) 는 cli crate 의 integration test 에서 처리.
     #[tokio::test]
@@ -237,7 +234,7 @@ mod tests {
         assert!(result.is_none(), "empty store should yield None from ensure_fresh");
     }
 
-    /// `OAuthProvider` stub — ensure_fresh 분기 검증용
+    /// `OAuthProvider` stub — `ensure_fresh` 분기 검증용
     struct StubProvider;
     #[async_trait::async_trait]
     impl OAuthProvider for StubProvider {
@@ -264,11 +261,11 @@ mod tests {
         }
     }
 
-    /// W15.b.2 e2e — 401 → ensure_fresh(mock OAuth) → store save + retry 검증.
+    /// W15.b.2 e2e — 401 → `ensure_fresh(mock` OAuth) → store save + retry 검증.
     ///
     /// inner = Always401 (deterministic 401). 1st 호출 401 → `RefreshingLlmClient::try_refresh_and_retry`
-    /// 가 mock OAuth server 의 /token 에 refresh 요청 → 새 access_token 받음 → store save
-    /// → 새 OpenAiCompatProvider (base_url=mock) 빌드 → retry 호출 → mock server 가
+    /// 가 mock OAuth server 의 /token 에 refresh 요청 → 새 `access_token` 받음 → store save
+    /// → 새 `OpenAiCompatProvider` (`base_url=mock`) 빌드 → retry 호출 → mock server 가
     /// OpenAI-compat JSON 응답 → Ok.
     #[tokio::test]
     async fn refreshing_client_e2e_401_refresh_retry_200() {
@@ -295,8 +292,7 @@ mod tests {
                     let line = req.lines().next().unwrap_or("").to_string();
                     let resp = if line.contains("/token") {
                         let body = format!(
-                            r#"{{"access_token":"{new_access}","refresh_token":"rt-new","expires_in":3600,"scope":"read","token_type":"Bearer"}}"#,
-                            new_access = new_access_clone,
+                            r#"{{"access_token":"{new_access_clone}","refresh_token":"rt-new","expires_in":3600,"scope":"read","token_type":"Bearer"}}"#,
                         );
                         format!(
                             "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{}",
@@ -398,7 +394,7 @@ mod tests {
         let _ = tokio::time::timeout(std::time::Duration::from_secs(2), server_task).await;
     }
 
-    /// W15.b.2 e2e — refresh_token 없으면 refresh 시도 않고 surface
+    /// W15.b.2 e2e — `refresh_token` 없으면 refresh 시도 않고 surface
     #[tokio::test]
     async fn refreshing_client_without_refresh_token_returns_no_stored_token_error() {
         use myharness_auth::flow::OAuthToken;
@@ -462,11 +458,11 @@ mod tests {
         // 단순 검증: 에러 surface 됨
         match err {
             LlmError::ProviderCall(_) | LlmError::ProviderInit(_) | LlmError::ProviderUnavailable(_) => {}
-            other => panic!("unexpected error variant: {:?}", other),
+            other => panic!("unexpected error variant: {other:?}"),
         }
     }
 
-    /// W15.b e2e helper — MiniMax OAuth provider mock (token_endpoint 만 mock).
+    /// W15.b e2e helper — `MiniMax` OAuth provider mock (`token_endpoint` 만 mock).
     /// `token_endpoint` 가 mock server URL 이라 매 test 마다 다른 String. trait signature 가
     /// `&str` (self lifetime) 이므로 `&self.token_ep` 그대로 빌려쓰면 OK.
     /// `id` / `display_name` / `client_id` / `authorize_endpoint` 는 static literal.

@@ -1,7 +1,7 @@
-//! OpenAI 호환 provider wrapper (DeepSeek / Minimax / local-llm).
+//! `OpenAI` 호환 provider wrapper (`DeepSeek` / Minimax / local-llm).
 //!
 //! rig-core 의 `openai::CompletionsClient` (Chat Completions API) 를 사용.
-//! DeepSeek, Minimax, local-llm (Ollama) 모두 base_url 만 다르고 동일.
+//! `DeepSeek`, Minimax, local-llm (Ollama) 모두 `base_url` 만 다르고 동일.
 
 use std::sync::Arc;
 
@@ -24,7 +24,11 @@ pub struct OpenAiCompatProvider {
 }
 
 impl OpenAiCompatProvider {
-    /// `base_url`: OpenAI 호환 root (예: `https://api.deepseek.com/v1`, `http://localhost:11434/v1`).
+    ///
+    /// # Errors
+    ///
+    /// This function returns an error if the underlying operation fails.
+    /// `base_url`: `OpenAI` 호환 root (예: `https://api.deepseek.com/v1`, `http://localhost:11434/v1`).
     /// `api_key`: 빈 문자열이면 "not-needed" 로 채워짐 (Ollama 등 key-less local 서버용).
     pub fn new(
         base_url: &str,
@@ -46,6 +50,7 @@ impl OpenAiCompatProvider {
         })
     }
 
+    #[must_use] 
     pub fn base_url(&self) -> &str {
         &self.base_url
     }
@@ -148,8 +153,8 @@ mod tests {
         assert_eq!(p.provider_id(), ProviderId::LocalLlm);
     }
 
-    /// W12 (D-50) — MiniMax OpenAI-compat client 구성 검증 (real network 없음).
-    /// base_url/모델/key 가 rig-core CompletionsClient 로 정확히 전달되는지.
+    /// W12 (D-50) — `MiniMax` OpenAI-compat client 구성 검증 (real network 없음).
+    /// `base_url/모델/key` 가 rig-core `CompletionsClient` 로 정확히 전달되는지.
     #[test]
     fn minimax_provider_builds_with_correct_metadata() {
         let p = OpenAiCompatProvider::new(
@@ -177,18 +182,15 @@ mod tests {
         assert_eq!(p.base_url(), "https://api.minimaxi.com/v1");
     }
 
-    /// W12 (D-50) — real MiniMax API 호출. MINIMAX_API_KEY env 가 있어야 동작.
+    /// W12 (D-50) — real `MiniMax` API 호출. `MINIMAX_API_KEY` env 가 있어야 동작.
     /// network test — CI 환경에선 #[ignore], 수동 실행:
     /// `MINIMAX_API_KEY=... cargo test minimax_real_api_smoke -- --ignored --nocapture`
     #[tokio::test]
     #[ignore = "requires real MINIMAX_API_KEY + network access"]
     async fn minimax_real_api_smoke() {
-        let api_key = match std::env::var("MINIMAX_API_KEY") {
-            Ok(k) => k,
-            Err(_) => {
-                eprintln!("MINIMAX_API_KEY not set; skipping");
-                return;
-            }
+        let Ok(api_key) = std::env::var("MINIMAX_API_KEY") else {
+            eprintln!("MINIMAX_API_KEY not set; skipping");
+            return;
         };
         let base_url = std::env::var("MINIMAX_API_HOST")
             .unwrap_or_else(|_| "https://api.minimax.io/v1".into());

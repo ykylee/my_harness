@@ -27,7 +27,7 @@ impl Tool for BashTool {
 
         let timeout_ms = input
             .get("timeout_ms")
-            .and_then(|v| v.as_u64())
+            .and_then(serde_json::Value::as_u64)
             .unwrap_or(30_000);
 
         let decision = PermissionGuard::check(
@@ -60,7 +60,7 @@ impl Tool for BashTool {
         })
         .await
         .map_err(|_| {
-            ToolError::ExecutionFailed(format!("command timed out after {}ms", timeout_ms))
+            ToolError::ExecutionFailed(format!("command timed out after {timeout_ms}ms"))
         })?
         .map_err(ToolError::IoError)?;
 
@@ -69,7 +69,7 @@ impl Tool for BashTool {
         let combined = if stderr.is_empty() {
             stdout.clone()
         } else {
-            format!("{}{}", stdout, stderr)
+            format!("{stdout}{stderr}")
         };
 
         Ok(ToolResult {

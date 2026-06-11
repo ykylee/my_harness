@@ -1,9 +1,10 @@
 //! `AuthManager` — 전체 OAuth flow orchestration.
 //!
-//! login 흐름: build_authorize_url → browser open → callback server wait → exchange_code → token store save.
+//! login 흐름: `build_authorize_url` → browser open → callback server wait → `exchange_code` → token store save.
 //! refresh 흐름: load stored → refresh if expired → save.
 //! logout: token store delete + keyring clear.
 
+#![allow(clippy::cast_possible_truncation, clippy::cast_precision_loss, clippy::cast_sign_loss, clippy::cast_possible_wrap)]
 use std::sync::Arc;
 
 use serde::{Deserialize, Serialize};
@@ -34,13 +35,14 @@ pub enum AuthError {
     Device(#[from] DeviceError),
 }
 
-/// expired_in 단위 자동 감지 (D-52 follow-up, W14.7).
+/// `expired_in` 단위 자동 감지 (D-52 follow-up, W14.7).
+#[allow(clippy::cast_sign_loss)]
 ///
-/// mini_max 가 호출마다 단위를 다르게 응답: ms (1.78e12) 또는 microseconds (1.81e15) 또는
+/// `mini_max` 가 호출마다 단위를 다르게 응답: ms (1.78e12) 또는 microseconds (1.81e15) 또는
 /// seconds (1.78e9). 값의 크기로 판별:
 /// - < 1e11: seconds (1.78e9 s = 2026)
 /// - 1e11..1e14: milliseconds (1.78e12 ms = 2026)
-/// - 1e14..1e17: microseconds (1.81e15 μs = 2026 + 57년 — mini_max token 실제 만료)
+/// - 1e14..1e17: microseconds (1.81e15 μs = 2026 + 57년 — `mini_max` token 실제 만료)
 /// - >= 1e17: nanoseconds (rare)
 fn expired_in_to_chrono(value: u64) -> chrono::DateTime<chrono::Utc> {
     let secs = if value >= 1_000_000_000_000_000_000 {
@@ -56,9 +58,9 @@ fn expired_in_to_chrono(value: u64) -> chrono::DateTime<chrono::Utc> {
         .unwrap_or_else(|| chrono::DateTime::<chrono::Utc>::from_timestamp(0, 0).unwrap())
 }
 
-/// `DeviceToken` (W14) → `OAuthToken` (W13). `expired_in` → `expires_at` (DateTime).
+/// `DeviceToken` (W14) → `OAuthToken` (W13). `expired_in` → `expires_at` (`DateTime`).
 ///
-/// mini_max 가 응답 단위를 ms/μs/s 중 다양하게 보냄. `expired_in_to_chrono` 가 자동 감지.
+/// `mini_max` 가 응답 단위를 ms/μs/s 중 다양하게 보냄. `expired_in_to_chrono` 가 자동 감지.
 fn device_token_to_oauth(t: &DeviceToken) -> OAuthToken {
     let expires_at = expired_in_to_chrono(t.expired_in);
     OAuthToken {
@@ -71,6 +73,7 @@ fn device_token_to_oauth(t: &DeviceToken) -> OAuthToken {
 }
 
 impl AuthError {
+    #[must_use] 
     pub fn is_not_found(&self) -> bool {
         matches!(self, AuthError::Store(StoreError::NotFound))
     }
@@ -106,14 +109,22 @@ pub struct AuthManager {
 }
 
 impl AuthManager {
+    /// # Errors
+    ///
+    /// This function returns an error if the underlying operation fails.
     pub fn new() -> Result<Self, AuthError> {
         Ok(Self { store: TokenStore::new()? })
     }
 
+    #[must_use] 
     pub fn with_store(store: TokenStore) -> Self {
         Self { store }
     }
 
+    ///
+    /// # Errors
+    ///
+    /// This function returns an error if the underlying operation fails.
     /// build authorize URL + browser open + await callback (timeout 5min default).
     /// 정상 callback 도착 시 token exchange + store save.
     /// `interactive=false` 면 browser open 안 하고 URL 만 return.
@@ -169,24 +180,32 @@ impl AuthManager {
         })
     }
 
+    ///
+    /// # Errors
+    ///
+    /// This function returns an error if the underlying operation fails.
     /// 저장된 token load. 없거나 expired 면 None.
     pub fn current_token(&self, provider_id: &str) -> Result<OAuthToken, AuthError> {
         let stored = self.store.load(provider_id)?;
         Ok(stored.token)
     }
 
-    /// MiniMax Device Authorization Grant flow (W14).
     ///
-    /// 표준 Authorization Code + PKCE redirect flow 는 MiniMax 에서 404 (D-52 follow-up).
-    /// 따라서 DeviceCodeFlow 사용:
-    /// 1) POST /oauth/code → user_code + verification_uri
+    /// # Errors
+    ///
+    /// This function returns an error if the underlying operation fails.
+    /// `MiniMax` Device Authorization Grant flow (W14).
+    ///
+    /// 표준 Authorization Code + PKCE redirect flow 는 `MiniMax` 에서 404 (D-52 follow-up).
+    /// 따라서 `DeviceCodeFlow` 사용:
+    /// 1) POST /oauth/code → `user_code` + `verification_uri`
     /// 2) `auto_open_browser=true` 면 OS 기본 browser 자동 open
-    ///    (`false` 면 user 가 직접 verification_uri 를 browser 에 paste)
-    /// 3) user 가 verification_uri 에서 user_code 입력 → "Authorize"
-    /// 4) polling /oauth/token → access_token
-    /// 5) TokenStore::save
+    ///    (`false` 면 user 가 직접 `verification_uri` 를 browser 에 paste)
+    /// 3) user 가 `verification_uri` 에서 `user_code` 입력 → "Authorize"
+    /// 4) polling /oauth/token → `access_token`
+    /// 5) `TokenStore::save`
     ///
-    /// `non_interactive=true` 면 1) 만 실행하고 URL + user_code + expired_in 만 return.
+    /// `non_interactive=true` 면 1) 만 실행하고 URL + `user_code` + `expired_in` 만 return.
     /// polling/저장 안 함 (CI/스크립트용, v1.5+ 에서 다른 옵션 검토).
     ///
     /// `auto_open_browser` 와 `non_interactive` 의 조합 (W14.4):
@@ -196,6 +215,7 @@ impl AuthManager {
     ///   URL 출력 + polling + save (user 가 직접 browser paste)
     /// - `auto_open_browser=*, non_interactive=true` (`--non-interactive`):
     ///   URL 출력만 + 즉시 종료
+    #[allow(clippy::cast_sign_loss)] // timestamp_millis() i64 → u64 의도적 (D-52 ms-unix-ts)
     pub async fn login_minimax_device(
         &self,
         auto_open_browser: bool,
@@ -256,6 +276,10 @@ impl AuthManager {
         })
     }
 
+    ///
+    /// # Errors
+    ///
+    /// This function returns an error if the underlying operation fails.
     /// expired 면 refresh, 안되면 None. token 자동 save.
     pub async fn ensure_fresh(
         &self,
@@ -273,15 +297,16 @@ impl AuthManager {
         if !token.is_expired() {
             return Ok(Some(token));
         }
-        let refresh = match token.refresh_token {
-            Some(r) => r,
-            None => return Ok(Some(token)), // refresh 없으면 expired 그대로 반환
-        };
+        let Some(refresh) = token.refresh_token else { return Ok(Some(token)) }; // refresh 없으면 expired 그대로 반환
         let new_token = refresh_token(&*provider, &refresh).await?;
         self.store.save(provider.id(), &new_token)?;
         Ok(Some(new_token))
     }
 
+    ///
+    /// # Errors
+    ///
+    /// This function returns an error if the underlying operation fails.
     /// status (CLI 표시용).
     pub fn status(&self, provider_id: &str) -> Result<AuthStatus, AuthError> {
         match self.store.load(provider_id) {
@@ -310,6 +335,10 @@ impl AuthManager {
         }
     }
 
+    ///
+    /// # Errors
+    ///
+    /// This function returns an error if the underlying operation fails.
     /// logout: token store delete.
     pub fn logout(&self, provider_id: &str) -> Result<(), AuthError> {
         self.store.delete(provider_id)?;
@@ -318,6 +347,8 @@ impl AuthManager {
 }
 
 #[cfg(test)]
+#[allow(clippy::cast_sign_loss)] // mock-server timestamp_millis() i64 → u64 의도적
+#[allow(clippy::items_after_statements)] // mock provider struct/impl within async fn body
 mod tests {
     use super::*;
     use crate::device_flow::TokenPoll;
@@ -415,9 +446,9 @@ mod tests {
         assert!(r.is_none());
     }
 
-    /// W13.6 (D-52) — mock OAuth server + AuthManager end-to-end.
+    /// W13.6 (D-52) — mock OAuth server + `AuthManager` end-to-end.
     /// real network 없이 전체 OAuth flow 검증: authorize URL → callback → exchange → save.
-    /// MockHttpServer 가 MiniMax 의 authorize_endpoint 와 token_endpoint 를 대체.
+    /// `MockHttpServer` 가 `MiniMax` 의 `authorize_endpoint` 와 `token_endpoint` 를 대체.
     #[tokio::test]
     async fn auth_manager_end_to_end_with_mock_server() {
         use crate::flow::OAuthProvider;
@@ -458,9 +489,7 @@ mod tests {
                     } else if request_line.contains("POST /token") {
                         // /token → JSON access_token + refresh_token
                         let body = format!(
-                            r#"{{"access_token":"{at}","refresh_token":"{rt}","expires_in":3600,"scope":"read","token_type":"Bearer"}}"#,
-                            at = at_clone,
-                            rt = rt_clone,
+                            r#"{{"access_token":"{at_clone}","refresh_token":"{rt_clone}","expires_in":3600,"scope":"read","token_type":"Bearer"}}"#,
                         );
                         let resp = format!(
                             "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{}",
@@ -490,7 +519,7 @@ mod tests {
             fn display_name(&self) -> &'static str { self.display }
             fn authorize_endpoint(&self) -> &str { &self.auth_ep }
             fn token_endpoint(&self) -> &str { &self.token_ep }
-            fn client_id(&self) -> &str { "mock-client" }
+            fn client_id(&self) -> &'static str { "mock-client" }
             fn client_secret(&self) -> Option<&str> { None }
             fn default_scopes(&self) -> &[&str] { &["read"] }
         }
@@ -546,10 +575,11 @@ mod tests {
         assert_eq!(loaded.access_token, access_token_returned);
     }
 
-    /// W14 — mock MiniMax Device Authorization Grant + AuthManager end-to-end.
-    /// real network 없이 DeviceCodeFlow 전체 검증: POST /oauth/code → user_code →
-    /// POST /oauth/token (polling) → TokenStore save.
+    /// W14 — mock `MiniMax` Device Authorization Grant + `AuthManager` end-to-end.
+    /// real network 없이 `DeviceCodeFlow` 전체 검증: POST /oauth/code → `user_code` →
+    /// POST /oauth/token (polling) → `TokenStore` save.
     #[tokio::test]
+    #[allow(clippy::too_many_lines)] // mock provider + body (D-13.6 e2e shape)
     async fn login_minimax_device_with_mock_server() {
         use crate::device_flow::{DeviceCodeProvider, poll_token, request_code};
         use async_trait::async_trait;
@@ -577,7 +607,7 @@ mod tests {
                         let state_param = req
                             .split("state=")
                             .nth(1)
-                            .and_then(|s| s.split('&').next().map(|x| x.to_string()))
+                            .and_then(|s| s.split('&').next().map(std::string::ToString::to_string))
                             .unwrap_or_else(|| "placeholder".to_string());
                         let now = chrono::Utc::now().timestamp_millis() as u64;
                         let body = format!(
@@ -615,12 +645,12 @@ mod tests {
         #[async_trait]
         impl DeviceCodeProvider for MockDeviceProvider {
             fn id(&self) -> &'static str { "minimax" }
-            fn display_name(&self) -> &str { "Mock MiniMax" }
+            fn display_name(&self) -> &'static str { "Mock MiniMax" }
             fn code_endpoint(&self) -> &str { &self.code_ep }
             fn token_endpoint(&self) -> &str { &self.token_ep }
-            fn client_id(&self) -> &str { "mock-client" }
-            fn scope(&self) -> &str { "group_id profile model.completion" }
-            fn region(&self) -> &str { "global" }
+            fn client_id(&self) -> &'static str { "mock-client" }
+            fn scope(&self) -> &'static str { "group_id profile model.completion" }
+            fn region(&self) -> &'static str { "global" }
         }
         let provider = MockDeviceProvider {
             code_ep: format!("{mock_base}/oauth/code"),
@@ -669,10 +699,11 @@ mod tests {
     }
 
 
-    /// W14.4 — `--no-browser` mode (auto_open_browser=false, non_interactive=false)
+    /// W14.4 — `--no-browser` mode (`auto_open_browser=false`, `non_interactive=false`)
     /// 검증: browser open 안 함 + polling + save 진행. user 가 직접 URL 을
     /// browser 에 paste 한 시나리오.
     #[tokio::test]
+    #[allow(clippy::too_many_lines)] // mock provider + body (D-14.4 e2e shape)
     async fn login_minimax_device_no_browser_polling_saves() {
         use crate::device_flow::{DeviceCodeProvider, poll_token, request_code, DeviceToken, TokenPoll};
         use async_trait::async_trait;
@@ -702,7 +733,7 @@ mod tests {
                         let state_param = req
                             .split("state=")
                             .nth(1)
-                            .and_then(|s| s.split('&').next().map(|x| x.to_string()))
+                            .and_then(|s| s.split('&').next().map(std::string::ToString::to_string))
                             .unwrap_or_else(|| "placeholder".to_string());
                         let now = chrono::Utc::now().timestamp_millis() as u64;
                         let body = format!(
@@ -745,12 +776,12 @@ mod tests {
         #[async_trait]
         impl DeviceCodeProvider for MockDeviceProvider {
             fn id(&self) -> &'static str { "minimax" }
-            fn display_name(&self) -> &str { "Mock MiniMax" }
+            fn display_name(&self) -> &'static str { "Mock MiniMax" }
             fn code_endpoint(&self) -> &str { &self.code_ep }
             fn token_endpoint(&self) -> &str { &self.token_ep }
-            fn client_id(&self) -> &str { "mock-client" }
-            fn scope(&self) -> &str { "group_id profile model.completion" }
-            fn region(&self) -> &str { "global" }
+            fn client_id(&self) -> &'static str { "mock-client" }
+            fn scope(&self) -> &'static str { "group_id profile model.completion" }
+            fn region(&self) -> &'static str { "global" }
         }
         let provider = MockDeviceProvider {
             code_ep: format!("{mock_base}/oauth/code"),

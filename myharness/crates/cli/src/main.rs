@@ -62,7 +62,7 @@ enum Cmd {
         #[arg(long)]
         to: String,
     },
-    /// OAuth 인증 (W13) — MiniMax / OpenAI / Google
+    /// OAuth 인증 (W13) — `MiniMax` / `OpenAI` / Google
     Auth { #[command(subcommand)] action: AuthAction },
 }
 
@@ -111,7 +111,7 @@ enum AuthAction {
     /// OAuth 로그인. 기본: URL 출력 + browser 자동 open + polling + save.
     /// `--no-browser`: URL 출력 + polling + save (user 가 직접 browser paste).
     /// `--non-interactive`: URL 출력만 + 즉시 종료 (CI/스크립트용).
-    /// OpenAI/Google: redirect flow. MiniMax: DeviceCodeFlow (W14).
+    /// OpenAI/Google: redirect flow. `MiniMax`: `DeviceCodeFlow` (W14).
     Login {
         /// provider id: minimax | openai | google
         provider: String,
@@ -138,26 +138,26 @@ enum AuthAction {
     /// 로컬 LLM 서버 등록 (D-59 W16 + D-60 W17 + D-61 W18) — Ollama / vLLM / LM Studio / llama.cpp
     ///
     /// Interactive wizard (default):
-    ///   1. 서버 URL 입력 (default: http://localhost:11434/v1)
+    ///   1. 서버 URL 입력 (default: <http://localhost:11434/v1>)
     ///   2. API token 입력 (선택, 빈칸 가능)
     ///   3. GET /v1/models 로 모델 목록 probe
     ///   4. arrow-key 로 모델 선택
-    ///   5. ~/.myharness/providers.toml 의 LocalLlm entry 갱신
+    ///   5. ~/.myharness/providers.toml 의 `LocalLlm` entry 갱신
     ///   6. 덮어쓰기 시 `~/.myharness/providers.toml.backup.<ts>` 자동 생성 (W18 R-4 대응)
     ///
     /// Non-interactive (CI/스크립트, v1.5 W17):
-    ///   --url <URL>        OpenAI 호환 endpoint
+    ///   --url <URL>        `OpenAI` 호환 endpoint
     ///   --token <TOKEN>    API token (optional)
-    ///   --model <MODEL_ID> 모델 id (probe 스킵 시)
+    ///   --model <`MODEL_ID`> 모델 id (probe 스킵 시)
     ///   --probe-skip       비대화형 모드에서도 /v1/models probe 안 함
     ///   --yes              비대화형 모드에서 덮어쓰기 confirm 자동 yes (default: --url/--model set = 자동 yes)
     ///
     /// Examples:
     ///   myharness auth add-local
-    ///   myharness auth add-local --url http://localhost:11434/v1 --model llama3.1:8b
-    ///   myharness auth add-local --url http://host:8000/v1 --model gpt-oss --probe-skip
+    ///   myharness auth add-local --url <http://localhost:11434/v1> --model llama3.1:8b
+    ///   myharness auth add-local --url <http://host:8000/v1> --model gpt-oss --probe-skip
     AddLocal {
-        /// OpenAI 호환 endpoint (non-interactive 모드 필수)
+        /// `OpenAI` 호환 endpoint (non-interactive 모드 필수)
         #[arg(long)]
         url: Option<String>,
         /// API token (선택)
@@ -240,7 +240,7 @@ fn main() -> anyhow::Result<()> {
             let out = rt.block_on(orch.run(&question))?;
             println!("{out}");
         }
-        Some(Cmd::Task { .. }) | Some(Cmd::Handoff { .. }) | Some(Cmd::Auth { .. }) => unreachable!(),
+        Some(Cmd::Task { .. } | Cmd::Handoff { .. } | Cmd::Auth { .. }) => unreachable!(),
         None => match mode {
             "loop" => {
                 let goal = args.goal.unwrap_or_else(|| {
@@ -459,11 +459,11 @@ fn print_auth_status(s: &AuthStatus) {
 /// W15.b — OAuth 경로(1번)를 `RefreshingLlmClient` 로 wrap → 401 시 자동 refresh + 1회 retry.
 ///
 /// 우선순위:
-/// 1. `~/.myharness/oauth/minimax.toml` 의 OAuth access_token (env var 보다 우선, opencode 패턴)
+/// 1. `~/.myharness/oauth/minimax.toml` 의 OAuth `access_token` (env var 보다 우선, opencode 패턴)
 ///    + `RefreshingLlmClient` 가 401 시 자동 refresh (W15.b)
 /// 2. `MINIMAX_API_KEY` env var (regular API key)
 /// 3. `ANTHROPIC_API_KEY` env var
-/// 4. MockClient fallback
+/// 4. `MockClient` fallback
 #[allow(clippy::collapsible_if)]
 fn resolve_llm_client() -> Arc<dyn LLMClient> {
     use myharness_auth::TokenStore;
@@ -483,9 +483,7 @@ fn resolve_llm_client() -> Arc<dyn LLMClient> {
                 model,
                 stored
                     .token
-                    .expires_at
-                    .map(|e| e.format("%Y-%m-%dT%H:%M:%SZ").to_string())
-                    .unwrap_or_else(|| "unknown".into())
+                    .expires_at.map_or_else(|| "unknown".into(), |e| e.format("%Y-%m-%dT%H:%M:%SZ").to_string())
             );
             let inner: Arc<dyn LLMClient> = Arc::new(
                 myharness_llm::OpenAiCompatProvider::new(
@@ -591,9 +589,9 @@ fn resolve_llm_client() -> Arc<dyn LLMClient> {
 /// W16 (D-59) + W17 (D-60) + W18 (D-61) — `myharness auth add-local` handler.
 ///
 /// # 분기 (DD-AddLocal §6.3 OI-1 + §10 W18)
-/// - **Interactive**: `url == None && model == None` → inquire wizard (TtyGuard 필수)
+/// - **Interactive**: `url == None && model == None` → inquire wizard (`TtyGuard` 필수)
 /// - **Non-interactive**: `url.is_some() && model.is_some()` → flag 기반 직접 호출
-///   - `probe_skip == false` (default): 비대화형이지만 `probe_local_models` 호출 → available_models 검증
+///   - `probe_skip == false` (default): 비대화형이지만 `probe_local_models` 호출 → `available_models` 검증
 ///   - `probe_skip == true`: probe 완전 스킵 → `register_local_provider_non_interactive`
 /// - **혼합 (❌)**: flag 일부만 set → 에러 (CI에서 silent fallback 방지)
 ///
@@ -751,7 +749,7 @@ async fn handle_add_local_non_interactive(
     Ok(())
 }
 
-/// RegisterReport 한국어 출력 — interactive / non-interactive 공통.
+/// `RegisterReport` 한국어 출력 — interactive / non-interactive 공통.
 fn print_register_report(report: &myharness_llm::RegisterReport) {
     println!();
     println!("✓ 로컬 LLM 등록 완료");

@@ -22,6 +22,7 @@ pub enum ContextSource {
 }
 
 impl ContextSource {
+    #[must_use]
     pub fn priority(&self) -> u32 {
         match self {
             ContextSource::ProjectLocal => 0,
@@ -31,6 +32,7 @@ impl ContextSource {
         }
     }
 
+    #[must_use]
     pub fn label(&self) -> &'static str {
         match self {
             ContextSource::ProjectLocal => "project-local",
@@ -50,6 +52,7 @@ pub struct ContextLoader {
 }
 
 impl ContextLoader {
+    #[must_use]
     pub fn new() -> Self {
         Self {
             use_global: true,
@@ -57,16 +60,19 @@ impl ContextLoader {
         }
     }
 
+    #[must_use]
     pub fn with_extra_root(mut self, path: PathBuf) -> Self {
         self.extra_roots.push(path);
         self
     }
 
+    #[must_use]
     pub fn without_global(mut self) -> Self {
         self.use_global = false;
         self
     }
 
+    #[must_use]
     /// cwd 기준 우선순위대로 CLAUDE.md 발견. 발견 결과를 priority 오름차순으로 반환.
     pub fn discover(&self, cwd: &Path) -> Vec<DiscoveredContext> {
         let mut out = Vec::new();
@@ -120,6 +126,7 @@ impl ContextLoader {
         out
     }
 
+    #[must_use]
     /// 발견된 contexts 를 단일 system prompt 로 합치기. 우선순위 순으로 `---\n# <label>\n<content>` 형식.
     pub fn merge_to_system_prompt(contexts: &[DiscoveredContext]) -> String {
         if contexts.is_empty() {
@@ -128,12 +135,14 @@ impl ContextLoader {
         let mut out = String::new();
         out.push_str("## Project context (CLAUDE.md files)\n\n");
         for c in contexts {
-            out.push_str(&format!(
+            use std::fmt::Write;
+            let _ = write!(
+                out,
                 "### {}\n({})\n\n{}\n\n",
                 c.source.label(),
                 c.path.display(),
                 c.content.trim_end()
-            ));
+            );
         }
         out
     }

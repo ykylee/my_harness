@@ -24,6 +24,7 @@ impl PermissionMode {
         PermissionMode::BypassPermissions,
     ];
 
+    #[must_use] 
     pub fn as_str(&self) -> &'static str {
         match self {
             PermissionMode::Default => "default",
@@ -34,6 +35,7 @@ impl PermissionMode {
     }
 
     #[allow(clippy::should_implement_trait)]
+    #[must_use] 
     pub fn from_str(s: &str) -> Option<Self> {
         match s {
             "default" => Some(Self::Default),
@@ -44,6 +46,7 @@ impl PermissionMode {
         }
     }
 
+    #[must_use] 
     pub fn label(&self) -> &'static str {
         match self {
             PermissionMode::Default => "Default (prompt for each destructive action)",
@@ -76,6 +79,7 @@ pub enum ToolCategory {
 }
 
 impl ToolCategory {
+    #[must_use] 
     pub fn from_name(name: &str) -> Option<Self> {
         match name.to_ascii_lowercase().as_str() {
             "read" => Some(Self::Read),
@@ -88,6 +92,7 @@ impl ToolCategory {
         }
     }
 
+    #[must_use] 
     pub fn is_destructive(&self) -> bool {
         matches!(self, Self::Edit | Self::Write | Self::Bash)
     }
@@ -108,16 +113,19 @@ impl Default for PermissionPolicy {
 }
 
 impl PermissionPolicy {
+    #[must_use] 
     pub fn new(mode: PermissionMode) -> Self {
         Self { mode, auto_approve: false }
     }
 
+    #[must_use] 
     pub fn with_auto_approve(mut self, yes: bool) -> Self {
         self.auto_approve = yes;
         self
     }
 
     /// tool name + mode → decision.
+    #[must_use] 
     pub fn decide(&self, tool_name: &str) -> PermissionDecision {
         let Some(cat) = ToolCategory::from_name(tool_name) else {
             // unknown tool — default 에서 prompt
@@ -140,7 +148,11 @@ impl PermissionPolicy {
                 }
             }
             PermissionMode::AcceptEdits => match cat {
-                ToolCategory::Edit | ToolCategory::Write => PermissionDecision::Allow,
+                ToolCategory::Edit
+                | ToolCategory::Write
+                | ToolCategory::Read
+                | ToolCategory::Grep
+                | ToolCategory::Glob => PermissionDecision::Allow,
                 ToolCategory::Bash => {
                     if self.auto_approve {
                         PermissionDecision::Allow
@@ -148,7 +160,6 @@ impl PermissionPolicy {
                         PermissionDecision::Prompt
                     }
                 }
-                _ => PermissionDecision::Allow,
             },
             PermissionMode::Plan => PermissionDecision::Deny,
             PermissionMode::BypassPermissions => PermissionDecision::Allow,

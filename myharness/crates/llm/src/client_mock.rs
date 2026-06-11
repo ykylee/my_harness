@@ -1,5 +1,6 @@
 //! 테스트용 mock client. queue 에 적힌 응답을 순서대로 반환.
 
+#![allow(clippy::cast_possible_truncation, clippy::cast_precision_loss, clippy::cast_sign_loss, clippy::cast_possible_wrap)]
 use std::collections::VecDeque;
 use std::sync::Mutex;
 
@@ -34,11 +35,18 @@ impl MockClient {
         }
     }
 
+    /// # Panics
+    ///
+    /// This function returns an error if the underlying operation fails.
     pub fn push(&self, resp: MockResponse) {
         self.queue.lock().unwrap().push_back(resp);
     }
 
-    /// `push` 와 동일 (VecDeque::push_back → pop_front = FIFO).
+    ///
+    /// # Panics
+    ///
+    /// This function returns an error if the underlying operation fails.
+    /// `push` 와 동일 (`VecDeque::push_back` → `pop_front` = FIFO).
     /// W11.3 (D-49) 에서 명시적 FIFO 메서드로 추가. push 와 동작이 같아서
     /// 함수 이름으로 의도만 명시.
     pub fn push_fifo(&self, resp: MockResponse) {
@@ -52,10 +60,16 @@ impl MockClient {
         }
     }
 
+    /// # Panics
+    ///
+    /// This function returns an error if the underlying operation fails.
     pub fn call_count(&self) -> usize {
         self.calls.lock().unwrap().len()
     }
 
+    /// # Panics
+    ///
+    /// This function returns an error if the underlying operation fails.
     pub fn last_call(&self) -> Option<CompletionRequest> {
         self.calls.lock().unwrap().last().cloned()
     }

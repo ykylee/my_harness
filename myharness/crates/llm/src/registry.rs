@@ -24,11 +24,13 @@ pub enum RegistryError {
 }
 
 impl ProviderRegistry {
+    #[must_use] 
     pub fn new() -> Self {
         Self::default()
     }
 
     /// 6 built-in 으로 시작.
+    #[must_use] 
     pub fn with_builtins() -> Self {
         let mut r = Self::new();
         for m in ProviderMetadata::all_builtins() {
@@ -42,6 +44,10 @@ impl ProviderRegistry {
         self.providers.insert(meta.id, meta)
     }
 
+    ///
+    /// # Panics
+    ///
+    /// This function returns an error if the underlying operation fails.
     /// upsert. 항상 최신 값 반환.
     pub fn replace(&mut self, meta: ProviderMetadata) -> ProviderMetadata {
         self.providers.insert(meta.id, meta).unwrap_or_else(|| {
@@ -57,6 +63,7 @@ impl ProviderRegistry {
         })
     }
 
+    #[must_use] 
     pub fn get(&self, id: ProviderId) -> Option<&ProviderMetadata> {
         self.providers.get(&id)
     }
@@ -69,23 +76,31 @@ impl ProviderRegistry {
         self.providers.remove(&id)
     }
 
-    /// id 순서 (BTreeMap 이므로 정렬됨).
+    /// id 순서 (`BTreeMap` 이므로 정렬됨).
+    #[must_use] 
     pub fn list(&self) -> Vec<&ProviderMetadata> {
         self.providers.values().collect()
     }
 
+    #[must_use] 
     pub fn ids(&self) -> Vec<ProviderId> {
         self.providers.keys().copied().collect()
     }
 
+    #[must_use] 
     pub fn len(&self) -> usize {
         self.providers.len()
     }
 
+    #[must_use] 
     pub fn is_empty(&self) -> bool {
         self.providers.is_empty()
     }
 
+    ///
+    /// # Errors
+    ///
+    /// This function returns an error if the underlying operation fails.
     /// TOML 문자열 → registry. provider 별 [[providers]] array-of-tables 형식.
     pub fn from_toml(s: &str) -> Result<Self, RegistryError> {
         #[derive(serde::Deserialize)]
@@ -100,6 +115,10 @@ impl ProviderRegistry {
         Ok(r)
     }
 
+    ///
+    /// # Errors
+    ///
+    /// This function returns an error if the underlying operation fails.
     /// registry → TOML.
     pub fn to_toml(&self) -> Result<String, RegistryError> {
         #[derive(serde::Serialize)]
@@ -112,6 +131,10 @@ impl ProviderRegistry {
         Ok(toml::to_string(&w)?)
     }
 
+    ///
+    /// # Errors
+    ///
+    /// This function returns an error if the underlying operation fails.
     /// 파일에서 로드. 없으면 빈 registry.
     pub fn load_from_path(path: &Path) -> Result<Self, RegistryError> {
         if !path.exists() {
@@ -121,6 +144,10 @@ impl ProviderRegistry {
         Self::from_toml(&s)
     }
 
+    ///
+    /// # Errors
+    ///
+    /// This function returns an error if the underlying operation fails.
     /// 파일로 저장. 부모 디렉토리 자동 생성.
     pub fn save_to_path(&self, path: &Path) -> Result<(), RegistryError> {
         if let Some(parent) = path.parent() {

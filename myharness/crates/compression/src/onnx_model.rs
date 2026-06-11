@@ -1,6 +1,6 @@
 //! Kompress-base ML model manager (v2.0, D-67, tract Commit 1).
 //!
-//! Lazy singleton — first use 시 HuggingFace 에서 all-MiniLM-L6-v2 ONNX 모델
+//! Lazy singleton — first use 시 `HuggingFace` 에서 all-MiniLM-L6-v2 ONNX 모델
 //! streaming download + SHA256 verify + `tract` ONNX load + inference setup.
 //!
 //! # Commit 1 scope
@@ -9,7 +9,7 @@
 //! - Layer 2 opt-in 유지 (기존 `kompress_v1` rule-based fallback 그대로)
 //!
 //! # Model metadata
-//! - 출처: `sentence-transformers/all-MiniLM-L6-v2` (HuggingFace, Apache 2.0)
+//! - 출처: `sentence-transformers/all-MiniLM-L6-v2` (`HuggingFace`, Apache 2.0)
 //! - 파일: `onnx/model_O4.onnx` (O4 optimized, ~45 MB, 모든 opset 호환)
 //! - embedding dim: 384, max tokens: 256
 //! - License 호환: Apache 2.0 ↔ myharness `MIT OR Apache-2.0` dual ✅
@@ -23,6 +23,7 @@
 //! - binary size: ~22-33 MB 추가 (Pure Rust compiled, D-67 trade-off)
 //! - Linux/macOS/Windows matrix 모두 동작 (tract 가 cross-platform)
 
+#![allow(clippy::cast_possible_truncation, clippy::cast_precision_loss, clippy::cast_sign_loss, clippy::cast_possible_wrap)]
 use std::path::PathBuf;
 use std::sync::{Arc, OnceLock};
 
@@ -38,11 +39,11 @@ static MODEL_MANAGER: OnceLock<Arc<ModelManager>> = OnceLock::new();
 /// Kompress-base 가 사용하는 ONNX 모델 메타데이터.
 #[derive(Debug, Clone)]
 pub struct ModelInfo {
-    /// HuggingFace `resolve` endpoint URL (LFS binary)
+    /// `HuggingFace` `resolve` endpoint URL (LFS binary)
     pub url: &'static str,
     /// 다운로드 후 검증할 SHA256 hex (lowercase, 64-char)
     pub sha256: &'static str,
-    /// HuggingFace model id (license/attribution 표기용)
+    /// `HuggingFace` model id (license/attribution 표기용)
     pub model_id: &'static str,
     /// 출력 embedding vector 차원
     pub embedding_dim: usize,
@@ -78,6 +79,10 @@ pub struct ModelManager {
 }
 
 impl ModelManager {
+    ///
+    /// # Errors
+    ///
+    /// This function returns an error if the underlying operation fails.
     /// Process-wide singleton 접근. 첫 호출 시 instance 생성.
     pub fn get() -> Result<Arc<Self>> {
         if let Some(mm) = MODEL_MANAGER.get() {
@@ -90,6 +95,10 @@ impl ModelManager {
         Ok(mm)
     }
 
+    ///
+    /// # Errors
+    ///
+    /// This function returns an error if the underlying operation fails.
     /// 새 instance 생성 (download/load 안 함, singleton 등록 안 함).
     pub fn new() -> Result<Self> {
         Ok(Self {
@@ -108,6 +117,7 @@ impl ModelManager {
     }
 
     /// Local cache 경로: `~/.cache/myharness/models/all-MiniLM-L6-v2.onnx`
+    #[must_use] 
     pub fn cache_path() -> PathBuf {
         dirs::cache_dir()
             .unwrap_or_else(|| PathBuf::from("."))
@@ -116,6 +126,10 @@ impl ModelManager {
             .join(ModelInfo::default().cache_filename)
     }
 
+    ///
+    /// # Errors
+    ///
+    /// This function returns an error if the underlying operation fails.
     /// 모델 파일이 다운로드되어 있고 SHA256 이 일치하는지 확인.
     /// 없거나 mismatch 면 download. 성공 시 cache path 반환.
     pub async fn ensure_downloaded(&self) -> Result<PathBuf> {
@@ -186,6 +200,10 @@ impl ModelManager {
         Ok(())
     }
 
+    ///
+    /// # Errors
+    ///
+    /// This function returns an error if the underlying operation fails.
     /// tract ONNX model load + runnable verify. `ensure_downloaded()` 이후 호출.
     ///
     /// **Commit 1 scope**: `into_runnable()` 가 성공하는지 검증만. 실제 inference 는
@@ -202,7 +220,7 @@ impl ModelManager {
             .map_err(|e| anyhow!("tract into_runnable: {e:?}"))?;
         self.loaded
             .set(())
-            .map_err(|_| anyhow!("load_runnable: race lost, runnable already set"))?;
+            .map_err(|()| anyhow!("load_runnable: race lost, runnable already set"))?;
         Ok(())
     }
 
@@ -211,6 +229,10 @@ impl ModelManager {
         self.loaded.get().is_some()
     }
 
+    ///
+    /// # Errors
+    ///
+    /// This function returns an error if the underlying operation fails.
     /// Embedding inference. **Commit 1 stub**: Commit 2 에서 tokenization +
     /// tract run 구현 예정. 현재는 `Err` 반환하여 Kompress-base 가
     /// rule-based v1 로 graceful fallback 하도록.
@@ -225,7 +247,7 @@ impl ModelManager {
 async fn sha256_file(path: &PathBuf) -> Result<String> {
     let data = tokio::fs::read(path).await.context("read file for sha256")?;
     let hash = Sha256::digest(&data);
-    Ok(format!("{:x}", hash))
+    Ok(format!("{hash:x}"))
 }
 
 #[cfg(test)]

@@ -1,4 +1,4 @@
-//! tui::events — crossterm 기반 입력 + lifecycle (raw mode init/restore).
+//! `tui::events` — crossterm 기반 입력 + lifecycle (raw mode init/restore).
 
 use std::io::{self, Stdout};
 
@@ -16,6 +16,9 @@ pub struct TtyGuard {
 }
 
 impl TtyGuard {
+    /// # Errors
+    ///
+    /// This function returns an error if the underlying operation fails.
     pub fn enter() -> Result<Self> {
         let mut stdout = io::stdout();
         enable_raw_mode()?;
@@ -23,6 +26,9 @@ impl TtyGuard {
         Ok(Self { stdout, active: true })
     }
 
+    /// # Errors
+    ///
+    /// This function returns an error if the underlying operation fails.
     pub fn leave(&mut self) -> Result<()> {
         if self.active {
             execute!(self.stdout, LeaveAlternateScreen)?;
@@ -56,6 +62,7 @@ pub enum AppKey {
 }
 
 impl AppKey {
+    #[must_use] 
     pub fn from_crossterm(event: Event) -> Option<Self> {
         match event {
             Event::Key(KeyEvent {
@@ -80,6 +87,10 @@ impl AppKey {
         }
     }
 
+    ///
+    /// # Errors
+    ///
+    /// This function returns an error if the underlying operation fails.
     /// blocking read (실제 terminal 용)
     pub fn read() -> Result<AppKey> {
         loop {

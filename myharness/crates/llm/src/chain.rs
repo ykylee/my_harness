@@ -2,6 +2,7 @@
 //!
 //! load/save: `~/.myharness/state/active-providers.toml`
 
+#![allow(clippy::cast_possible_truncation, clippy::cast_precision_loss, clippy::cast_sign_loss, clippy::cast_possible_wrap)]
 use std::path::Path;
 
 use chrono::{DateTime, Utc};
@@ -52,6 +53,7 @@ pub enum ChainError {
 }
 
 impl ActiveProviderChain {
+    #[must_use] 
     pub fn new() -> Self {
         Self {
             version: 1,
@@ -62,7 +64,8 @@ impl ActiveProviderChain {
     }
 
     /// discovered 목록을 우선순위별로 정렬해 chain 생성.
-    /// 우선순위: env_var=0..99, keychain=100..199, manual=200..299, local_detected=300..399.
+    /// 우선순위: `env_var=0..99`, keychain=100..199, manual=200..299, `local_detected=300..399`.
+    #[must_use] 
     pub fn from_discovered(discovered: Vec<DiscoveredProvider>) -> Self {
         let mut sorted = discovered;
         sorted.sort_by_key(|d| match d.auth_state {
@@ -103,6 +106,7 @@ impl ActiveProviderChain {
         self.entries.iter()
     }
 
+    #[must_use] 
     pub fn primary(&self) -> Option<&ChainEntry> {
         self.entries.iter().min_by_key(|e| e.priority)
     }
@@ -111,6 +115,9 @@ impl ActiveProviderChain {
         self.entries.sort_by_key(|e| e.priority);
     }
 
+    /// # Errors
+    ///
+    /// This function returns an error if the underlying operation fails.
     pub fn load(path: &Path) -> Result<Self, ChainError> {
         if !path.exists() {
             return Ok(Self::new());
@@ -120,6 +127,9 @@ impl ActiveProviderChain {
         Ok(chain)
     }
 
+    /// # Errors
+    ///
+    /// This function returns an error if the underlying operation fails.
     pub fn save(&self, path: &Path) -> Result<(), ChainError> {
         if let Some(parent) = path.parent() {
             std::fs::create_dir_all(parent)?;

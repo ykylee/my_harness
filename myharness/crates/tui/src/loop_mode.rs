@@ -3,6 +3,7 @@
 //! 주어진 goal 을 달성할 때까지 orchestrator + sub-agent + LLM 호출을 반복.
 //! Stop condition: success-criteria 충족 OR max-iterations 도달 OR user interrupt.
 
+#![allow(clippy::cast_possible_truncation, clippy::cast_precision_loss, clippy::cast_sign_loss, clippy::cast_possible_wrap)]
 use serde::{Deserialize, Serialize};
 
 use crate::orchestrator::{DispatchDecision, DispatchKind, Orchestrator};
@@ -59,6 +60,7 @@ pub struct LoopRunner {
 }
 
 impl LoopRunner {
+    #[must_use] 
     pub fn new(config: LoopConfig) -> Self {
         Self {
             config,
@@ -66,12 +68,14 @@ impl LoopRunner {
         }
     }
 
+    #[must_use] 
     pub fn interrupt_handle(&self) -> std::sync::Arc<std::sync::atomic::AtomicBool> {
         self.interrupted.clone()
     }
 
     /// 휴리스틱 success 평가: response 가 "DONE" 또는 "SUCCESS" word 포함 시 성공.
-    /// 또는 success_criteria 가 있고 response 가 그 string 포함 시.
+    /// 또는 `success_criteria` 가 있고 response 가 그 string 포함 시.
+    #[must_use] 
     pub fn is_success(response: &str, criteria: Option<&str>) -> bool {
         if let Some(c) = criteria
             && !c.is_empty()

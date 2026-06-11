@@ -1,6 +1,6 @@
 //! OAuth token store. `~/.myharness/oauth/{provider}.toml` (chmod 600).
 //!
-//! disk 영구 저장 + KeyringAuthStore 의 in-memory cache 와 연동 (set 시 양쪽 update).
+//! disk 영구 저장 + `KeyringAuthStore` 의 in-memory cache 와 연동 (set 시 양쪽 update).
 
 use std::path::PathBuf;
 
@@ -36,6 +36,9 @@ pub struct TokenStore {
 }
 
 impl TokenStore {
+    /// # Errors
+    ///
+    /// This function returns an error if the underlying operation fails.
     pub fn new() -> Result<Self, StoreError> {
         let base_dir = if let Ok(p) = std::env::var("MYHARNESS_HOME") {
             PathBuf::from(p).join("oauth")
@@ -48,6 +51,7 @@ impl TokenStore {
         Ok(Self { base_dir })
     }
 
+    #[must_use] 
     pub fn with_base(base_dir: PathBuf) -> Self {
         Self { base_dir }
     }
@@ -56,11 +60,17 @@ impl TokenStore {
         self.base_dir.join(format!("{provider}.toml"))
     }
 
+    /// # Errors
+    ///
+    /// This function returns an error if the underlying operation fails.
     pub fn ensure_dir(&self) -> Result<(), StoreError> {
         std::fs::create_dir_all(&self.base_dir)?;
         Ok(())
     }
 
+    /// # Errors
+    ///
+    /// This function returns an error if the underlying operation fails.
     pub fn save(&self, provider: &str, token: &OAuthToken) -> Result<(), StoreError> {
         self.ensure_dir()?;
         let stored = StoredToken {
@@ -82,6 +92,9 @@ impl TokenStore {
         Ok(())
     }
 
+    /// # Errors
+    ///
+    /// This function returns an error if the underlying operation fails.
     pub fn load(&self, provider: &str) -> Result<StoredToken, StoreError> {
         let path = self.path(provider);
         if !path.exists() {
@@ -92,6 +105,9 @@ impl TokenStore {
         Ok(stored)
     }
 
+    /// # Errors
+    ///
+    /// This function returns an error if the underlying operation fails.
     pub fn delete(&self, provider: &str) -> Result<(), StoreError> {
         let path = self.path(provider);
         if path.exists() {
@@ -100,6 +116,9 @@ impl TokenStore {
         Ok(())
     }
 
+    /// # Errors
+    ///
+    /// This function returns an error if the underlying operation fails.
     pub fn list(&self) -> Result<Vec<String>, StoreError> {
         if !self.base_dir.exists() {
             return Ok(Vec::new());

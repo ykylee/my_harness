@@ -1,4 +1,4 @@
-//! tool name alias table — sub-agent 의 도구 이름 (PascalCase) ↔ tools crate (snake_case).
+//! tool name alias table — sub-agent 의 도구 이름 (`PascalCase`) ↔ tools crate (`snake_case`).
 //!
 //! sub-agent (W10.2) 가 기대하는 도구 이름: Read, Write, Edit, Bash, Grep, Glob
 //! tools crate (W3) 의 실제 이름: read, write, edit, bash, grep, glob_
@@ -8,6 +8,7 @@
 use std::collections::HashMap;
 
 /// 양방향 alias 매핑.
+#[must_use] 
 pub fn known_aliases() -> HashMap<&'static str, &'static str> {
     let mut m = HashMap::new();
     // sub-agent PascalCase → tools crate snake_case
@@ -34,12 +35,11 @@ pub static KNOWN_TOOL_ALIASES: std::sync::LazyLock<HashMap<&'static str, &'stati
 /// sub-agent name → tools crate name. 없으면 그대로 반환 (passthrough).
 pub fn resolve_tool_alias(name: &str) -> String {
     KNOWN_TOOL_ALIASES
-        .get(name)
-        .map(|s| s.to_string())
-        .unwrap_or_else(|| name.to_string())
+        .get(name).map_or_else(|| name.to_string(), std::string::ToString::to_string)
 }
 
 /// 여러 alias 일괄 변환.
+#[must_use] 
 pub fn resolve_all_aliases(names: &[&str]) -> Vec<String> {
     names.iter().map(|n| resolve_tool_alias(n)).collect()
 }

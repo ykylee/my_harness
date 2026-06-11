@@ -1,8 +1,8 @@
-//! BuiltinAlgorithm registry — 6 알고리즘 (CacheAligner/ContentRouter/SmartCrusher/CodeCompressor/Ccr/KompressBase)
+//! `BuiltinAlgorithm` registry — 6 알고리즘 (CacheAligner/ContentRouter/SmartCrusher/CodeCompressor/Ccr/KompressBase)
 //! 중 어떤 게 enabled 인지 통합 관리.
 //!
 //! Note: W8.4 에서 context 의 compression 모듈에 CacheAligner/ContentRouter/SmartCrusher/CodeCompressor 4종
-//! 구현됨. CCR + KompressBase 는 W9.3/W9.4 에서 compression crate 의 신규 모듈.
+//! 구현됨. CCR + `KompressBase` 는 W9.3/W9.4 에서 compression crate 의 신규 모듈.
 //! W9.5 에서 두 crate 의 알고리즘을 단일 `BuiltinAlgorithm` enum 으로 통합 view 제공.
 
 use std::collections::HashMap;
@@ -34,6 +34,7 @@ impl BuiltinAlgorithm {
         BuiltinAlgorithm::KompressBase,
     ];
 
+    #[must_use] 
     pub fn as_str(&self) -> &'static str {
         match self {
             BuiltinAlgorithm::CacheAligner => "cache-aligner",
@@ -46,6 +47,7 @@ impl BuiltinAlgorithm {
     }
 
     #[allow(clippy::should_implement_trait)]
+    #[must_use] 
     pub fn from_str(s: &str) -> Option<Self> {
         match s {
             "cache-aligner" => Some(BuiltinAlgorithm::CacheAligner),
@@ -70,6 +72,7 @@ pub struct BuiltinFlags {
 }
 
 impl BuiltinFlags {
+    #[must_use] 
     pub fn from_slice(enabled: &[BuiltinAlgorithm]) -> Self {
         let mut f = Self::default();
         for a in enabled {
@@ -85,6 +88,7 @@ impl BuiltinFlags {
         f
     }
 
+    #[must_use] 
     pub fn enabled_list(&self) -> Vec<BuiltinAlgorithm> {
         let mut v = Vec::new();
         if self.cache_aligner {
@@ -109,7 +113,7 @@ impl BuiltinFlags {
     }
 }
 
-/// Layer 2 (W9.5) — CCR + KompressBase 의 통합 registry.
+/// Layer 2 (W9.5) — CCR + `KompressBase` 의 통합 registry.
 /// W8.4 의 CacheAligner/ContentRouter/SmartCrusher/CodeCompressor 는 context crate 에서 처리.
 pub struct BuiltinRegistry {
     pub ccr: CcrStore,
@@ -128,6 +132,7 @@ impl Default for BuiltinRegistry {
 }
 
 impl BuiltinRegistry {
+    #[must_use] 
     pub fn new(flags: BuiltinFlags) -> Self {
         Self {
             flags,
@@ -162,7 +167,8 @@ impl BuiltinRegistry {
     }
 }
 
-/// `flags` 를 HashMap 으로 표현 (TOML 호환).
+/// `flags` 를 `HashMap` 으로 표현 (TOML 호환).
+#[must_use] 
 pub fn flags_to_map(flags: &BuiltinFlags) -> HashMap<&'static str, bool> {
     let mut m = HashMap::new();
     m.insert("cache-aligner", flags.cache_aligner);

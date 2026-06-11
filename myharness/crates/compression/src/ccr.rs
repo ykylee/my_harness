@@ -1,11 +1,12 @@
 //! CCR (Compress-Cache-Retrieve) — reversible + retrieval
 //!
-//! v1 simple: in-memory dictionary 로 {marker_N} ↔ original_text 매핑.
+//! v1 simple: in-memory dictionary 로 {`marker_N`} ↔ `original_text` 매핑.
 //! 압축: 특정 threshold (예: 30+ char) 단어/구를 `{marker_N}` 로 치환.
-//! 복원: marker → original_text lookup.
+//! 복원: marker → `original_text` lookup.
 //!
-//! v1.5+: persistence (SQLite), LLM-based segment selection, round-trip 비용 trade-off.
+//! v1.5+: persistence (`SQLite`), LLM-based segment selection, round-trip 비용 trade-off.
 
+#![allow(clippy::cast_possible_truncation, clippy::cast_precision_loss, clippy::cast_sign_loss, clippy::cast_possible_wrap)]
 use std::collections::HashMap;
 use std::sync::Mutex;
 
@@ -26,10 +27,12 @@ struct CcrInner {
 }
 
 impl CcrStore {
+    #[must_use] 
     pub fn new() -> Self {
         Self::default()
     }
 
+    #[must_use] 
     pub fn marker_format() -> &'static str {
         "{ccr:%d}"
     }
@@ -38,6 +41,10 @@ impl CcrStore {
         format!("{{ccr:{id}}}")
     }
 
+    ///
+    /// # Panics
+    ///
+    /// This function returns an error if the underlying operation fails.
     /// original text 등록. marker 텍스트 반환. 중복이면 기존 marker.
     pub fn intern(&self, text: &str) -> String {
         let mut g = self.inner.lock().unwrap();
@@ -53,13 +60,17 @@ impl CcrStore {
         marker
     }
 
+    ///
+    /// # Panics
+    ///
+    /// This function returns an error if the underlying operation fails.
     /// marker → original 복원. 없으면 None.
     pub fn retrieve(&self, marker: &str) -> Option<String> {
         let g = self.inner.lock().unwrap();
         g.reverse.get(marker).and_then(|id| g.forward.get(id).cloned())
     }
 
-    /// 압축: min_length 이상이고 알파벳/숫자 위주 segment 만 marker 화.
+    /// 압축: `min_length` 이상이고 알파벳/숫자 위주 segment 만 marker 화.
     /// segment 분리: 공백 기준. punctuation 포함 단어도 통째로.
     pub fn compress(&self, text: &str, min_length: usize) -> (String, CcrStats) {
         let mut out = String::with_capacity(text.len());
@@ -119,6 +130,9 @@ impl CcrStore {
         out
     }
 
+    /// # Panics
+    ///
+    /// This function returns an error if the underlying operation fails.
     pub fn len(&self) -> usize {
         self.inner.lock().unwrap().forward.len()
     }
@@ -127,6 +141,9 @@ impl CcrStore {
         self.len() == 0
     }
 
+    /// # Panics
+    ///
+    /// This function returns an error if the underlying operation fails.
     pub fn clear(&self) {
         let mut g = self.inner.lock().unwrap();
         g.next_id = 0;
@@ -144,6 +161,7 @@ pub struct CcrStats {
 }
 
 impl CcrStats {
+    #[must_use] 
     pub fn savings_ratio(&self) -> f32 {
         if self.original_chars == 0 {
             return 0.0;

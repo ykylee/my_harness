@@ -11,6 +11,9 @@ pub enum PermissionDecision {
 pub struct PermissionGuard;
 
 impl PermissionGuard {
+    /// # Errors
+    ///
+    /// This function returns an error if the underlying operation fails.
     pub fn check(
         tool_name: &str,
         mode: PermissionMode,
@@ -43,8 +46,7 @@ impl PermissionGuard {
                 }
             }
             PermissionMode::Plan => Ok(PermissionDecision::Deny(format!(
-                "{} blocked in plan mode (read-only)",
-                tool_name
+                "{tool_name} blocked in plan mode (read-only)"
             ))),
             PermissionMode::BypassPermissions => unreachable!(),
         }
@@ -52,10 +54,10 @@ impl PermissionGuard {
 
     fn prompt(tool_name: &str, detail: Option<&str>) -> Result<PermissionDecision, ToolError> {
         let msg = match detail {
-            Some(d) => format!("myharness: {} 실행하시겠습니까? [y/N] ({}) ", tool_name, d),
-            None => format!("myharness: {} 실행하시겠습니까? [y/N] ", tool_name),
+            Some(d) => format!("myharness: {tool_name} 실행하시겠습니까? [y/N] ({d}) "),
+            None => format!("myharness: {tool_name} 실행하시겠습니까? [y/N] "),
         };
-        print!("{}", msg);
+        print!("{msg}");
         io::stdout().flush()?;
 
         let mut input = String::new();
@@ -66,8 +68,7 @@ impl PermissionGuard {
             Ok(PermissionDecision::Allow)
         } else {
             Ok(PermissionDecision::Deny(format!(
-                "user declined: {}",
-                tool_name
+                "user declined: {tool_name}"
             )))
         }
     }

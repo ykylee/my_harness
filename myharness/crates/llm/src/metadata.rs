@@ -5,6 +5,7 @@ use serde::{Deserialize, Serialize};
 use crate::provider::{ProviderId, ProviderKind};
 
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[allow(clippy::struct_excessive_bools)] // capability flags are intrinsic to provider metadata
 pub struct ProviderCapabilities {
     pub tool_use: bool,
     pub vision: bool,
@@ -17,7 +18,7 @@ pub struct ProviderCapabilities {
 pub struct ProviderMetadata {
     pub id: ProviderId,
     pub display_name: String,
-    /// 환경변수 이름 (예: "ANTHROPIC_API_KEY"). None 이면 env var 기반 인증 안 함 (local-llm 등).
+    /// 환경변수 이름 (예: "`ANTHROPIC_API_KEY`"). None 이면 env var 기반 인증 안 함 (local-llm 등).
     pub env_var: Option<String>,
     /// keychain service 이름 (예: "myharness:anthropic").
     pub keychain_service: String,
@@ -36,7 +37,8 @@ pub struct ProviderMetadata {
 }
 
 impl ProviderMetadata {
-    /// ProviderId → built-in metadata.
+    /// `ProviderId` → built-in metadata.
+    #[must_use] 
     pub fn builtin(id: ProviderId) -> Self {
         match id {
             ProviderId::Claude => Self::builtin_claude(),
@@ -49,6 +51,7 @@ impl ProviderMetadata {
     }
 
     /// 6 built-in 의 Vec (id 순서).
+    #[must_use] 
     pub fn all_builtins() -> Vec<Self> {
         ProviderId::ALL.iter().map(|id| Self::builtin(*id)).collect()
     }

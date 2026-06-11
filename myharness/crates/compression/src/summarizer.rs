@@ -1,7 +1,7 @@
-//! `Summarizer` trait + `LlmSummarizer` (rig-core LLMClient) + `MockSummarizer` (test).
+//! `Summarizer` trait + `LlmSummarizer` (rig-core `LLMClient`) + `MockSummarizer` (test).
 //!
 //! Layer 1 의 정식 동작: budget 한계 도달 시 old message 들을 LLM 으로 요약하여
-//! 단일 assistant message 로 history 에 보관. ANTHROPIC_API_KEY absent 환경에선
+//! 단일 assistant message 로 history 에 보관. `ANTHROPIC_API_KEY` absent 환경에선
 //! `MockSummarizer` 로 unit test.
 
 use async_trait::async_trait;
@@ -25,7 +25,7 @@ pub trait Summarizer: Send + Sync {
     fn name(&self) -> &'static str;
 }
 
-/// `LLMClient` 호출하여 요약. ANTHROPIC_API_KEY 있으면 실제 LLM, 없으면 fallback 시 Mock 사용 가능.
+/// `LLMClient` 호출하여 요약. `ANTHROPIC_API_KEY` 있으면 실제 LLM, 없으면 fallback 시 Mock 사용 가능.
 pub struct LlmSummarizer {
     client: std::sync::Arc<dyn LLMClient>,
     model: String,
@@ -41,6 +41,7 @@ impl LlmSummarizer {
         }
     }
 
+    #[must_use]
     pub fn with_model(mut self, model: impl Into<String>) -> Self {
         self.model = model.into();
         self
@@ -75,10 +76,14 @@ pub struct MockSummarizer {
 }
 
 impl MockSummarizer {
+    #[must_use] 
     pub fn new() -> Self {
         Self { queue: std::sync::Mutex::new(Vec::new()) }
     }
 
+    /// # Panics
+    ///
+    /// This function returns an error if the underlying operation fails.
     pub fn push(&self, summary: impl Into<String>) {
         self.queue.lock().unwrap().push(summary.into());
     }

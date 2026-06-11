@@ -1,7 +1,7 @@
-//! MiniMax Device Authorization Grant OAuth flow (W14).
+//! `MiniMax` Device Authorization Grant OAuth flow (W14).
 //!
-//! MiniMax OAuth 는 표준 Authorization Code + redirect 가 아니라 **Device Authorization
-//! Grant 변형** (OAuth 2.0 RFC 8628 의 MiniMax 구현). 흐름:
+//! `MiniMax` OAuth 는 표준 Authorization Code + redirect 가 아니라 **Device Authorization
+//! Grant 변형** (OAuth 2.0 RFC 8628 의 `MiniMax` 구현). 흐름:
 //!
 //! 1) `request_code(provider)` → POST `{base_url}/oauth/code` (form body) →
 //!    `DeviceAuthorization { user_code, verification_uri, interval, expired_in, state }`
@@ -11,15 +11,16 @@
 //!    `TokenPoll { status, access_token?, refresh_token?, expired_in? }`
 //! 4) `status=success` 시 `OAuthToken` 으로 변환 → `TokenStore::save`
 //!
-//! 다른 provider (OpenAI, Google) 는 표준 Authorization Code + redirect flow 사용
-//! ([`crate::flow`]). MiniMax 만 이 flow 사용.
+//! 다른 provider (`OpenAI`, Google) 는 표준 Authorization Code + redirect flow 사용
+//! ([`crate::flow`]). `MiniMax` 만 이 flow 사용.
 //!
-//! 표준 (Hermes, OpenClaw) 과 동일한 상수:
-//! - client_id: `78257093-7e40-4613-99e0-527b14b39113` (MiniMax 공통, 모든 client 가 동일 값 사용)
-//! - scope: `group_id profile model.completion` (MiniMax Portal OAuth 권한)
-//! - grant_type: `urn:ietf:params:oauth:grant-type:user_code` (MiniMax custom grant)
+//! 표준 (Hermes, `OpenClaw`) 과 동일한 상수:
+//! - `client_id`: `78257093-7e40-4613-99e0-527b14b39113` (`MiniMax` 공통, 모든 client 가 동일 값 사용)
+//! - scope: `group_id profile model.completion` (`MiniMax` Portal OAuth 권한)
+//! - `grant_type`: `urn:ietf:params:oauth:grant-type:user_code` (`MiniMax` custom grant)
 //! - endpoint: `https://api.minimax.io/oauth/{code,token}` (글로벌; 한국 default)
 
+#![allow(clippy::cast_possible_truncation, clippy::cast_precision_loss, clippy::cast_sign_loss, clippy::cast_possible_wrap)]
 use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
@@ -49,7 +50,7 @@ pub enum DeviceError {
 pub struct DeviceAuthorization {
     pub user_code: String,
     pub verification_uri: String,
-    /// 기본 2s. OpenClaw 는 1.5x backoff, 우리 v1 은 고정값 사용.
+    /// 기본 2s. `OpenClaw` 는 1.5x backoff, 우리 v1 은 고정값 사용.
     #[serde(default = "default_interval")]
     pub interval: u64,
     /// unix timestamp (초). user 가 이 시각 전에 authorize 해야 함.
@@ -66,13 +67,13 @@ fn default_interval() -> u64 {
 pub enum TokenPoll {
     /// 아직 user 가 authorize 안 함. 계속 polling.
     Pending,
-    /// user 가 authorize 완료. access_token/refresh_token 포함.
+    /// user 가 authorize 완료. `access_token/refresh_token` 포함.
     Success {
         access_token: String,
         refresh_token: String,
         /// unix timestamp (초). 만료 시각.
         expired_in: u64,
-        /// optional. token_type (default "Bearer").
+        /// optional. `token_type` (default "Bearer").
         token_type: Option<String>,
         /// optional. inference URL (e.g. `https://api.minimax.io/anthropic`).
         resource_url: Option<String>,
@@ -90,10 +91,10 @@ pub struct DeviceToken {
     pub resource_url: Option<String>,
 }
 
-/// Device Authorization Grant provider 정의 (MiniMax 만 사용).
+/// Device Authorization Grant provider 정의 (`MiniMax` 만 사용).
 ///
 /// 표준 [`crate::flow::OAuthProvider`] 와 별도 trait. OpenAI/Google 는 redirect flow
-/// (Authorization Code + PKCE) 사용, MiniMax 만 이 flow 사용.
+/// (Authorization Code + PKCE) 사용, `MiniMax` 만 이 flow 사용.
 #[async_trait]
 pub trait DeviceCodeProvider: Send + Sync {
     fn id(&self) -> &'static str;
@@ -102,7 +103,7 @@ pub trait DeviceCodeProvider: Send + Sync {
     fn code_endpoint(&self) -> &str;
     /// POST `{base_url}/oauth/token` 의 base URL.
     fn token_endpoint(&self) -> &str;
-    /// OAuth client_id.
+    /// OAuth `client_id`.
     fn client_id(&self) -> &str;
     /// scope (공백 구분 단일 string).
     fn scope(&self) -> &str;
@@ -117,6 +118,10 @@ pub struct DeviceRequest {
     pub pkce: PkcePair,
 }
 
+///
+/// # Errors
+///
+/// This function returns an error if the underlying operation fails.
 /// POST `{code_endpoint}` → `DeviceAuthorization`.
 ///
 /// `state` 와 `code_challenge` 모두 generate 후 form body 에 포함. 응답의 state 가
@@ -162,9 +167,13 @@ pub async fn request_code(
     Ok(DeviceRequest { authorization: auth, pkce })
 }
 
+///
+/// # Errors
+///
+/// This function returns an error if the underlying operation fails.
 /// POST `{token_endpoint}` 1회 호출. polling loop 에서 매번 호출.
 ///
-/// grant_type: `urn:ietf:params:oauth:grant-type:user_code`.
+/// `grant_type`: `urn:ietf:params:oauth:grant-type:user_code`.
 pub async fn poll_token(
     provider: &dyn DeviceCodeProvider,
     user_code: &str,
@@ -211,16 +220,16 @@ pub async fn poll_token(
                 .to_string();
             let expired_in = value
                 .get("expired_in")
-                .and_then(|v| v.as_u64())
+                .and_then(serde_json::Value::as_u64)
                 .ok_or_else(|| DeviceError::Provider("no expired_in".into()))?;
             let token_type = value
                 .get("token_type")
                 .and_then(|v| v.as_str())
-                .map(|s| s.to_string());
+                .map(std::string::ToString::to_string);
             let resource_url = value
                 .get("resource_url")
                 .and_then(|v| v.as_str())
-                .map(|s| s.to_string());
+                .map(std::string::ToString::to_string);
             Ok(TokenPoll::Success {
                 access_token,
                 refresh_token,
@@ -243,14 +252,18 @@ pub async fn poll_token(
     }
 }
 
+///
+/// # Errors
+///
+/// This function returns an error if the underlying operation fails.
 /// 만료 시각까지 interval 으로 polling. 성공/실패 시 종료.
 ///
-/// OpenClaw 와 동일한 backoff 정책 (W14.5): `cur_interval *= 1.5` (cap 10s).
-/// MiniMax 가 `interval=3000` 으로 응답해도 polling 1회 사이가 너무 길지 않도록
-/// 1.5x backoff + cap. 단 MiniMax 가 명시한 interval 보다 작아지지 않음
+/// `OpenClaw` 와 동일한 backoff 정책 (W14.5): `cur_interval *= 1.5` (cap 10s).
+/// `MiniMax` 가 `interval=3000` 으로 응답해도 polling 1회 사이가 너무 길지 않도록
+/// 1.5x backoff + cap. 단 `MiniMax` 가 명시한 interval 보다 작아지지 않음
 /// (서버 권고 존중, 1초 floor).
 ///
-/// `expired_in` 은 **milliseconds 단위 unix timestamp** (MiniMax 응답, D-52 follow-up 확인).
+/// `expired_in` 은 **milliseconds 단위 unix timestamp** (`MiniMax` 응답, D-52 follow-up 확인).
 pub async fn poll_until_success(
     provider: &dyn DeviceCodeProvider,
     user_code: &str,
@@ -271,7 +284,6 @@ pub async fn poll_until_success(
                 // 1.5x backoff. cap 10s, floor 1s.
                 let next = (cur_interval * 3 / 2).max(floor).min(cap);
                 cur_interval = next;
-                continue;
             }
             TokenPoll::Success {
                 access_token,
@@ -302,12 +314,12 @@ mod tests {
     #[async_trait]
     impl DeviceCodeProvider for FakeDeviceProvider {
         fn id(&self) -> &'static str { "fake" }
-        fn display_name(&self) -> &str { "Fake Device" }
-        fn code_endpoint(&self) -> &str { "https://fake/oauth/code" }
-        fn token_endpoint(&self) -> &str { "https://fake/oauth/token" }
-        fn client_id(&self) -> &str { "fake-client" }
-        fn scope(&self) -> &str { "group_id profile model.completion" }
-        fn region(&self) -> &str { "global" }
+        fn display_name(&self) -> &'static str { "Fake Device" }
+        fn code_endpoint(&self) -> &'static str { "https://fake/oauth/code" }
+        fn token_endpoint(&self) -> &'static str { "https://fake/oauth/token" }
+        fn client_id(&self) -> &'static str { "fake-client" }
+        fn scope(&self) -> &'static str { "group_id profile model.completion" }
+        fn region(&self) -> &'static str { "global" }
     }
 
     #[test]

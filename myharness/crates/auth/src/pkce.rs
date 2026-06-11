@@ -1,7 +1,7 @@
 //! PKCE (Proof Key for Code Exchange, RFC 7636) + state generator.
 //!
-//! code_verifier: 43-128 char [A-Z][a-z][0-9]-._~
-//! code_challenge: S256(code_verifier) base64url-encoded
+//! `code_verifier`: 43-128 char [A-Z][a-z][0-9]-._~
+//! `code_challenge`: `S256(code_verifier)` base64url-encoded
 
 use base64::{Engine, engine::general_purpose::URL_SAFE_NO_PAD};
 use rand::RngCore;
@@ -20,6 +20,7 @@ pub enum PkceMethod {
 }
 
 impl PkceMethod {
+    #[must_use] 
     pub fn as_str(&self) -> &'static str {
         match self {
             PkceMethod::S256 => "S256",
@@ -27,6 +28,7 @@ impl PkceMethod {
     }
 }
 
+#[must_use] 
 pub fn generate_pkce() -> PkcePair {
     let mut bytes = [0u8; 32];
     rand::thread_rng().fill_bytes(&mut bytes);
@@ -39,6 +41,7 @@ pub fn generate_pkce() -> PkcePair {
 }
 
 /// random state (CSRF 방지) — URL-safe 16 byte
+#[must_use] 
 pub fn generate_state() -> String {
     let mut bytes = [0u8; 16];
     rand::thread_rng().fill_bytes(&mut bytes);

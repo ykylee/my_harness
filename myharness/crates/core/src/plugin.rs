@@ -73,6 +73,7 @@ pub struct PluginManifest {
 
 impl PluginManifest {
     /// `name@version` 형식.
+    #[must_use] 
     pub fn id(&self) -> String {
         format!("{}@{}", self.name, self.version)
     }
@@ -123,6 +124,7 @@ pub struct PluginLocation {
 }
 
 impl PluginLocation {
+    #[must_use] 
     pub fn id(&self) -> String {
         self.manifest.id()
     }
@@ -135,12 +137,13 @@ pub struct PluginRegistry {
 }
 
 impl PluginRegistry {
+    #[must_use] 
     pub fn new() -> Self {
         Self::default()
     }
 
     /// `plugins_dir` (=`~/.myharness/plugins/`) 에서 모든 plugin 발견.
-    /// 각 subdir 의 `plugin.json` parse. 실패한 plugin 은 skip + tracing::warn.
+    /// 각 subdir 의 `plugin.json` parse. 실패한 plugin 은 skip + `tracing::warn`.
     pub fn discover(plugins_dir: &Path) -> Self {
         let mut reg = Self::new();
         let entries = match std::fs::read_dir(plugins_dir) {
@@ -172,6 +175,10 @@ impl PluginRegistry {
         reg
     }
 
+    ///
+    /// # Errors
+    ///
+    /// This function returns an error if the underlying operation fails.
     /// 단일 plugin 디렉토리 load.
     pub fn load_one(root: &Path, manifest_path: &Path) -> Result<PluginLocation, PluginError> {
         let bytes = std::fs::read(manifest_path).map_err(|e| PluginError::Io {
@@ -202,29 +209,41 @@ impl PluginRegistry {
         })
     }
 
+    #[must_use] 
     pub fn get(&self, name: &str) -> Option<&PluginLocation> {
         self.plugins.get(name)
     }
 
+    #[must_use] 
     pub fn names(&self) -> Vec<String> {
         self.plugins.keys().cloned().collect()
     }
 
+    #[must_use] 
     pub fn len(&self) -> usize {
         self.plugins.len()
     }
 
+    #[must_use] 
     pub fn is_empty(&self) -> bool {
         self.plugins.is_empty()
     }
 
     /// v1 first run 시 `~/.myharness/plugins/` 자동 생성.
     /// `init_home_dir()` 와 함께 호출 (D-69 §5.12 통합).
+    ///
+    /// # Errors
+    ///
+    /// This function returns an error if the underlying operation fails.
     pub fn ensure_plugins_dir(plugins_dir: &Path) -> std::io::Result<PathBuf> {
         std::fs::create_dir_all(plugins_dir)?;
         Ok(plugins_dir.to_path_buf())
     }
 
+    ///
+    /// # Errors
+    ///
+    /// This function returns an error if the underlying operation fails.
     /// 수동 등록 (test/외부 주입 용).
     pub fn register(&mut self, loc: PluginLocation) {
         self.plugins.insert(loc.manifest.name.clone(), loc);

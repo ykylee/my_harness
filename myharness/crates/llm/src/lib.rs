@@ -8,7 +8,7 @@
 //! - [`registry`]: in-memory provider CRUD + TOML 영속화
 //! - [`client`]: provider-agnostic `LLMClient` trait + 메시지 타입
 //! - [`client_anthropic`]: rig-core Anthropic 래퍼
-//! - [`client_openai_compat`]: OpenAI 호환 (DeepSeek/Ollama/local-llm) 래퍼
+//! - [`client_openai_compat`]: `OpenAI` 호환 (DeepSeek/Ollama/local-llm) 래퍼
 //! - [`client_gemini`]: rig-core Gemini 래퍼
 //! - [`client_mock`]: 테스트용 mock client
 //! - [`auth_state`]: per-provider auth 상태 (Unset/EnvVar/Keychain/Manual/LocalDetected/Error)
@@ -61,6 +61,7 @@ pub use registry::{ProviderRegistry, RegistryError};
 pub use router::{FallbackRouter, ProviderStatus, RouterResponse};
 
 /// Crate 버전.
+#[must_use] 
 pub fn version() -> &'static str {
     env!("CARGO_PKG_VERSION")
 }

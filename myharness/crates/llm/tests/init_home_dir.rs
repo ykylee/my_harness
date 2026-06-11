@@ -1,7 +1,7 @@
-//! §5.12 init_home_dir 통합 테스트 (tempdir 격리).
+//! §5.12 `init_home_dir` 통합 테스트 (tempdir 격리).
 //!
-//! 기존 w16_add_local.rs/w16_scenarios.rs 와 같은 패턴으로,
-//! MYHARNESS_HOME 을 tempdir 로 강제 + init_home_dir 호출 후
+//! 기존 `w16_add_local.rs/w16_scenarios.rs` 와 같은 패턴으로,
+//! `MYHARNESS_HOME` 을 tempdir 로 강제 + `init_home_dir` 호출 후
 //! §5.12 spec 의 11개 디렉토리가 모두 존재하는지 검증.
 
 use std::path::Path;

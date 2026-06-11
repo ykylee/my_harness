@@ -1,14 +1,14 @@
-//! 3 OAuth provider 구현 (W13.2) + MiniMax Device Authorization Grant (W14).
+//! 3 OAuth provider 구현 (W13.2) + `MiniMax` Device Authorization Grant (W14).
 //!
 //! 표준 Authorization Code + PKCE redirect flow (RFC 6749):
-//! - OpenAI: auth.openai.com/oauth/authorize. PKCE public client.
+//! - `OpenAI`: auth.openai.com/oauth/authorize. PKCE public client.
 //! - Google: accounts.google.com/o/oauth2/v2/auth (Gemini 용). PKCE public client.
 //!
-//! MiniMax 는 표준 redirect flow 가 **404** (D-52 follow-up). 대신 **Device Authorization
+//! `MiniMax` 는 표준 redirect flow 가 **404** (D-52 follow-up). 대신 **Device Authorization
 //! Grant 변형** (W14) 사용:
-//! - POST `{base_url}/oauth/code` → user_code + verification_uri
+//! - POST `{base_url}/oauth/code` → `user_code` + `verification_uri`
 //! - POST `{base_url}/oauth/token` polling
-//! - 표준 client_id `78257093-7e40-4613-99e0-527b14b39113` (OpenClaw/Hermes 공통, 모든 client 가 동일 값 사용)
+//! - 표준 `client_id` `78257093-7e40-4613-99e0-527b14b39113` (OpenClaw/Hermes 공통, 모든 client 가 동일 값 사용)
 //! - scope: `group_id profile model.completion`
 //! - region: 한국 default = global (`https://api.minimax.io`). CN 은 `MYHARNESS_MINIMAX_CN=1` 또는 `MINIMAX_OAUTH_BASE_URL` env override.
 
@@ -19,7 +19,7 @@ use async_trait::async_trait;
 use crate::device_flow::DeviceCodeProvider;
 use crate::flow::OAuthProvider;
 
-/// 빌드 시 OAuth provider 등록. CLI/사용자가 client_id 를 override 하려면
+/// 빌드 시 OAuth provider 등록. CLI/사용자가 `client_id` 를 override 하려면
 /// env var `MYHARNESS_OAUTH_CLIENT_ID_<PROVIDER>` 사용.
 /// W13.5 (D-52) — env 매 호출마다 재읽기. `oauth_providers()` 가 매번 새 instance.
 pub struct MinimaxOAuth {
@@ -29,6 +29,7 @@ pub struct MinimaxOAuth {
 
 impl MinimaxOAuth {
     /// env var 매번 재읽기. instance 새로 생성하여 env 변경 즉시 반영.
+    #[must_use] 
     pub fn from_env() -> Self {
         Self {
             client_id: std::env::var("MYHARNESS_OAUTH_CLIENT_ID_MINIMAX")
@@ -46,6 +47,7 @@ impl Default for MinimaxOAuth {
 }
 
 impl MinimaxOAuth {
+    #[must_use] 
     pub fn new() -> Arc<Self> {
         Arc::new(Self::from_env())
     }
@@ -66,7 +68,7 @@ impl OAuthProvider for MinimaxOAuth {
             "https://api.minimax.io/oauth/authorize"
         }
     }
-    fn token_endpoint(&self) -> &str { "https://api.minimax.io/oauth/token" }
+    fn token_endpoint(&self) -> &'static str { "https://api.minimax.io/oauth/token" }
     fn client_id(&self) -> &str { &self.client_id }
     fn client_secret(&self) -> Option<&str> { None }
     fn default_scopes(&self) -> &[&str] { &["completions.read", "completions.write"] }
@@ -81,12 +83,14 @@ pub struct OpenAiOAuth {
 }
 
 impl OpenAiOAuth {
+    #[must_use] 
     pub fn from_env() -> Self {
         Self {
             client_id: std::env::var("MYHARNESS_OAUTH_CLIENT_ID_OPENAI")
                 .unwrap_or_else(|_| "myharness-cli".into()),
         }
     }
+    #[must_use] 
     pub fn new() -> Arc<Self> { Arc::new(Self::from_env()) }
 }
 
@@ -98,8 +102,8 @@ impl Default for OpenAiOAuth {
 impl OAuthProvider for OpenAiOAuth {
     fn id(&self) -> &'static str { "openai" }
     fn display_name(&self) -> &'static str { "OpenAI" }
-    fn authorize_endpoint(&self) -> &str { "https://auth.openai.com/oauth/authorize" }
-    fn token_endpoint(&self) -> &str { "https://auth.openai.com/oauth/token" }
+    fn authorize_endpoint(&self) -> &'static str { "https://auth.openai.com/oauth/authorize" }
+    fn token_endpoint(&self) -> &'static str { "https://auth.openai.com/oauth/token" }
     fn client_id(&self) -> &str { &self.client_id }
     fn client_secret(&self) -> Option<&str> { None }
     fn default_scopes(&self) -> &[&str] { &["openid", "profile", "email", "offline_access"] }
@@ -110,12 +114,14 @@ pub struct GoogleOAuth {
 }
 
 impl GoogleOAuth {
+    #[must_use] 
     pub fn from_env() -> Self {
         Self {
             client_id: std::env::var("MYHARNESS_OAUTH_CLIENT_ID_GOOGLE")
                 .unwrap_or_else(|_| "myharness-cli".into()),
         }
     }
+    #[must_use] 
     pub fn new() -> Arc<Self> { Arc::new(Self::from_env()) }
 }
 
@@ -127,8 +133,8 @@ impl Default for GoogleOAuth {
 impl OAuthProvider for GoogleOAuth {
     fn id(&self) -> &'static str { "google" }
     fn display_name(&self) -> &'static str { "Google (Gemini)" }
-    fn authorize_endpoint(&self) -> &str { "https://accounts.google.com/o/oauth2/v2/auth" }
-    fn token_endpoint(&self) -> &str { "https://oauth2.googleapis.com/token" }
+    fn authorize_endpoint(&self) -> &'static str { "https://accounts.google.com/o/oauth2/v2/auth" }
+    fn token_endpoint(&self) -> &'static str { "https://oauth2.googleapis.com/token" }
     fn client_id(&self) -> &str { &self.client_id }
     fn client_secret(&self) -> Option<&str> { None }
     fn default_scopes(&self) -> &[&str] {
@@ -142,14 +148,14 @@ impl OAuthProvider for GoogleOAuth {
     }
 }
 
-/// MiniMax Device Authorization Grant provider (W14).
+/// `MiniMax` Device Authorization Grant provider (W14).
 ///
-/// 표준 OAuth 2.0 Authorization Code + PKCE redirect flow 가 MiniMax 에서 404 반환
+/// 표준 OAuth 2.0 Authorization Code + PKCE redirect flow 가 `MiniMax` 에서 404 반환
 /// (D-52 follow-up 확인). 따라서 **Device Authorization Grant 변형** 사용:
 /// POST `/oauth/code` → `user_code` + `verification_uri` → user 가 browser 에서
-/// `user_code` 입력 → polling `/oauth/token` → access_token.
+/// `user_code` 입력 → polling `/oauth/token` → `access_token`.
 ///
-/// 표준 client_id (OpenClaw/Hermes 와 동일): `78257093-7e40-4613-99e0-527b14b39113`.
+/// 표준 `client_id` (OpenClaw/Hermes 와 동일): `78257093-7e40-4613-99e0-527b14b39113`.
 /// scope: `group_id profile model.completion` (Portal OAuth 권한).
 /// region: global (한국 default) = `https://api.minimax.io`. CN 은 `MYHARNESS_MINIMAX_CN=1`
 /// 또는 `MINIMAX_OAUTH_BASE_URL` env override.
@@ -163,11 +169,11 @@ pub struct MinimaxDeviceOAuth {
 impl MinimaxDeviceOAuth {
     /// env 재읽기. 한국 환경 default = global (`https://api.minimax.io`).
     /// CN 으로 전환: `MYHARNESS_MINIMAX_CN=1` 또는 `MINIMAX_OAUTH_BASE_URL` 직접 설정.
+    #[must_use] 
     pub fn from_env() -> Self {
         let cn = std::env::var("MYHARNESS_MINIMAX_CN")
             .ok()
-            .map(|v| v == "1" || v.eq_ignore_ascii_case("true"))
-            .unwrap_or(false);
+            .is_some_and(|v| v == "1" || v.eq_ignore_ascii_case("true"));
         let base_url = std::env::var("MINIMAX_OAUTH_BASE_URL").unwrap_or_else(|_| {
             if cn {
                 "https://api.minimaxi.com".into()
@@ -182,6 +188,7 @@ impl MinimaxDeviceOAuth {
         };
         Self { base_url, region }
     }
+    #[must_use] 
     pub fn new() -> Arc<Self> { Arc::new(Self::from_env()) }
 }
 
@@ -192,7 +199,7 @@ impl Default for MinimaxDeviceOAuth {
 #[async_trait]
 impl DeviceCodeProvider for MinimaxDeviceOAuth {
     fn id(&self) -> &'static str { "minimax" }
-    fn display_name(&self) -> &str { "MiniMax" }
+    fn display_name(&self) -> &'static str { "MiniMax" }
     fn code_endpoint(&self) -> &str {
         // &str 반환이지만 self.base_url 와 lifetime 동일 → Box::leak 회피:
         // base_url 이 "https://api.minimax.io" 또는 "https://api.minimaxi.com" 이면 정적 literal.
@@ -225,6 +232,7 @@ impl DeviceCodeProvider for MinimaxDeviceOAuth {
 }
 
 /// 등록된 3 provider.
+#[must_use] 
 pub fn oauth_providers() -> Vec<Arc<dyn OAuthProvider>> {
     vec![
         MinimaxOAuth::new(),
@@ -245,8 +253,9 @@ pub fn find_provider(id: &str) -> Option<Arc<dyn OAuthProvider>> {
     None
 }
 
-/// DeviceCodeProvider (W14). MiniMax 만 DeviceCodeFlow 사용. find_device_provider("minimax")
-/// 로 MinimaxDeviceOAuth instance 반환.
+/// `DeviceCodeProvider` (W14). `MiniMax` 만 `DeviceCodeFlow` 사용. `find_device_provider("minimax`")
+/// 로 `MinimaxDeviceOAuth` instance 반환.
+#[must_use] 
 pub fn find_device_provider(id: &str) -> Option<Arc<dyn DeviceCodeProvider>> {
     match id {
         "minimax" => Some(MinimaxDeviceOAuth::new() as Arc<dyn DeviceCodeProvider>),

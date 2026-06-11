@@ -24,6 +24,7 @@ pub use sanitizer::{BashSanitizer, SanitizerMode, SanitizerViolation};
 pub use schema::{ProviderCompat, ToolSchema, ToolSchemaRegistry};
 pub use tool::{PermissionMode, Tool, ToolContext, ToolResult};
 
+#[must_use] 
 pub fn version() -> &'static str {
     env!("CARGO_PKG_VERSION")
 }

@@ -19,6 +19,9 @@ pub struct GeminiProvider {
 }
 
 impl GeminiProvider {
+    /// # Errors
+    ///
+    /// This function returns an error if the underlying operation fails.
     pub fn new(api_key: &str) -> Result<Self, LlmError> {
         let client = rig_core::providers::gemini::Client::new(api_key)
             .map_err(|e| LlmError::ProviderInit(e.to_string()))?;

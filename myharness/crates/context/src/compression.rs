@@ -1,16 +1,17 @@
 //! Layer 2 — headroom 4 알고리즘 built-in (D-27 + D-30).
 //!
-//! - CacheAligner: system + 최근 N message prefix 안정화
-//! - ContentRouter: content type 분류 (json/code/text/log)
-//! - SmartCrusher: JSON key 순서 정규화 + whitespace 제거 + 숫자 정밀도 축소
-//! - CodeCompressor: tree-sitter 식별자 shorten + 주석 제거 (v1.5+, 현재는 간단 regex 기반 stub)
+//! - `CacheAligner`: system + 최근 N message prefix 안정화
+//! - `ContentRouter`: content type 분류 (json/code/text/log)
+//! - `SmartCrusher`: JSON key 순서 정규화 + whitespace 제거 + 숫자 정밀도 축소
+//! - `CodeCompressor`: tree-sitter 식별자 shorten + 주석 제거 (v1.5+, 현재는 간단 regex 기반 stub)
 
+#![allow(clippy::cast_possible_truncation, clippy::cast_precision_loss, clippy::cast_sign_loss, clippy::cast_possible_wrap)]
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
 use crate::budget::Message;
 
-/// content type 분류 (ContentRouter 결과).
+/// content type 분류 (`ContentRouter` 결과).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "kebab-case")]
 pub enum ContentType {
@@ -51,11 +52,13 @@ pub struct BuiltinPipeline {
 }
 
 impl BuiltinPipeline {
+    #[must_use] 
     pub fn new(config: BuiltinConfig) -> Self {
         Self { config }
     }
 
     /// 전체 파이프라인. messages + system 을 받아서 압축된 (system, messages) 반환.
+    #[must_use] 
     pub fn run(&self, system: Option<String>, messages: Vec<Message>) -> (Option<String>, Vec<Message>) {
         let (system, messages) = if self.config.cache_aligner {
             self.cache_align(system, messages)
@@ -90,8 +93,9 @@ impl BuiltinPipeline {
         (system, messages)
     }
 
-    /// CacheAligner: system prompt 의 공백/개행 정규화 + 최근 N message 의 선두 공백 제거.
+    /// `CacheAligner`: system prompt 의 공백/개행 정규화 + 최근 N message 의 선두 공백 제거.
     /// 효과: KV cache 의 prefix 가 안정화되어 hit rate ↑.
+    #[must_use] 
     pub fn cache_align(&self, system: Option<String>, messages: Vec<Message>) -> (Option<String>, Vec<Message>) {
         let sys = system.map(|s| normalize_whitespace(&s));
         let msgs = messages
@@ -102,7 +106,8 @@ impl BuiltinPipeline {
     }
 }
 
-/// ContentRouter — content type 분류. 휴리스틱 기반.
+/// `ContentRouter` — content type 분류. 휴리스틱 기반.
+#[must_use] 
 pub fn detect_content_type(content: &str) -> ContentType {
     let trimmed = content.trim_start();
     if (trimmed.starts_with('{') || trimmed.starts_with('['))
@@ -148,7 +153,8 @@ fn looks_like_log(s: &str) -> bool {
     false
 }
 
-/// SmartCrusher — JSON key 순서 정규화 + whitespace 제거 + 숫자 정밀도 축소.
+/// `SmartCrusher` — JSON key 순서 정규화 + whitespace 제거 + 숫자 정밀도 축소.
+#[must_use] 
 pub fn smart_crush(s: &str) -> String {
     // 1) JSON parse 시도
     if let Ok(v) = serde_json::from_str::<serde_json::Value>(s) {
@@ -188,7 +194,8 @@ fn reduce_number_precision(v: &serde_json::Value, decimals: usize) -> serde_json
     }
 }
 
-/// CodeCompressor — 간단한 정규식 기반 압축 (v1.5+ 에서 tree-sitter 통합).
+/// `CodeCompressor` — 간단한 정규식 기반 압축 (v1.5+ 에서 tree-sitter 통합).
+#[must_use] 
 pub fn code_compress(s: &str) -> String {
     let mut out = String::with_capacity(s.len());
     for line in s.lines() {

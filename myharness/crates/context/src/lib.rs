@@ -4,8 +4,8 @@
 //! - [`claude_md`]: project CLAUDE.md 자동 발견
 //! - [`auto_memory`]: 작업 패턴 자동 학습
 //! - [`budget`]: token budget + /compact Layer 1
-//! - [`compression`]: Layer 2 (CacheAligner + ContentRouter + SmartCrusher + CodeCompressor)
-//! - [`config`]: 통합 config + ContextOrchestrator
+//! - [`compression`]: Layer 2 (`CacheAligner` + `ContentRouter` + `SmartCrusher` + `CodeCompressor`)
+//! - [`config`]: 통합 config + `ContextOrchestrator`
 
 pub mod auto_memory;
 pub mod budget;
@@ -20,6 +20,7 @@ pub use compression::{detect_content_type, smart_crush, code_compress, BuiltinCo
 pub use config::{BuiltinLayerConfig, ConfigError, ContextConfig, ContextOrchestrator};
 
 /// Crate 버전.
+#[must_use] 
 pub fn version() -> &'static str {
     env!("CARGO_PKG_VERSION")
 }

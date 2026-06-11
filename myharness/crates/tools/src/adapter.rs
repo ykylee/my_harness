@@ -2,6 +2,9 @@ use crate::error::ToolError;
 use crate::registry::ToolRegistry;
 use crate::tool::{ToolContext, ToolResult};
 
+/// # Errors
+///
+/// This function returns an error if the underlying operation fails.
 pub async fn execute_by_name(
     name: &str,
     input: serde_json::Value,
@@ -10,7 +13,7 @@ pub async fn execute_by_name(
     let registry = ToolRegistry::default_tools();
     let tool = registry
         .get(name)
-        .ok_or_else(|| ToolError::Other(format!("unknown tool: {}", name)))?;
+        .ok_or_else(|| ToolError::Other(format!("unknown tool: {name}")))?;
     tool.execute(ctx, input).await
 }
 

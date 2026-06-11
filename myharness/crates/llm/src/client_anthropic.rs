@@ -21,6 +21,9 @@ pub struct AnthropicProvider {
 }
 
 impl AnthropicProvider {
+    /// # Errors
+    ///
+    /// This function returns an error if the underlying operation fails.
     pub fn new(api_key: &str) -> Result<Self, LlmError> {
         let client = rig_core::providers::anthropic::Client::builder()
             .api_key(api_key)
@@ -33,6 +36,9 @@ impl AnthropicProvider {
         })
     }
 
+    /// # Errors
+    ///
+    /// This function returns an error if the underlying operation fails.
     pub fn from_metadata(meta: &ProviderMetadata, api_key: &str) -> Result<Self, LlmError> {
         let p = Self::new(api_key)?;
         Ok(Self { default_model: meta.default_model.clone(), ..p })

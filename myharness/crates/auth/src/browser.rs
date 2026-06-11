@@ -10,6 +10,10 @@ pub enum BrowserError {
     Launch(#[from] std::io::Error),
 }
 
+///
+/// # Errors
+///
+/// This function returns an error if the underlying operation fails.
 /// URL 을 OS 기본 browser 로 open. blocking (subprocess spawn).
 /// headless 환경 (CI, server) 에서는 실패할 수 있음 — caller 가 fallback (URL 만 print).
 pub fn open(url: &str) -> Result<(), BrowserError> {

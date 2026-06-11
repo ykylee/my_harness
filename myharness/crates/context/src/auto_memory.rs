@@ -43,6 +43,7 @@ pub struct AutoMemory {
 }
 
 impl AutoMemory {
+    #[must_use]
     /// 기본 경로 `~/.myharness/memory/auto/`. `MYHARNESS_HOME` env 로 override 가능.
     pub fn new() -> Result<Self, MemoryError> {
         let base_dir = if let Ok(p) = std::env::var("MYHARNESS_HOME") {
@@ -57,6 +58,7 @@ impl AutoMemory {
         Ok(Self { base_dir })
     }
 
+    #[must_use]
     pub fn with_base(base_dir: PathBuf) -> Self {
         Self { base_dir }
     }
@@ -132,6 +134,7 @@ impl AutoMemory {
         Ok(self.recent(usize::MAX)?.into_iter().filter(|r| r.kind == kind).rev().take(n).collect::<Vec<_>>().into_iter().rev().collect())
     }
 
+    #[must_use]
     /// system prompt injection 텍스트. 최근 N (default 20) 를 kind 별 요약.
     pub fn to_system_prompt_section(&self, max_records: usize) -> Result<String, MemoryError> {
         let recs = self.recent(max_records)?;
@@ -141,18 +144,21 @@ impl AutoMemory {
         let mut out = String::new();
         out.push_str("## Auto memory (recent activity)\n\n");
         for r in &recs {
-            out.push_str(&format!(
+            use std::fmt::Write;
+            let _ = write!(
+                out,
                 "- [{}] {}: {}\n",
                 r.timestamp.format("%Y-%m-%dT%H:%M:%SZ"),
                 r.kind_label(),
                 r.payload
-            ));
+            );
         }
         Ok(out)
     }
 }
 
 impl MemoryKind {
+    #[must_use]
     pub fn label(&self) -> &'static str {
         match self {
             MemoryKind::Tool => "tool",
@@ -165,6 +171,7 @@ impl MemoryKind {
 }
 
 impl MemoryRecord {
+    #[must_use]
     pub fn kind_label(&self) -> &'static str {
         self.kind.label()
     }

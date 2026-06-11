@@ -33,6 +33,7 @@ pub struct RouterResponse {
 }
 
 impl FallbackRouter {
+    #[must_use] 
     pub fn new(chain: ActiveProviderChain) -> Self {
         Self {
             chain: Arc::new(RwLock::new(chain)),
@@ -42,6 +43,7 @@ impl FallbackRouter {
         }
     }
 
+    #[must_use] 
     pub fn with_consecutive_failure_threshold(mut self, n: u32) -> Self {
         self.max_consecutive_failures_skip = n;
         self
@@ -59,6 +61,9 @@ impl FallbackRouter {
         *self.chain.write().await = chain;
     }
 
+    /// # Errors
+    ///
+    /// This function returns an error if the underlying operation fails.
     pub async fn complete(&self, req: CompletionRequest) -> Result<RouterResponse, LlmError> {
         let chain_snapshot = self.chain.read().await.clone();
         let entries: Vec<_> = chain_snapshot.iter().cloned().collect();
@@ -68,15 +73,12 @@ impl FallbackRouter {
 
         for entry in entries {
             attempts += 1;
-            let client = match self.clients.read().await.get(&entry.provider) {
-                Some(c) => Arc::clone(c),
-                None => {
-                    last_err = Some(LlmError::ProviderUnavailable(format!(
-                        "no client for {}",
-                        entry.provider
-                    )));
-                    continue;
-                }
+            let client = if let Some(c) = self.clients.read().await.get(&entry.provider) { Arc::clone(c) } else {
+                last_err = Some(LlmError::ProviderUnavailable(format!(
+                    "no client for {}",
+                    entry.provider
+                )));
+                continue;
             };
 
             // consecutive_failures 가 임계값 이상이고 마지막 fallback 이 아니면 skip

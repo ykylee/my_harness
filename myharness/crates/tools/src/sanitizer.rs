@@ -1,7 +1,7 @@
 //! Bash command sanitization — 위험 패턴 사전 차단 (CONCEPT.md §5.4)
 //!
 //! 9 dangerous patterns + 3 modes (Strict/Permissive/Off).
-//! MVP: regex compiled per check() call (perf tradeoff accepted).
+//! MVP: regex compiled per `check()` call (perf tradeoff accepted).
 
 use std::fmt;
 
@@ -76,6 +76,9 @@ const DANGEROUS_PATTERNS: &[(&str, &str, &str)] = &[
 pub struct BashSanitizer;
 
 impl BashSanitizer {
+    /// # Errors
+    ///
+    /// This function returns an error if the underlying operation fails.
     pub fn check(command: &str, mode: SanitizerMode) -> Result<(), SanitizerViolation> {
         if mode == SanitizerMode::Off {
             return Ok(());
@@ -93,7 +96,7 @@ impl BashSanitizer {
                 match mode {
                     SanitizerMode::Strict => return Err(violation),
                     SanitizerMode::Permissive => {
-                        eprintln!("[sanitizer:warning] {}", violation);
+                        eprintln!("[sanitizer:warning] {violation}");
                         return Ok(());
                     }
                     SanitizerMode::Off => unreachable!(),
@@ -155,8 +158,7 @@ mod tests {
         ] {
             assert!(
                 BashSanitizer::check(cmd, SanitizerMode::Strict).is_ok(),
-                "expected safe command to pass: {}",
-                cmd
+                "expected safe command to pass: {cmd}"
             );
         }
     }

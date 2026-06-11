@@ -21,8 +21,12 @@ pub struct CallbackServer {
 }
 
 impl CallbackServer {
+    ///
+    /// # Errors
+    ///
+    /// This function returns an error if the underlying operation fails.
     /// `127.0.0.1:port` 에 listen + path (예: "/callback") 매치.
-    /// port=0 → OS 가 빈 포트 할당. local_addr 로 실제 port 확인.
+    /// port=0 → OS 가 빈 포트 할당. `local_addr` 로 실제 port 확인.
     pub async fn start(port: u16, path: impl Into<String>) -> Result<Self, OAuthError> {
         let listener = TcpListener::bind(("127.0.0.1", port)).await?;
         let local_addr = listener.local_addr()?;
@@ -39,6 +43,10 @@ impl CallbackServer {
         Ok(Self { local_addr, redirect_path: path, rx: Some(rx) })
     }
 
+    ///
+    /// # Errors
+    ///
+    /// This function returns an error if the underlying operation fails.
     /// caller 가 next `code+state` 받을 때까지 wait (timeout).
     pub async fn wait_for_callback(mut self, timeout: Duration) -> Result<CallbackParams, OAuthError> {
         let rx = self.rx.take().ok_or_else(|| {
@@ -72,9 +80,7 @@ async fn handle_connection(
         None => (path_and_query, String::new()),
     };
     // 성공/실패 모두 client 에 HTML 응답
-    let (status, body) = if path != expected_path {
-        (404, "<h1>404 Not Found</h1>")
-    } else {
+    let (status, body) = if path == expected_path {
         let mut code = None;
         let mut state = None;
         for pair in query.split('&') {
@@ -92,6 +98,8 @@ async fn handle_connection(
             }
             _ => (400, "<h1>400 Bad Request</h1>"),
         }
+    } else {
+        (404, "<h1>404 Not Found</h1>")
     };
     let response = format!(
         "HTTP/1.1 {status} {reason}\r\nContent-Type: text/html; charset=utf-8\r\nContent-Length: {len}\r\nConnection: close\r\n\r\n{body}",
@@ -153,7 +161,7 @@ mod tests {
         let port = s.local_addr.port();
         // 127.0.0.1:port 로 GET /callback?code=abc&state=xyz 요청
         tokio::spawn(async move {
-            let _ = tokio::time::sleep(Duration::from_millis(50)).await;
+            let () = tokio::time::sleep(Duration::from_millis(50)).await;
             let _ = reqwest::get(format!("http://127.0.0.1:{port}/callback?code=abc&state=xyz")).await;
         });
         let params = s.wait_for_callback(Duration::from_secs(2)).await.unwrap();
@@ -173,7 +181,7 @@ mod tests {
         let s = CallbackServer::start(0, "/callback").await.unwrap();
         let port = s.local_addr.port();
         tokio::spawn(async move {
-            let _ = tokio::time::sleep(Duration::from_millis(50)).await;
+            let () = tokio::time::sleep(Duration::from_millis(50)).await;
             let _ = reqwest::get(format!("http://127.0.0.1:{port}/wrong")).await;
         });
         // 404 → callback 안 옴 → timeout

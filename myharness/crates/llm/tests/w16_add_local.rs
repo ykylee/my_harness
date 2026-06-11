@@ -1,6 +1,6 @@
-//! W16 add-local 의 L2 Integration TC (D-59, §7.2 / TC_INTEGRATION.md §W16-AddLocal).
+//! W16 add-local 의 L2 Integration TC (D-59, §7.2 / `TC_INTEGRATION.md` §W16-AddLocal).
 //!
-//! mock strategy: wiremock + tempfile + MYHARNESS_HOME env override.
+//! mock strategy: wiremock + tempfile + `MYHARNESS_HOME` env override.
 
 use myharness_llm::add_local::{
     probe_local_models, register_local_provider, register_local_provider_non_interactive,
@@ -69,7 +69,7 @@ async fn tc_w18_i01_register_creates_backup_before_overwrite() {
     // backup 1개 존재 확인 (first-model 내용)
     let backups: Vec<_> = std::fs::read_dir(tmp.path())
         .unwrap()
-        .filter_map(|e| e.ok())
+        .filter_map(std::result::Result::ok)
         .filter(|e| e.file_name().to_string_lossy().contains(".backup."))
         .collect();
     assert_eq!(backups.len(), 1, "두 번째 register 후 backup 1개");
@@ -79,7 +79,7 @@ async fn tc_w18_i01_register_creates_backup_before_overwrite() {
     unsafe { std::env::remove_var("MYHARNESS_HOME"); }
 }
 
-/// TC-W18-I02 — backup helper 직접 호출 (max_retention 검증)
+/// TC-W18-I02 — backup helper 직접 호출 (`max_retention` 검증)
 #[tokio::test]
 #[serial_test::serial(env)]
 async fn tc_w18_i02_backup_max_retention_keeps_only_n_files() {
@@ -96,7 +96,7 @@ async fn tc_w18_i02_backup_max_retention_keeps_only_n_files() {
 
     let backups: Vec<_> = std::fs::read_dir(tmp.path())
         .unwrap()
-        .filter_map(|e| e.ok())
+        .filter_map(std::result::Result::ok)
         .filter(|e| e.file_name().to_string_lossy().contains(".backup."))
         .collect();
     assert!(backups.len() <= 3, "max 3개 유지, 실제 {}개", backups.len());
@@ -253,7 +253,7 @@ async fn tc_w17_i01_non_interactive_skips_probe_and_writes_toml() {
     unsafe { std::env::remove_var("MYHARNESS_HOME"); }
 }
 
-/// TC-W17-I02 — 비대화형 모드에서 token + base_url + model_id 모두 set → keyring set + register.
+/// TC-W17-I02 — 비대화형 모드에서 token + `base_url` + `model_id` 모두 set → keyring set + register.
 ///
 /// CI 환경 시뮬레이션: stdin/stdout non-tty 일 때 비대화형 함수는 정상 동작.
 #[tokio::test]
@@ -311,7 +311,7 @@ async fn tc_w20_i01_probe_ollama_native_api_tags_succeeds() {
     assert_eq!(models[1].owned_by.as_deref(), Some("qwen2"));
 }
 
-/// TC-W20-I02 — `/api/tags` 404 (Ollama OpenAI compat only or vLLM/LM Studio/llama.cpp)
+/// TC-W20-I02 — `/api/tags` 404 (Ollama `OpenAI` compat only or vLLM/LM Studio/llama.cpp)
 /// → cascade 가 `/v1/models` 로 fallback 성공
 #[tokio::test]
 async fn tc_w20_i02_probe_cascade_fallback_to_openai_compat() {
@@ -337,7 +337,7 @@ async fn tc_w20_i02_probe_cascade_fallback_to_openai_compat() {
     assert_eq!(models[0].owned_by.as_deref(), Some("vllm"));
 }
 
-/// TC-W20-I03 — 양쪽 다 200 응답 시 native 가 우선 (early return, OpenAI 미호출)
+/// TC-W20-I03 — 양쪽 다 200 응답 시 native 가 우선 (early return, `OpenAI` 미호출)
 #[tokio::test]
 async fn tc_w20_i03_probe_ollama_native_takes_priority_over_openai_compat() {
     let server = MockServer::start().await;

@@ -17,6 +17,9 @@ pub struct LocalHit {
 
 const PROBE_TIMEOUT_MS: u64 = 500;
 
+/// # Panics
+///
+/// This function returns an error if the underlying operation fails.
 pub async fn scan_local_servers() -> Vec<LocalHit> {
     let client = reqwest::Client::builder()
         .timeout(Duration::from_millis(PROBE_TIMEOUT_MS))
@@ -56,30 +59,24 @@ pub async fn scan_local_servers() -> Vec<LocalHit> {
 }
 
 async fn parse_models(server: &str, resp: reqwest::Response) -> Vec<String> {
-    let body = match resp.text().await {
-        Ok(b) => b,
-        Err(_) => return vec![],
-    };
-    match server {
-        "ollama" => {
-            #[derive(Deserialize)]
-            struct O { models: Vec<OM> }
-            #[derive(Deserialize)]
-            struct OM { name: String }
-            serde_json::from_str::<O>(&body)
-                .map(|o| o.models.into_iter().map(|m| m.name).collect())
-                .unwrap_or_default()
-        }
-        _ => {
-            // OpenAI 호환: { "data": [ { "id": "model-name" } ] }
-            #[derive(Deserialize)]
-            struct R { data: Vec<D> }
-            #[derive(Deserialize)]
-            struct D { id: String }
-            serde_json::from_str::<R>(&body)
-                .map(|r| r.data.into_iter().map(|d| d.id).collect())
-                .unwrap_or_default()
-        }
+    let Ok(body) = resp.text().await else { return vec![] };
+    if server == "ollama" {
+        #[derive(Deserialize)]
+        struct O { models: Vec<OM> }
+        #[derive(Deserialize)]
+        struct OM { name: String }
+        serde_json::from_str::<O>(&body)
+            .map(|o| o.models.into_iter().map(|m| m.name).collect())
+            .unwrap_or_default()
+    } else {
+        // OpenAI 호환: { "data": [ { "id": "model-name" } ] }
+        #[derive(Deserialize)]
+        struct R { data: Vec<D> }
+        #[derive(Deserialize)]
+        struct D { id: String }
+        serde_json::from_str::<R>(&body)
+            .map(|r| r.data.into_iter().map(|d| d.id).collect())
+            .unwrap_or_default()
     }
 }
 

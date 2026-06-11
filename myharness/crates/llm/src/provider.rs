@@ -1,4 +1,4 @@
-//! 6 provider 식별자 + 종류 분류 (Native / OpenAI 호환).
+//! 6 provider 식별자 + 종류 분류 (Native / `OpenAI` 호환).
 
 use serde::{Deserialize, Serialize};
 
@@ -8,15 +8,15 @@ use serde::{Deserialize, Serialize};
 pub enum ProviderId {
     /// Anthropic Claude (native SDK)
     Claude,
-    /// OpenAI Codex / GPT (native SDK)
+    /// `OpenAI` Codex / GPT (native SDK)
     Codex,
     /// Google Gemini (native SDK)
     Gemini,
-    /// DeepSeek (OpenAI 호환)
+    /// `DeepSeek` (`OpenAI` 호환)
     Deepseek,
-    /// Minimax (OpenAI 호환, base_url 미검증 — D-28 TBD)
+    /// Minimax (`OpenAI` 호환, `base_url` 미검증 — D-28 TBD)
     Minimax,
-    /// local LLM — Ollama / vLLM / LM Studio / llama.cpp (OpenAI 호환)
+    /// local LLM — Ollama / vLLM / LM Studio / llama.cpp (`OpenAI` 호환)
     LocalLlm,
 }
 
@@ -31,6 +31,7 @@ impl ProviderId {
         ProviderId::LocalLlm,
     ];
 
+    #[must_use] 
     pub fn as_str(&self) -> &'static str {
         match self {
             ProviderId::Claude => "claude",
@@ -43,6 +44,7 @@ impl ProviderId {
     }
 
     #[allow(clippy::should_implement_trait)]
+    #[must_use] 
     pub fn from_str(s: &str) -> Option<Self> {
         match s {
             "claude" => Some(ProviderId::Claude),
@@ -62,26 +64,26 @@ impl std::fmt::Display for ProviderId {
     }
 }
 
-/// SDK 의 종류. fallback 가능 여부 + base_url 사용 결정.
+/// SDK 의 종류. fallback 가능 여부 + `base_url` 사용 결정.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "kebab-case")]
 pub enum ProviderKind {
     /// rig-core native SDK 사용 (Anthropic, Gemini)
     Native,
-    /// OpenAI 호환 API (DeepSeek, Minimax, local-llm)
+    /// `OpenAI` 호환 API (`DeepSeek`, Minimax, local-llm)
     OpenAiCompat,
 }
 
 impl ProviderId {
-    /// native vs OpenAI 호환 분류. Codex 도 v1 에서는 OpenAI 호환 (`CompletionsClient`) 으로 wrap.
+    /// native vs `OpenAI` 호환 분류. Codex 도 v1 에서는 `OpenAI` 호환 (`CompletionsClient`) 으로 wrap.
+    #[must_use] 
     pub fn kind(&self) -> ProviderKind {
         match self {
-            ProviderId::Claude => ProviderKind::Native,
-            ProviderId::Gemini => ProviderKind::Native,
-            ProviderId::Codex => ProviderKind::OpenAiCompat,
-            ProviderId::Deepseek => ProviderKind::OpenAiCompat,
-            ProviderId::Minimax => ProviderKind::OpenAiCompat,
-            ProviderId::LocalLlm => ProviderKind::OpenAiCompat,
+            ProviderId::Claude | ProviderId::Gemini => ProviderKind::Native,
+            ProviderId::Codex
+            | ProviderId::Deepseek
+            | ProviderId::Minimax
+            | ProviderId::LocalLlm => ProviderKind::OpenAiCompat,
         }
     }
 }

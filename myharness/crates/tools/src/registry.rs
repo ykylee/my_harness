@@ -20,6 +20,7 @@ impl Default for ToolRegistry {
 }
 
 impl ToolRegistry {
+    #[must_use] 
     pub fn new() -> Self {
         Self {
             tools: HashMap::new(),
@@ -30,6 +31,7 @@ impl ToolRegistry {
         self.tools.insert(tool.name().to_string(), tool);
     }
 
+    #[must_use] 
     pub fn default_tools() -> Self {
         let mut reg = Self::new();
         reg.register(Arc::new(ReadTool));
@@ -41,10 +43,12 @@ impl ToolRegistry {
         reg
     }
 
+    #[must_use] 
     pub fn get(&self, name: &str) -> Option<Arc<dyn Tool>> {
         self.tools.get(name).cloned()
     }
 
+    #[must_use] 
     pub fn names(&self) -> Vec<String> {
         let mut names: Vec<String> = self.tools.keys().cloned().collect();
         names.sort();

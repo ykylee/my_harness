@@ -37,6 +37,7 @@ pub use pkce::{generate_pkce, generate_state, PkceMethod, PkcePair};
 pub use store::{StoreError, StoredToken, TokenStore};
 
 /// Crate 버전.
+#[must_use] 
 pub fn version() -> &'static str {
     env!("CARGO_PKG_VERSION")
 }

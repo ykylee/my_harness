@@ -8,6 +8,7 @@
 //!
 //! 정확 복원 안 함 — LLM 이 이해 가능한 수준. v1.5+ 에서 ONNX ML 모델 도입 (Kompress-base 실제).
 
+#![allow(clippy::cast_possible_truncation, clippy::cast_precision_loss, clippy::cast_sign_loss, clippy::cast_possible_wrap)]
 #[derive(Debug, Clone)]
 pub struct KompressConfig {
     pub collapse_whitespace: bool,
@@ -46,6 +47,7 @@ const STOPWORDS: &[&str] = &[
 ];
 
 /// v1 simple 압축. LLM 이 이해 가능한 수준으로 줄임.
+#[must_use] 
 pub fn kompress_v1(text: &str, cfg: &KompressConfig) -> String {
     let mut out = text.to_string();
     if cfg.collapse_whitespace {
@@ -103,11 +105,11 @@ fn remove_stopwords(s: &str) -> String {
         // token = 단어 + trailing 공백/구두점
         let (word, trailing) = split_word_trailing(token);
         let lower = word.to_ascii_lowercase();
-        if !STOPWORDS.contains(&lower.as_str()) {
-            out.push_str(token);
-        } else {
+        if STOPWORDS.contains(&lower.as_str()) {
             // stopword: trailing 만 보존
             out.push_str(trailing);
+        } else {
+            out.push_str(token);
         }
     }
     out
@@ -146,6 +148,7 @@ pub struct KompressStats {
 }
 
 impl KompressStats {
+    #[must_use] 
     pub fn from(original: &str, compressed: &str) -> Self {
         Self {
             original_chars: original.chars().count(),
@@ -153,6 +156,7 @@ impl KompressStats {
         }
     }
 
+    #[must_use] 
     pub fn savings_ratio(&self) -> f32 {
         if self.original_chars == 0 {
             return 0.0;

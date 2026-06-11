@@ -31,6 +31,10 @@ pub struct EnvVarHit {
     pub env_var: String,
 }
 
+///
+/// # Errors
+///
+/// This function returns an error if the underlying operation fails.
 /// 메인 진입점. env + (keychain) + local scan 병렬 → 우선순위 merge → persist.
 pub async fn discover(
     registry: &ProviderRegistry,
@@ -117,7 +121,6 @@ fn merge(
                     auth_state: AuthState::LocalDetected,
                     default_model: m.default_model.clone(),
                 });
-                continue;
             }
     }
     out
@@ -139,8 +142,8 @@ mod tests {
         assert!(r.local_hits.len() == 4);
     }
 
-    /// W12 (D-50) — integration test: discover() 가 6 provider 의 default model/base_url 로 동작.
-    /// 실제 network call 은 안 함 (--ignored). real test 는 MINIMAX_API_KEY 등 env 주입 후 수동 실행.
+    /// W12 (D-50) — integration test: `discover()` 가 6 provider 의 default `model/base_url` 로 동작.
+    /// 실제 network call 은 안 함 (--ignored). real test 는 `MINIMAX_API_KEY` 등 env 주입 후 수동 실행.
     #[tokio::test]
     #[ignore = "requires real network and env var; run manually with MINIMAX_API_KEY set"]
     async fn discover_minimax_integration_smoke() {

@@ -4,7 +4,7 @@
 //!
 //! ### Request side (tools definition)
 //!
-//! | Field | Anthropic | OpenAI strict | DeepSeek | Ollama (OpenAI-compat) | llama.cpp | LiteLlm |
+//! | Field | Anthropic | `OpenAI` strict | `DeepSeek` | Ollama (OpenAI-compat) | llama.cpp | `LiteLlm` |
 //! |---|---|---|---|---|---|---|
 //! | `name` | ✅ top-level | ✅ `function.name` | ✅ `function.name` | ✅ `function.name` | ✅ `function.name` | ✅ `function.name` |
 //! | `description` | ✅ top-level | ✅ `function.description` | ✅ `function.description` | ✅ `function.description` | ✅ `function.description` | ✅ `function.description` |
@@ -14,9 +14,9 @@
 //! | `parameters.required` (all fields) | ❌ (in `input_schema`) | ✅ (strict 필수) | ✅ (strict 필수) | ✅ (basic) | ✅ (basic) | ✅ (pass-through) |
 //! | `parameters.$schema` | ❌ | ⚠️ strip 권장 (draft-07 거부 가능) | ⚠️ strip 권장 | ❌ (strip) | ❌ (strip) | ⚠️ strip 권장 (pass-through) |
 //!
-//! ### Response side (tool_calls array)
+//! ### Response side (`tool_calls` array)
 //!
-//! | Field | OpenAI | DeepSeek | Ollama (OpenAI-compat) | llama.cpp | LiteLlm |
+//! | Field | `OpenAI` | `DeepSeek` | Ollama (OpenAI-compat) | llama.cpp | `LiteLlm` |
 //! |---|---|---|---|---|---|
 //! | `tool_calls[].id` | ✅ `call_abc` | ✅ `call_00_...` | ❌ **없음** | ❌ **없음** | ✅ (upstream) |
 //! | `tool_calls[].type: "function"` | ✅ | ✅ | ❌ | ❌ | ✅ (upstream) |
@@ -28,11 +28,11 @@
 //! Response 처리는 W7+ (llm crate 진입 시점).
 //!
 //! **중요 정정 (W6.5.5)**:
-//! - DeepSeek strict mode = **Beta URL** `https://api.deepseek.com/beta` 필요 (W6.5 가 "❌" 으로 표기했으나 librarian 가 "✅" 확인)
+//! - `DeepSeek` strict mode = **Beta URL** `https://api.deepseek.com/beta` 필요 (W6.5 가 "❌" 으로 표기했으나 librarian 가 "✅" 확인)
 //! - schemars 1.2 의 `$schema` 출력 = `http://json-schema.org/draft-07/schema#` (W6.5 가 "draft/2020-12" 로 임의 강제했으나 실제는 draft-07)
-//! - OpenAI structured outputs 는 `$schema` field 거부 가능 → strict mode wire format 에서 strip
-//! - Ollama/llama.cpp 는 response 의 `id`/`type`/`arguments` (object) 가 OpenAI 와 다름 → W7+ 에서 response 처리 시 분기
-//! - llama.cpp `finish_reason: "tool"` (단수) → OpenAI `"tool_calls"` 와 다름
+//! - `OpenAI` structured outputs 는 `$schema` field 거부 가능 → strict mode wire format 에서 strip
+//! - Ollama/llama.cpp 는 response 의 `id`/`type`/`arguments` (object) 가 `OpenAI` 와 다름 → W7+ 에서 response 처리 시 분기
+//! - llama.cpp `finish_reason: "tool"` (단수) → `OpenAI` `"tool_calls"` 와 다름
 
 use schemars::{JsonSchema, schema_for};
 use serde::{Deserialize, Serialize};
@@ -97,6 +97,7 @@ impl Default for ToolSchemaRegistry {
 }
 
 impl ToolSchemaRegistry {
+    #[must_use] 
     pub fn new() -> Self {
         Self {
             schemas: HashMap::new(),
@@ -107,6 +108,10 @@ impl ToolSchemaRegistry {
         self.schemas.insert(schema.name.clone(), schema);
     }
 
+    /// # Panics
+    ///
+    /// This function returns an error if the underlying operation fails.
+    #[must_use] 
     pub fn default_schemas() -> Self {
         let mut reg = Self::new();
         reg.register(ToolSchema {
@@ -143,16 +148,19 @@ impl ToolSchemaRegistry {
         reg
     }
 
+    #[must_use] 
     pub fn get(&self, name: &str) -> Option<&ToolSchema> {
         self.schemas.get(name)
     }
 
+    #[must_use] 
     pub fn names(&self) -> Vec<String> {
         let mut n: Vec<_> = self.schemas.keys().cloned().collect();
         n.sort();
         n
     }
 
+    #[must_use] 
     pub fn to_anthropic_tools(&self) -> Vec<serde_json::Value> {
         self.schemas
             .values()
@@ -166,6 +174,7 @@ impl ToolSchemaRegistry {
             .collect()
     }
 
+    #[must_use] 
     pub fn to_openai_tools(&self) -> Vec<serde_json::Value> {
         self.schemas
             .values()
@@ -182,8 +191,9 @@ impl ToolSchemaRegistry {
             .collect()
     }
 
-    /// OpenAI strict mode: `strict=true`, `additionalProperties=false`,
-    /// `$schema` stripped (OpenAI 거부 가능), `required` array from schemars.
+    /// `OpenAI` strict mode: `strict=true`, `additionalProperties=false`,
+    /// `$schema` stripped (`OpenAI` 거부 가능), `required` array from schemars.
+    #[must_use] 
     pub fn to_openai_tools_strict(&self) -> Vec<serde_json::Value> {
         self.schemas
             .values()
@@ -209,9 +219,10 @@ impl ToolSchemaRegistry {
             .collect()
     }
 
-    /// DeepSeek: OpenAI-compatible wire format.
+    /// `DeepSeek`: OpenAI-compatible wire format.
     /// Strict mode 는 Beta URL (`https://api.deepseek.com/beta`) 에서 지원.
-    /// Non-Beta URL 에서는 to_openai_tools() 사용.
+    /// Non-Beta URL 에서는 `to_openai_tools()` 사용.
+    #[must_use] 
     pub fn to_deepseek_tools(&self) -> Vec<serde_json::Value> {
         self.schemas
             .values()
@@ -229,6 +240,7 @@ impl ToolSchemaRegistry {
     }
 
     /// Ollama 0.5.x: OpenAI-compatible minus `$schema` and `additionalProperties`.
+    #[must_use] 
     pub fn to_ollama_tools(&self) -> Vec<serde_json::Value> {
         self.schemas
             .values()
@@ -250,15 +262,16 @@ impl ToolSchemaRegistry {
             .collect()
     }
 
-    /// LiteLlm: 1:1 alias → [`ToolSchemaRegistry::to_openai_tools_strict`].
+    /// `LiteLlm`: 1:1 alias → [`ToolSchemaRegistry::to_openai_tools_strict`].
     /// `$schema` strip 포함 (pass-through 시 거부 회피).
+    #[must_use] 
     pub fn to_litellm_tools(&self) -> Vec<serde_json::Value> {
         self.to_openai_tools_strict()
     }
 }
 
 /// Recursively remove `$schema` fields from a JSON schema value.
-/// OpenAI strict mode / LiteLlm pass-through 시 `$schema` 거부 회피.
+/// `OpenAI` strict mode / `LiteLlm` pass-through 시 `$schema` 거부 회피.
 fn strip_dollar_schema(mut params: serde_json::Value) -> serde_json::Value {
     if let Some(obj) = params.as_object_mut() {
         obj.remove("$schema");
@@ -280,7 +293,7 @@ fn strip_dollar_schema(mut params: serde_json::Value) -> serde_json::Value {
 /// Provider-agnostic dispatch for wire-format tool generation.
 ///
 /// Maps each provider to its corresponding `ToolSchemaRegistry` method.
-/// Supported providers: Anthropic, OpenAI (strict), DeepSeek, Ollama, llama.cpp, LiteLlm.
+/// Supported providers: Anthropic, `OpenAI` (strict), `DeepSeek`, Ollama, llama.cpp, `LiteLlm`.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum ProviderCompat {
     Anthropic,
@@ -293,18 +306,19 @@ pub enum ProviderCompat {
 
 impl ProviderCompat {
     /// Dispatch to the correct wire-format method for this provider.
+    #[must_use] 
     pub fn wire_format_tools(&self, reg: &ToolSchemaRegistry) -> Vec<serde_json::Value> {
         match self {
             Self::Anthropic => reg.to_anthropic_tools(),
             Self::OpenAI => reg.to_openai_tools_strict(),
             Self::DeepSeek => reg.to_deepseek_tools(),
-            Self::Ollama => reg.to_ollama_tools(),
-            Self::LlamaCpp => reg.to_ollama_tools(),
+            Self::Ollama | Self::LlamaCpp => reg.to_ollama_tools(),
             Self::LiteLlm => reg.to_litellm_tools(),
         }
     }
 
     /// Canonical provider name string.
+    #[must_use] 
     pub fn name(&self) -> &'static str {
         match self {
             Self::Anthropic => "anthropic",
@@ -317,6 +331,7 @@ impl ProviderCompat {
     }
 
     /// Response format 의 주요 차이점 1-2줄. W7+ 에서 response 처리 시 활용.
+    #[must_use] 
     pub fn response_notes(&self) -> &'static str {
         match self {
             Self::Anthropic => {
@@ -386,13 +401,11 @@ mod tests {
             assert_eq!(
                 input.get("type").and_then(|v| v.as_str()),
                 Some("object"),
-                "{} input_schema should have type=object",
-                name
+                "{name} input_schema should have type=object"
             );
             assert!(
                 input.get("properties").is_some(),
-                "{} input_schema should have properties",
-                name
+                "{name} input_schema should have properties"
             );
         }
     }

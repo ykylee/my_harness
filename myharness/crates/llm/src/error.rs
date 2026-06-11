@@ -50,6 +50,7 @@ pub enum LlmError {
 
 impl LlmError {
     /// router 가 fallback 해야 하는 에러인지.
+    #[must_use] 
     pub fn is_fallbackable(&self) -> bool {
         matches!(
             self,

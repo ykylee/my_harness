@@ -3,7 +3,7 @@
 //! 모듈:
 //! - [`events`]: crossterm backend + key mapping
 //! - [`app`]: App state + ratatui draw logic
-//! - [`agent`]: SubAgent trait + 4 구현 (W10.2)
+//! - [`agent`]: `SubAgent` trait + 4 구현 (W10.2)
 //! - [`orchestrator`]: 도메인 dispatch + tools/llm 통합 (W10.3)
 //! - [`loop_mode`]: ralph-wiggum 패턴 (W10.4)
 
@@ -20,6 +20,7 @@ pub use loop_mode::{LoopConfig, LoopIteration, LoopReport, LoopRunner, LoopStop}
 pub use orchestrator::{DispatchDecision, DispatchKind, Orchestrator};
 
 /// Crate 버전.
+#[must_use] 
 pub fn version() -> &'static str {
     env!("CARGO_PKG_VERSION")
 }
@@ -34,6 +35,7 @@ mod tests {
     }
 
     #[test]
+    #[allow(clippy::no_effect_underscore_binding)]
     fn public_api_exports() {
         let _app: App = App::new("x", "orchestrator");
         let _k: AppKey = AppKey::Enter;

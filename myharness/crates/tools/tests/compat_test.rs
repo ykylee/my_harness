@@ -47,7 +47,7 @@ fn test_provider_compat_6_providers() {
     ];
     for p in &providers {
         let tools = p.wire_format_tools(&reg);
-        assert_eq!(tools.len(), 6, "{:?} returned wrong count", p);
+        assert_eq!(tools.len(), 6, "{p:?} returned wrong count");
     }
 }
 
@@ -70,8 +70,7 @@ fn test_6_providers_wire_format_with_dollar_schema_handling() {
                 for tool in &tools {
                     assert!(
                         tool["function"]["parameters"].get("$schema").is_none(),
-                        "{:?} should strip $schema",
-                        p
+                        "{p:?} should strip $schema"
                     );
                 }
             }

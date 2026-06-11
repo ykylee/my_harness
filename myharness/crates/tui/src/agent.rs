@@ -1,6 +1,6 @@
-//! SubAgent trait + 4 v1 구현 (CONCEPT §5.11).
+//! `SubAgent` trait + 4 v1 구현 (CONCEPT §5.11).
 //!
-//! v1: hardcoded system prompt + allowed_tools. v1.5+: `~/.myharness/sub-agents/<name>/SYSTEM.md`.
+//! v1: hardcoded system prompt + `allowed_tools`. v1.5+: `~/.myharness/sub-agents/<name>/SYSTEM.md`.
 
 use async_trait::async_trait;
 
@@ -13,6 +13,7 @@ pub enum SubAgentDomain {
 }
 
 impl SubAgentDomain {
+    #[must_use] 
     pub fn label(&self) -> &'static str {
         match self {
             SubAgentDomain::Code => "code",
@@ -39,6 +40,7 @@ impl SubAgentKind {
         SubAgentKind::GitOperator,
     ];
 
+    #[must_use] 
     pub fn as_str(&self) -> &'static str {
         match self {
             SubAgentKind::CodeReviewer => "code-reviewer",
@@ -49,6 +51,7 @@ impl SubAgentKind {
     }
 
     #[allow(clippy::should_implement_trait)]
+    #[must_use] 
     pub fn from_str(s: &str) -> Option<Self> {
         match s {
             "code-reviewer" => Some(Self::CodeReviewer),
@@ -59,6 +62,7 @@ impl SubAgentKind {
         }
     }
 
+    #[must_use] 
     pub fn domain(&self) -> SubAgentDomain {
         match self {
             SubAgentKind::CodeReviewer | SubAgentKind::CodeImplementer => SubAgentDomain::Code,
@@ -68,7 +72,7 @@ impl SubAgentKind {
     }
 }
 
-/// SubAgent 정의. v1 hardcoded.
+/// `SubAgent` 정의. v1 hardcoded.
 #[derive(Debug, Clone)]
 pub struct SubAgentDef {
     pub kind: SubAgentKind,
@@ -102,6 +106,7 @@ pub struct EnvDiagnoseAgent;
 pub struct GitOperatorAgent;
 
 impl SubAgentDef {
+    #[must_use] 
     pub fn for_kind(kind: SubAgentKind) -> Self {
         match kind {
             SubAgentKind::CodeReviewer => Self {
@@ -197,10 +202,11 @@ impl SubAgent for GitOperatorAgent {
     }
 }
 
-/// SubAgent registry — 4개 hardcoded.
+/// `SubAgent` registry — 4개 hardcoded.
 pub struct SubAgentRegistry;
 
 impl SubAgentRegistry {
+    #[must_use] 
     pub fn all() -> Vec<&'static dyn SubAgent> {
         vec![
             &CodeReviewerAgent,
@@ -210,6 +216,7 @@ impl SubAgentRegistry {
         ]
     }
 
+    #[must_use] 
     pub fn for_kind(kind: SubAgentKind) -> Option<&'static dyn SubAgent> {
         match kind {
             SubAgentKind::CodeReviewer => Some(&CodeReviewerAgent),
@@ -219,10 +226,12 @@ impl SubAgentRegistry {
         }
     }
 
+    #[must_use] 
     pub fn by_domain(domain: SubAgentDomain) -> Vec<&'static dyn SubAgent> {
         Self::all().into_iter().filter(|a| a.def().domain == domain).collect()
     }
 
+    #[must_use] 
     pub fn by_name(name: &str) -> Option<&'static dyn SubAgent> {
         let kind = SubAgentKind::from_str(name)?;
         Self::for_kind(kind)
@@ -235,8 +244,8 @@ mod tests {
 
     #[test]
     fn all_kind_six_unique_strings() {
-        let mut names: Vec<_> = SubAgentKind::ALL.iter().map(|k| k.as_str()).collect();
-        names.sort();
+        let mut names: Vec<_> = SubAgentKind::ALL.iter().map(super::SubAgentKind::as_str).collect();
+        names.sort_unstable();
         names.dedup();
         assert_eq!(names.len(), 4);
     }

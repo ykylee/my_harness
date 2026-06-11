@@ -1,4 +1,4 @@
-//! ContextConfig — `~/.myharness/config.toml` 의 [context] 섹션 통합.
+//! `ContextConfig` — `~/.myharness/config.toml` 의 [context] 섹션 통합.
 
 use std::path::Path;
 
@@ -35,6 +35,10 @@ pub enum ConfigError {
 }
 
 impl ContextConfig {
+    ///
+    /// # Errors
+    ///
+    /// This function returns an error if the underlying operation fails.
     /// TOML 파일에서 load. 없거나 [context] 섹션이 없으면 default 반환.
     pub fn load(path: &Path) -> Result<Self, ConfigError> {
         if !path.exists() {
@@ -51,12 +55,15 @@ impl ContextConfig {
         }
     }
 
+    /// # Errors
+    ///
+    /// This function returns an error if the underlying operation fails.
     pub fn to_toml(&self) -> Result<String, ConfigError> {
         Ok(toml::to_string(self)?)
     }
 }
 
-/// ContextManager + Builtin pipeline + Auto memory 통합.
+/// `ContextManager` + Builtin pipeline + Auto memory 통합.
 pub struct ContextOrchestrator {
     pub config: ContextConfig,
     pub manager: ContextManager,
@@ -66,6 +73,9 @@ pub struct ContextOrchestrator {
 }
 
 impl ContextOrchestrator {
+    /// # Errors
+    ///
+    /// This function returns an error if the underlying operation fails.
     pub fn from_config(config: ContextConfig, cwd: &Path) -> Result<Self, crate::budget::BudgetError> {
         let manager = ContextManager::new(config.budget.clone())?;
         let builtin = BuiltinPipeline::new(config.builtin.algorithms.clone());
@@ -80,7 +90,8 @@ impl ContextOrchestrator {
     }
 
     /// LLM 호출 직전 호출: 1) builtin 압축, 2) auto memory inject, 3) claude context inject.
-    /// returns (system_prompt, messages).
+    /// returns (`system_prompt`, messages).
+    #[must_use] 
     pub fn prepare_request(
         &self,
         user_system: Option<String>,

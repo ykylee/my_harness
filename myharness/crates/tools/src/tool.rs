@@ -27,6 +27,7 @@ pub struct ToolContext {
 }
 
 impl ToolContext {
+    #[must_use] 
     pub fn new(cwd: PathBuf, permission_mode: PermissionMode) -> Self {
         Self {
             cwd,
@@ -36,11 +37,13 @@ impl ToolContext {
         }
     }
 
+    #[must_use] 
     pub fn with_confirm_override(mut self, override_: bool) -> Self {
         self.confirm_override = override_;
         self
     }
 
+    #[must_use] 
     pub fn with_sanitizer_mode(mut self, mode: SanitizerMode) -> Self {
         self.sanitizer_mode = mode;
         self

@@ -1,16 +1,16 @@
-//! `auth add-local` subcommand 의 register_local_provider API (W16, D-59).
+//! `auth add-local` subcommand 의 `register_local_provider` API (W16, D-59).
 //!
 //! 흐름:
-//! 1. `probe_local_models` — OpenAI 호환 GET `{base_url}/models` 호출
+//! 1. `probe_local_models` — `OpenAI` 호환 GET `{base_url}/models` 호출
 //! 2. cli 측 inquire UI — 모델 선택
-//! 3. `register_local_provider` — KeyringAuthStore set + ProviderRegistry 의 LocalLlm entry 갱신
+//! 3. `register_local_provider` — `KeyringAuthStore` set + `ProviderRegistry` 의 `LocalLlm` entry 갱신
 //!
 //! # 설계 의도 (DD-AddLocal §3)
 //!
 //! - `register_local_provider` 는 **순수 등록 함수** (inquire 미사용) → unit test 가능
 //! - cli 측 (`myharness-cli`) 에서 inquire 통합 + `is_terminal()` 분기 + 한국어 출력
-//! - ProviderRegistry 갱신 시 atomic write (tmp + rename) 로 손상 방지
-//! - KeyringAuthStore backend=None (Linux libsecret 미설치) → in-memory fallback (W7.2 정책)
+//! - `ProviderRegistry` 갱신 시 atomic write (tmp + rename) 로 손상 방지
+//! - `KeyringAuthStore` backend=None (Linux libsecret 미설치) → in-memory fallback (W7.2 정책)
 
 use std::path::Path;
 use std::time::Duration;
@@ -25,11 +25,11 @@ use crate::paths;
 use crate::provider::ProviderId;
 use crate::registry::{ProviderRegistry, RegistryError};
 
-/// OpenAI 호환 `/v1/models` 응답 의 한 model entry.
+/// `OpenAI` 호환 `/v1/models` 응답 의 한 model entry.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct ModelInfo {
     pub id: String,
-    /// 서버가 제공한 추가 메타 (e.g., owned_by). 표시용, persistence 안 함.
+    /// 서버가 제공한 추가 메타 (e.g., `owned_by`). 표시용, persistence 안 함.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub owned_by: Option<String>,
 }
@@ -77,11 +77,15 @@ pub enum RegisterError {
     AtomicWrite(#[from] std::io::Error),
 }
 
-/// 로컬 LLM 서버 probe (D-63 cascade: Ollama native → OpenAI 호환).
+///
+/// # Errors
+///
+/// This function returns an error if the underlying operation fails.
+/// 로컬 LLM 서버 probe (D-63 cascade: Ollama native → `OpenAI` 호환).
 ///
 /// # Cascade 순서
 /// 1. `GET {base}/api/tags` (Ollama native) — Ollama default 모드 커버
-/// 2. 실패 시 `GET {base}/v1/models` (OpenAI 호환) — vLLM / LM Studio / llama.cpp / Ollama OpenAI compat
+/// 2. 실패 시 `GET {base}/v1/models` (`OpenAI` 호환) — vLLM / LM Studio / llama.cpp / Ollama `OpenAI` compat
 ///
 /// # 인자
 /// - `base_url`: 사용자가 입력한 base URL (`http://localhost:11434` 또는 `http://localhost:11434/v1`)
@@ -89,7 +93,7 @@ pub enum RegisterError {
 ///
 /// # Returns
 /// - 성공 시 `Vec<ModelInfo>` (cascade 첫 번째 성공 endpoint)
-/// - 둘 다 실패 시 cascade 의 마지막 에러 (OpenAI compat 4xx/5xx or connection refused)
+/// - 둘 다 실패 시 cascade 의 마지막 에러 (`OpenAI` compat 4xx/5xx or connection refused)
 pub async fn probe_local_models(
     base_url: &str,
     token: Option<&str>,
@@ -122,13 +126,13 @@ async fn probe_ollama_tags(
             let models = parse_ollama_tags(&body);
             Ok(Some(models))
         }
-        Err(RegisterError::HttpError { status: 404, .. })
-        | Err(RegisterError::HttpError { status: 405, .. }) => Ok(None),
+        Err(RegisterError::HttpError { status: 404, .. } | RegisterError::HttpError {
+status: 405, .. }) => Ok(None),
         Err(e) => Err(e),
     }
 }
 
-/// OpenAI 호환 `/v1/models` probe. W16 의 원래 동작.
+/// `OpenAI` 호환 `/v1/models` probe. W16 의 원래 동작.
 ///
 /// `base` 가 `/v1` 으로 끝나면 `format!("{base}/models")` (back-compat W16 caller),
 /// 아니면 `format!("{base}/v1/models")` (caller 가 bare host 만 전달한 경우).
@@ -223,7 +227,7 @@ pub(crate) fn parse_ollama_tags(body: &serde_json::Value) -> Vec<ModelInfo> {
         .unwrap_or_default()
 }
 
-/// OpenAI 호환 `/v1/models` 응답 → `Vec<ModelInfo>`.
+/// `OpenAI` 호환 `/v1/models` 응답 → `Vec<ModelInfo>`.
 ///
 /// 응답 형식: `{"data": [{"id": "llama3.1:8b", "owned_by": "ollama"}, ...]}`
 pub(crate) fn parse_openai_models(body: &serde_json::Value) -> Vec<ModelInfo> {
@@ -245,20 +249,24 @@ pub(crate) fn parse_openai_models(body: &serde_json::Value) -> Vec<ModelInfo> {
         .unwrap_or_default()
 }
 
-/// 로컬 LLM 등록 — `~/.myharness/providers.toml` 의 LocalLlm entry 갱신 + (옵션) keyring set.
+///
+/// # Errors
+///
+/// This function returns an error if the underlying operation fails.
+/// 로컬 LLM 등록 — `~/.myharness/providers.toml` 의 `LocalLlm` entry 갱신 + (옵션) keyring set.
 ///
 /// # 흐름
 /// 1. `base_url` 의 URL parse 검증
 /// 2. `token` 이 Some 이면 `KeyringAuthStore::set(LocalLlm, &token)` 호출
-/// 3. `ProviderRegistry::load_from_path` (없으면 with_builtins() 시작) → `LocalLlm` entry 의
+/// 3. `ProviderRegistry::load_from_path` (없으면 `with_builtins()` 시작) → `LocalLlm` entry 의
 ///    `base_url` + `default_model` + `available_models` 갱신 → `save_to_path`
 /// 4. atomic write (tmp + rename) 로 providers.toml 손상 방지
 ///
 /// # 인자
-/// - `base_url`: OpenAI 호환 endpoint (e.g., `http://localhost:11434/v1`)
+/// - `base_url`: `OpenAI` 호환 endpoint (e.g., `http://localhost:11434/v1`)
 /// - `token`: API token (Ollama 는 None, vLLM/LM Studio/llama.cpp 는 Some)
 /// - `selected_model`: 사용자가 선택한 모델
-/// - `available_models`: probe 결과 전체 (selected_model 포함)
+/// - `available_models`: probe 결과 전체 (`selected_model` 포함)
 ///
 /// # 비고 (W19-1, D-62 follow-up)
 /// - thin wrapper: `KeyringAuthStore::probe()` 1회 → [`register_local_provider_with_store`] 위임
@@ -273,20 +281,24 @@ pub async fn register_local_provider(
     register_local_provider_with_store(&base_url, token.as_deref(), &selected_model, &available_models, &store).await
 }
 
-/// AuthStore 트레이트 객체 주입 변형 (W19-1, D-62 follow-up).
+///
+/// # Errors
+///
+/// This function returns an error if the underlying operation fails.
+/// `AuthStore` 트레이트 객체 주입 변형 (W19-1, D-62 follow-up).
 ///
 /// ## WHY
 /// - v1.5 `register_local_provider` 는 내부에서 `KeyringAuthStore::probe()` 1회 — 호출자(store A)
 ///   와 함수 내부(store B) 가 **별개 instance** 라 in-memory cache 공유 안 됨
-/// - TC-W17-002 가 libsecret 부재 환경에서 store A.get() 시 BackendUnavailable 로 fail
+/// - TC-W17-002 가 libsecret 부재 환경에서 store `A.get()` 시 `BackendUnavailable` 로 fail
 /// - 해결: caller 가 만든 store 1개를 명시적으로 전달 → cache lifecycle 단일화
 ///
 /// ## 인자
-/// - `base_url`: OpenAI 호환 endpoint
+/// - `base_url`: `OpenAI` 호환 endpoint
 /// - `token`: API token (optional)
 /// - `selected_model`: 사용자가 선택한 모델
 /// - `available_models`: probe 결과 전체
-/// - `store`: AuthStore 트레이트 객체 (caller lifecycle)
+/// - `store`: `AuthStore` 트레이트 객체 (caller lifecycle)
 pub async fn register_local_provider_with_store(
     base_url: &str,
     token: Option<&str>,
@@ -341,20 +353,24 @@ pub async fn register_local_provider_with_store(
     })
 }
 
+///
+/// # Errors
+///
+/// This function returns an error if the underlying operation fails.
 /// W17 (v1.5 OI-1) — `register_local_provider` 의 비대화형 변형.
 ///
 /// `probe_local_models` 호출 없이 (HTTP round-trip 생략) `register_local_provider` 를 직접 호출.
 /// CI/스크립트 환경 (stdin/stdout non-tty) 에서 사용.
 ///
 /// # 인자
-/// - `base_url`: OpenAI 호환 endpoint (e.g., `http://localhost:11434/v1`)
+/// - `base_url`: `OpenAI` 호환 endpoint (e.g., `http://localhost:11434/v1`)
 /// - `token`: API token (optional)
 /// - `model_id`: 사용자가 직접 지정한 모델 id (probe 없음 → 모델 검증 ❌, user 책임)
 ///
 /// # 비고
 /// - `available_models = vec![model_id]` 1개로 hardcode (probe 없으므로)
 /// - `selected_model.owned_by = None` (probe 안 했으니 서버 메타 모름)
-/// - URL 검증 + KeyringAuthStore set + ProviderRegistry 갱신 + atomic write = interactive 와 동일
+/// - URL 검증 + `KeyringAuthStore` set + `ProviderRegistry` 갱신 + atomic write = interactive 와 동일
 /// - thin wrapper: [`register_local_provider_non_interactive_with_store`] 에 위임 (W19-1, D-62 follow-up)
 pub async fn register_local_provider_non_interactive(
     base_url: String,
@@ -365,6 +381,10 @@ pub async fn register_local_provider_non_interactive(
     register_local_provider_non_interactive_with_store(&base_url, token.as_deref(), &model_id, &store).await
 }
 
+///
+/// # Errors
+///
+/// This function returns an error if the underlying operation fails.
 /// W19-1 (D-62 follow-up) — `register_local_provider_non_interactive` 의 store 주입 변형.
 ///
 /// caller 가 store lifecycle 명시적 제어. test / 멀티 store 환경 / mock store 격리에 사용.
@@ -399,7 +419,7 @@ pub(crate) fn atomic_write(path: &Path, content: &str) -> std::io::Result<()> {
 /// # 동작
 /// 1. `path` 가 존재하지 않으면 `Some(path)` 반환 (신규 write case, backup 불요)
 /// 2. `path` 가 존재하면 content 읽기 → SHA-256 hash8 계산 → `path.backup.<ts>.<hash8>` 으로 copy
-/// 3. **실패 시 warn 만, register_local_provider 는 계속 진행** (graceful, R-4 fail-soft)
+/// 3. **실패 시 warn 만, `register_local_provider` 는 계속 진행** (graceful, R-4 fail-soft)
 /// 4. `max_backups` 개수 초과 시 가장 오래된 것부터 삭제 (default 5)
 ///
 /// # W21 변경 (D-64 F-1+F-2)
@@ -416,6 +436,7 @@ pub(crate) fn atomic_write(path: &Path, content: &str) -> std::io::Result<()> {
 /// # Returns
 /// - `Some(backup_path)`: backup 성공 (또는 skip)
 /// - `None`: backup 시도했으나 실패 (warn 만, register 계속)
+#[must_use] 
 pub fn backup_providers_toml(
     path: &Path,
     max_backups: usize,
@@ -459,24 +480,20 @@ fn with_backup_suffix(path: &Path, ts: u64, hash8: &str) -> std::path::PathBuf {
 /// backup 파일들 중 가장 오래된 것부터 삭제하여 `max_backups` 개 이하로 유지.
 ///
 /// W21 (D-64) sort fix: filename string sort 는 `backup.999` 와 `backup.10000` 비교 시
-/// '9' > '1' 으로 retention 거꾸로 동작. **numeric parse** 로 unix_ts 추출 후 정렬.
+/// '9' > '1' 으로 retention 거꾸로 동작. **numeric parse** 로 `unix_ts` 추출 후 정렬.
 /// hash suffix 는 tie-breaker (동일 ts 시 stable sort) — 동일 ts 내 여러 backup 보존.
 fn cleanup_old_backups(path: &Path, max_backups: usize) -> std::io::Result<()> {
-    let parent = match path.parent() {
-        Some(p) => p,
-        None => return Ok(()),
-    };
+    let Some(parent) = path.parent() else { return Ok(()) };
     let prefix = format!(
         "{}.backup.",
         path.file_name().and_then(|s| s.to_str()).unwrap_or("providers.toml")
     );
     let mut backups: Vec<_> = std::fs::read_dir(parent)?
-        .filter_map(|e| e.ok())
+        .filter_map(std::result::Result::ok)
         .filter(|e| {
             e.file_name()
                 .to_str()
-                .map(|n| n.starts_with(&prefix))
-                .unwrap_or(false)
+                .is_some_and(|n| n.starts_with(&prefix))
         })
         .collect();
     // numeric sort on unix_ts (D-64 fix): "backup.999.a1b2" < "backup.10000.c3d4"
@@ -595,13 +612,13 @@ mod tests {
         let report = register_local_provider_non_interactive(
             "http://localhost:11434/v1".into(),
             None,
-            "".into(),
+            String::new(),
         )
         .await
         .unwrap();
 
         assert_eq!(report.model_id, "");
-        assert_eq!(report.available_models, vec!["".to_string()]);
+        assert_eq!(report.available_models, vec![String::new()]);
         unsafe { std::env::remove_var("MYHARNESS_HOME"); }
     }
 
@@ -629,7 +646,7 @@ mod tests {
         // backup 파일 없음 (신규 write)
         let backups_after_first: Vec<_> = std::fs::read_dir(tmp.path())
             .unwrap()
-            .filter_map(|e| e.ok())
+            .filter_map(std::result::Result::ok)
             .filter(|e| e.file_name().to_string_lossy().contains(".backup."))
             .collect();
         assert_eq!(backups_after_first.len(), 0, "신규 write 시 backup ❌");
@@ -648,7 +665,7 @@ mod tests {
 
         let backups_after_second: Vec<_> = std::fs::read_dir(tmp.path())
             .unwrap()
-            .filter_map(|e| e.ok())
+            .filter_map(std::result::Result::ok)
             .filter(|e| e.file_name().to_string_lossy().contains(".backup."))
             .collect();
         assert_eq!(backups_after_second.len(), 1, "두 번째 write 시 backup 1개");
@@ -689,7 +706,7 @@ mod tests {
 
         let backups: Vec<_> = std::fs::read_dir(tmp.path())
             .unwrap()
-            .filter_map(|e| e.ok())
+            .filter_map(std::result::Result::ok)
             .filter(|e| e.file_name().to_string_lossy().contains(".backup."))
             .collect();
         // 6번 backup (1~6번 write 각각) + cleanup → 5개 이하
@@ -867,7 +884,7 @@ mod tests {
     }
 
     /// TC-W19-003: store A (caller) 와 별개 store B (wrapper 내부) 는 in-memory cache 공유 안 함.
-    /// `register_local_provider` (with_store 미사용) 의 thin wrapper 동작 검증.
+    /// `register_local_provider` (`with_store` 미사용) 의 thin wrapper 동작 검증.
     /// W19-1 이전의 TC-W17-002 가 같은 이유로 fail 했었음. 이 test 가 회귀 방지.
     #[tokio::test]
     #[serial_test::serial(env)]
@@ -927,10 +944,10 @@ mod tests {
         unsafe { std::env::remove_var("MYHARNESS_HOME"); }
     }
 
-    /// TC-W21-002 — cleanup_old_backups sort 정확도 (D-64 fix)
+    /// TC-W21-002 — `cleanup_old_backups` sort 정확도 (D-64 fix)
     ///
     /// **WHY**: 기존 string sort 는 `backup.999` < `backup.10000` 거꾸로 동작.
-    /// 수동으로 8개 backup 파일 생성 후 max_backups=5 → 가장 오래된 ts 3개 삭제.
+    /// 수동으로 8개 backup 파일 생성 후 `max_backups=5` → 가장 오래된 ts 3개 삭제.
     #[tokio::test]
     #[serial_test::serial(env)]
     async fn tc_w21_002_cleanup_old_backups_uses_numeric_sort() {
@@ -950,7 +967,7 @@ mod tests {
 
         let mut remaining: Vec<u64> = std::fs::read_dir(tmp.path())
             .unwrap()
-            .filter_map(|e| e.ok())
+            .filter_map(std::result::Result::ok)
             .filter(|e| {
                 e.file_name()
                     .to_string_lossy()
@@ -964,7 +981,7 @@ mod tests {
                     .and_then(|s| s.parse::<u64>().ok())
             })
             .collect();
-        remaining.sort();
+        remaining.sort_unstable();
 
         // 8 + 1(current backup) = 9 → max=5 → 가장 오래된 4개 삭제
         // 100, 101, 102, 103 삭제 → 104~107 + current backup (ts >= 108) 남아야
@@ -997,7 +1014,7 @@ mod tests {
 
         let backups: Vec<_> = std::fs::read_dir(tmp.path())
             .unwrap()
-            .filter_map(|e| e.ok())
+            .filter_map(std::result::Result::ok)
             .filter(|e| {
                 e.file_name()
                     .to_string_lossy()

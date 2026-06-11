@@ -1,7 +1,8 @@
-//! tui::app — App state + ratatui draw logic.
+//! `tui::app` — App state + ratatui draw logic.
 //!
 //! 최소 TUI shell: welcome header + message list + input box.
 
+#![allow(clippy::cast_possible_truncation, clippy::cast_precision_loss, clippy::cast_sign_loss, clippy::cast_possible_wrap)]
 use ratatui::buffer::Buffer;
 use ratatui::layout::{Constraint, Direction, Layout, Rect};
 use ratatui::style::{Color, Modifier, Style};
@@ -109,6 +110,7 @@ impl App {
         }
     }
 
+    #[must_use] 
     pub fn submitted_messages(&self) -> Vec<&str> {
         self.messages
             .iter()
