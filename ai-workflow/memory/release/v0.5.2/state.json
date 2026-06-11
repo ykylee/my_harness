@@ -1,0 +1,61 @@
+{
+  "schema_version": "1",
+  "generated_at": "2026-06-06",
+  "source_of_truth": {
+    "project_profile_path": "docs/PROJECT_PROFILE.md",
+    "session_handoff_path": "ai-workflow/memory/release/v0.5.2/session_handoff.md",
+    "work_backlog_index_path": "ai-workflow/memory/work_backlog.md",
+    "latest_backlog_path": "ai-workflow/memory/release/v0.5.2/backlog/2026-06-06.md",
+    "repository_assessment_path": null
+  },
+  "project": {
+    "project_name": "Standard AI Workflow",
+    "document_home": "docs/README.md",
+    "operations_path": null,
+    "backlog_path": "ai-workflow/memory/backlog/",
+    "handoff_path": null,
+    "environment_path": "ai-workflow/memory/environments/"
+  },
+  "commands": {
+    "quick_tests": null,
+    "isolated_tests": null,
+    "runtime_checks": null
+  },
+  "session": {
+    "current_baseline": "**현재 브랜치**: `release/v0.5.2` (main #73f8f2f 에서 분기, 2026-06-06)",
+    "current_axis": "**현재 브랜치**: `release/v0.5.2` (main #73f8f2f 에서 분기, 2026-06-06)",
+    "current_focus": "TASK-V052-001 `bootstrap_workflow_kit.py` 풀 리팩터",
+    "in_progress_items": [],
+    "blocked_items": [],
+    "recent_done_items": [
+      "TASK-V052-002 `workflow_kit` 정식 패키지 배포 (`pyproject.toml`)",
+      "TASK-V052-003 외부 저장소 pilot validation 1건",
+      "TASK-V052-001 `bootstrap_workflow_kit.py` 풀 리팩터"
+    ],
+    "environment_constraints": []
+  },
+  "backlog": {
+    "latest_backlog_path": "ai-workflow/memory/release/v0.5.2/backlog/2026-06-06.md",
+    "task_count": 3,
+    "in_progress_items": [],
+    "blocked_items": [],
+    "done_items": [
+      "TASK-V052-001 `bootstrap_workflow_kit.py` 풀 리팩터",
+      "TASK-V052-002 `workflow_kit` 정식 패키지 배포",
+      "TASK-V052-003 외부 저장소 pilot validation 1건"
+    ]
+  },
+  "next_documents": [
+    "docs/PROJECT_PROFILE.md",
+    "ai-workflow/memory/release/v0.5.2/session_handoff.md",
+    "ai-workflow/memory/work_backlog.md",
+    "ai-workflow/memory/release/v0.5.2/backlog/2026-06-06.md",
+    "ai-workflow/memory/release/v0.5.2/state.json",
+    "ai-workflow/memory/release/v0.5.2/PROJECT_PROFILE.md",
+    "workflow-source/core/maturity_matrix.json"
+  ],
+  "repository_assessment": {
+    "path": null,
+    "present": false
+  }
+}

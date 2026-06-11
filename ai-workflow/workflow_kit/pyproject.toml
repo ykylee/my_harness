@@ -1,0 +1,96 @@
+[build-system]
+requires = ["setuptools>=68.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "standard-ai-workflow-kit"
+version = "0.5.2-beta"
+description = "Reusable library modules for the standard AI workflow kit (workflow_kit)."
+readme = "README.md"
+requires-python = ">=3.10"
+license = "MIT"
+authors = [
+    {name = "yklee", email = "ddn777@hotmail.com"},
+]
+keywords = [
+    "ai",
+    "workflow",
+    "mcp",
+    "code-agent",
+    "harness",
+    "standard-ai-workflow",
+]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+]
+
+# Runtime dependencies. Keep this list minimal — workflow_kit is the core
+# library; the bootstrap script, MCP servers, and skills are separate concerns
+# that live in the parent ``workflow-source`` package.
+dependencies = [
+    "pydantic>=2.0.0",
+    "anyio>=4.0.0",
+]
+
+[project.optional-dependencies]
+# MCP server transport. ``stdio-sdk`` uses the official mcp Python SDK
+# (experimental, requires ``mcp[cli]>=1.0`` and known-good SDK API compatibility).
+# ``jsonrpc-bridge`` is the draft fixture (always available, no extra deps).
+mcp-jsonrpc = []
+mcp-sdk = [
+    "mcp[cli]>=1.0",
+]
+# Development tools.
+dev = [
+    "pytest>=7.0",
+    "pytest-asyncio>=0.21",
+    "ruff>=0.1",
+    "mypy>=1.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/ykylee/standard_ai_workflow"
+Repository = "https://github.com/ykylee/standard_ai_workflow"
+Issues = "https://github.com/ykylee/standard_ai_workflow/issues"
+
+[tool.setuptools]
+# The pyproject.toml lives at the package root
+# (``workflow-source/workflow_kit/pyproject.toml``). setuptools treats the
+# directory containing pyproject.toml as the package root by default, so
+# we only need to list the subpackages here.
+packages = ["common", "server", "harness"]
+
+[tool.setuptools.package-data]
+# Include the README and any other non-Python files so ``pip install``
+# delivers a self-contained distribution.
+workflow_kit = ["README.md", "py.typed"]
+
+[tool.setuptools.exclude-package-data]
+workflow_kit = ["__pycache__/*", "*.pyc", "*.pyo"]
+
+# ---------------------------------------------------------------------------
+# Tool configuration (lives with the package so consumers inherit the same
+# lint/type settings as the upstream repo).
+# ---------------------------------------------------------------------------
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "W", "B", "UP"]
+ignore = ["E501"]  # line-length is handled by formatter
+
+[tool.mypy]
+python_version = "3.10"
+strict = false
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = false
+ignore_missing_imports = true

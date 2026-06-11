@@ -1,0 +1,137 @@
+[build-system]
+requires = ["setuptools>=68.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "standard-ai-workflow"
+version = "0.5.11"
+description = "Standard AI workflow kit — bootstrap, skills, MCP servers, templates, and examples."
+readme = "README.md"
+requires-python = ">=3.10"
+license = "MIT"
+authors = [
+    {name = "yklee", email = "ddn777@hotmail.com"},
+]
+keywords = [
+    "ai",
+    "workflow",
+    "mcp",
+    "code-agent",
+    "harness",
+    "standard-ai-workflow",
+    "bootstrap",
+]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+]
+
+# The full ``workflow-source`` distribution bundles the ``workflow_kit`` core
+# library, the ``bootstrap_lib`` package, and all skills/MCP servers/templates.
+# Most consumers should install this meta-package and use ``workflow_kit`` as
+# the importable library name.
+#
+# Note: ``workflow_kit`` is shipped as part of this same distribution
+# (see ``[tool.setuptools.packages]`` below), so we do NOT declare it as
+# an external dependency — that would force pip to fetch it from PyPI,
+# which is unnecessary for a local ``pip install -e .`` install.
+dependencies = [
+    "pydantic>=2.0.0",
+    "anyio>=4.0.0",
+]
+
+[project.optional-dependencies]
+# MCP server transport. ``stdio-sdk`` uses the official mcp Python SDK
+# (experimental). ``jsonrpc-bridge`` is the draft fixture (always available).
+mcp-jsonrpc = []
+mcp-sdk = [
+    "mcp[cli]>=1.0",
+]
+# Smoke test runner + linter + formatters.
+dev = [
+    "pytest>=7.0",
+    "pytest-asyncio>=0.21",
+    "ruff>=0.1",
+    "mypy>=1.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/ykylee/standard_ai_workflow"
+Repository = "https://github.com/ykylee/standard_ai_workflow"
+Issues = "https://github.com/ykylee/standard_ai_workflow/issues"
+
+[tool.setuptools]
+# ``workflow-source`` is not a single importable package — it's a bundle of:
+#   - ``workflow_kit/`` (importable, lives at workflow-source/workflow_kit/)
+#   - ``scripts/bootstrap_lib/`` (importable, lives at workflow-source/scripts/bootstrap_lib/)
+#   - skills/, mcp_servers/, templates/, examples/, etc. (non-code assets)
+#
+# For a full install we only need the two importable sub-packages on
+# ``sys.path``. The rest is consumed via the repo's directory layout
+# (or copied into the consumer's project by the bootstrap script).
+packages = [
+    "bootstrap_lib",
+    "bootstrap_lib.harnesses",
+    "workflow_kit",
+    "workflow_kit.common",
+    "workflow_kit.common.modes",
+    "workflow_kit.common.state",
+    "workflow_kit.common.contracts",
+    "workflow_kit.common.schemas",
+    "workflow_kit.contract_v1",
+    "workflow_kit.server",
+    "workflow_kit.harness",
+]
+
+# Single-file modules that don't live inside a package directory.
+# ``bootstrap_workflow_kit`` is the legacy CLI shim kept for back-compat
+# (see scripts/bootstrap_workflow_kit.py docstring) and ships as a
+# top-level module from ``scripts/``.
+py-modules = ["bootstrap_workflow_kit"]
+
+[tool.setuptools.package-dir]
+# Map package names to their on-disk locations. This lets us ship
+# ``workflow_kit`` and ``bootstrap_lib`` from the same distribution even
+# though they live in different subdirectories of the repo.
+"workflow_kit" = "workflow_kit"
+"workflow_kit.common" = "workflow_kit/common"
+"workflow_kit.common.modes" = "workflow_kit/common/modes"
+"workflow_kit.common.state" = "workflow_kit/common/state"
+"workflow_kit.common.contracts" = "workflow_kit/common/contracts"
+"workflow_kit.common.schemas" = "workflow_kit/common/schemas"
+"workflow_kit.server" = "workflow_kit/server"
+"workflow_kit.harness" = "workflow_kit/harness"
+"bootstrap_lib" = "scripts/bootstrap_lib"
+"bootstrap_lib.harnesses" = "scripts/bootstrap_lib/harnesses"
+
+[tool.setuptools.package-data]
+workflow_kit = ["README.md", "py.typed"]
+bootstrap_lib = ["py.typed"]
+
+[tool.setuptools.exclude-package-data]
+"*" = ["__pycache__/*", "*.pyc", "*.pyo"]
+
+# ---------------------------------------------------------------------------
+# Tool configuration
+# ---------------------------------------------------------------------------
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "W", "B", "UP"]
+ignore = ["E501"]
+
+[tool.mypy]
+python_version = "3.10"
+strict = false
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = false
+ignore_missing_imports = true
