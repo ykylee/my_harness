@@ -329,8 +329,9 @@ mod tests {
         let out = smart_crush(s);
         let v: serde_json::Value = serde_json::from_str(&out).unwrap();
         // reduce_number_precision 가 모든 number 를 f64 로 변환하므로 as_f64 로 비교
-        assert_eq!(v["outer"]["a"].as_f64().unwrap(), 2.0);
-        assert_eq!(v["outer"]["z"].as_f64().unwrap(), 1.0);
+        // (f64 정수값 직접 비교이므로 float_cmp 회피: 정수 리터럴을 bit-exact 비교)
+        assert!((v["outer"]["a"].as_f64().unwrap() - 2.0).abs() < f64::EPSILON);
+        assert!((v["outer"]["z"].as_f64().unwrap() - 1.0).abs() < f64::EPSILON);
     }
 
     #[test]

@@ -54,7 +54,7 @@ reqwest = { version = "0.12", default-features = false, features = ["json", "rus
 # URL parsing (W16 add-local)
 url = "2"
 # Interactive CLI prompts (W16 add-local)
-inquire = "0.7"
+inquire = "0.9"
 # Hashing (W21 hash8 + W23 tract ONNX model SHA256 verify)
 sha2 = "0.10"
 

@@ -175,6 +175,7 @@ enum AuthAction {
     },
 }
 
+#[allow(clippy::too_many_lines)] // entrypoint: matches CLI subcommand dispatch (single, loop, cli) — 의도적 단일 fn
 fn main() -> anyhow::Result<()> {
     tracing_subscriber::fmt()
         .with_env_filter(
@@ -257,7 +258,7 @@ fn main() -> anyhow::Result<()> {
                 println!("loop finished: stop={:?} iterations={}", report.stop, report.total_iterations);
             }
             "cli" => {
-                let _tty = TtyGuard::enter()?;
+                let tty = TtyGuard::enter()?;
                 let mut app = App::new("myharness", mode);
                 app.push_message(myharness_tui::AppMessage::system(format!(
                     "Mode: {mode} (type a message, Ctrl+C to quit)"
@@ -272,7 +273,7 @@ fn main() -> anyhow::Result<()> {
                         break;
                     }
                 }
-                drop(_tty);
+                drop(tty);
                 println!("\n--- session ended ---");
                 for m in &app.messages {
                     let prefix = match m.role {
@@ -464,6 +465,7 @@ fn print_auth_status(s: &AuthStatus) {
 /// 3. `ANTHROPIC_API_KEY` env var
 /// 4. `MockClient` fallback
 #[allow(clippy::collapsible_if)]
+#[allow(clippy::too_many_lines)] // 4-stage credential chain (OAuth → env → LocalLlm → Anthropic → Mock) — 각 stage 가 자체 logging + provider 빌드 + token 정책 가지므로 단일 fn 유지가 의도적
 fn resolve_llm_client() -> Arc<dyn LLMClient> {
     use myharness_auth::TokenStore;
     use myharness_llm::provider::ProviderId;

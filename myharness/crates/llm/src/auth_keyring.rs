@@ -168,6 +168,7 @@ mod tests {
     }
 
     #[tokio::test]
+    #[allow(clippy::match_same_arms)] // arm 1+3: 의도적 — (None, Err BackendUnavailable) 와 (_, Ok) 모두 expected pass, panic 분기는 backend-specific
     async fn keyring_get_returns_err_when_no_backend() {
         let s = KeyringAuthStore::probe();
         let r = s.get(ProviderId::Claude).await;

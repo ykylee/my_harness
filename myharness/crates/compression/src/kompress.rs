@@ -269,6 +269,6 @@ mod tests {
     #[test]
     fn savings_ratio_zero_for_empty() {
         let s = KompressStats::from("", "");
-        assert_eq!(s.savings_ratio(), 0.0);
+        assert!(s.savings_ratio().abs() < f32::EPSILON);
     }
 }
