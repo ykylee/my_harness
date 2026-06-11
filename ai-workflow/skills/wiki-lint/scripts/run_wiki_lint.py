@@ -205,9 +205,9 @@ def rule_l02(p: Page, idx: dict[str, str]) -> list[Finding]:
         fm_related = [fm_related]
     for raw in fm_related:
         target = _strip_link_brackets(raw)
-        if not target:
+        if not target or target.lower() in ("none", "null", "-"):
             continue
-        if target not in idx:
+        if target not in idx and not any(s == target or s.startswith(target + "-") for s in idx):
             findings.append(
                 Finding(
                     "L02",
@@ -219,7 +219,7 @@ def rule_l02(p: Page, idx: dict[str, str]) -> list[Finding]:
             )
     for raw in extract_wiki_links(p.body):
         target = raw.split("|")[0].split("#")[0].strip()
-        if target and target not in idx:
+        if target and target not in idx and not any(s == target or s.startswith(target + "-") for s in idx):
             findings.append(
                 Finding(
                     "L02",
@@ -586,6 +586,8 @@ def run_lint(
             findings.extend(rule_l05(p, today))
     if "L06" in active:
         for p in pages:
+            if _is_skipped("L06", p):
+                continue
             findings.extend(rule_l06(p, vault))
     if "L07" in active:
         for p in pages:
