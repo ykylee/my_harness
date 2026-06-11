@@ -9,7 +9,7 @@ import sys
 import tempfile
 from pathlib import Path
 
-SOURCE_ROOT_FOR_IMPORT = Path(__file__).resolve().parents[2] / "workflow-source"
+SOURCE_ROOT_FOR_IMPORT = Path(__file__).resolve().parents[2] / "ai-workflow"
 if str(SOURCE_ROOT_FOR_IMPORT) not in sys.path:
     sys.path.insert(0, str(SOURCE_ROOT_FOR_IMPORT))
 
@@ -17,7 +17,7 @@ from workflow_kit.common.output_contracts import validate_output_payload
 
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
-SOURCE_ROOT = REPO_ROOT / "workflow-source"
+SOURCE_ROOT = REPO_ROOT / "ai-workflow"
 BOOTSTRAP_SCRIPT = SOURCE_ROOT / "scripts" / "bootstrap_workflow_kit.py"
 ONBOARDING_SCRIPT = SOURCE_ROOT / "scripts" / "run_existing_project_onboarding.py"
 
