@@ -102,6 +102,7 @@ mod tests {
     use tempfile::tempdir;
 
     use super::*;
+    use crate::sanitizer::SanitizerMode;
     use crate::tool::{PermissionMode, ToolContext};
 
     #[tokio::test]
@@ -115,7 +116,7 @@ mod tests {
             cwd: PathBuf::from("/"),
             permission_mode: PermissionMode::Default,
             confirm_override: true,
-            sanitizer_mode: Default::default(),
+            sanitizer_mode: SanitizerMode::default(),
         };
         let input = serde_json::json!({
             "file_path": file_path.to_string_lossy(),

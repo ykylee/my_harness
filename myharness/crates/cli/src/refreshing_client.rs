@@ -173,6 +173,40 @@ mod tests {
     use myharness_auth::TokenStore;
     use myharness_llm::provider::ProviderId;
     use serde_json::json;
+    use std::sync::atomic::{AtomicUsize, Ordering};
+
+    /// `e2e_401_refresh_retry_200` 의 inner mock — 401 응답 + 호출 횟수 카운트
+    struct Always401Counter {
+        count: AtomicUsize,
+    }
+    #[async_trait::async_trait]
+    impl LLMClient for Always401Counter {
+        fn provider_id(&self) -> ProviderId {
+            ProviderId::Minimax
+        }
+        async fn complete(
+            &self,
+            _req: CompletionRequest,
+        ) -> Result<CompletionResponse, LlmError> {
+            self.count.fetch_add(1, Ordering::SeqCst);
+            Err(LlmError::ProviderCall("401 unauthorized".into()))
+        }
+    }
+
+    /// `e2e_without_refresh_token_returns_error` 의 inner mock — unit struct
+    struct Always401Simple;
+    #[async_trait::async_trait]
+    impl LLMClient for Always401Simple {
+        fn provider_id(&self) -> ProviderId {
+            ProviderId::Minimax
+        }
+        async fn complete(
+            &self,
+            _req: CompletionRequest,
+        ) -> Result<CompletionResponse, LlmError> {
+            Err(LlmError::ProviderCall("401 unauthorized".into()))
+        }
+    }
 
     #[test]
     fn is_unauthorized_detects_401() {
@@ -269,7 +303,6 @@ mod tests {
     #[tokio::test]
     async fn refreshing_client_e2e_401_refresh_retry_200() {
         use myharness_auth::flow::OAuthToken;
-        use std::sync::atomic::{AtomicUsize, Ordering};
         use tokio::io::{AsyncReadExt, AsyncWriteExt};
 
         // 1) mock server — OAuth /token + OpenAI /v1/chat/completions
@@ -328,24 +361,8 @@ mod tests {
         };
         store.save("minimax", &old_token).unwrap();
 
-        // 3) inner: Always401 (deterministic)
-        struct Always401 {
-            count: AtomicUsize,
-        }
-        #[async_trait::async_trait]
-        impl LLMClient for Always401 {
-            fn provider_id(&self) -> ProviderId {
-                ProviderId::Minimax
-            }
-            async fn complete(
-                &self,
-                _req: CompletionRequest,
-            ) -> Result<CompletionResponse, LlmError> {
-                self.count.fetch_add(1, Ordering::SeqCst);
-                Err(LlmError::ProviderCall("401 unauthorized".into()))
-            }
-        }
-        let inner: Arc<dyn LLMClient> = Arc::new(Always401 {
+        // 3) inner: Always401Counter (deterministic 401 + count)
+        let inner: Arc<dyn LLMClient> = Arc::new(Always401Counter {
             count: AtomicUsize::new(0),
         });
 
@@ -410,24 +427,10 @@ mod tests {
         };
         store.save("minimax", &old_token).unwrap();
 
-        // 2) inner: 항상 401
-        struct Always401;
-        #[async_trait::async_trait]
-        impl LLMClient for Always401 {
-            fn provider_id(&self) -> ProviderId {
-                ProviderId::Minimax
-            }
-            async fn complete(
-                &self,
-                _req: CompletionRequest,
-            ) -> Result<CompletionResponse, LlmError> {
-                Err(LlmError::ProviderCall("401 unauthorized".into()))
-            }
-        }
-
+        // 2) inner: 항상 401 (Always401Simple)
         let auth_manager = AuthManager::with_store(store.clone());
         let provider: Arc<dyn OAuthProvider> = Arc::new(StubProvider);
-        let inner: Arc<dyn LLMClient> = Arc::new(Always401);
+        let inner: Arc<dyn LLMClient> = Arc::new(Always401Simple);
         let client = RefreshingLlmClient::new(
             inner,
             "minimax",

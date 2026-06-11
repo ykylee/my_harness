@@ -91,7 +91,7 @@ mod tests {
     fn plan_denies_writes() {
         match PermissionGuard::check("Write", PermissionMode::Plan, false, None).unwrap() {
             PermissionDecision::Deny(_) => {}
-            _ => panic!("expected deny"),
+            PermissionDecision::Allow => panic!("expected deny"),
         }
     }
 
