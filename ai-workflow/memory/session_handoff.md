@@ -4,7 +4,7 @@
 - Scope: current focus, task status, key changes, next actions, risks
 - Audience: yklee, Mavis orchestrator, .MiniMax 워커 에이전트
 - Status: active
-- Updated: 2026-06-11 (D-74 LLM Wiki 정상화 — lint 0/0/0 + R-4 SSOT drift 정정. 3 sub-task: L08 fix + L03 skip patch + 3 project skip config. wiki commit bd9b108 + my_harness commit 5407f82 dual push. 이전: D-73 T-v5-sync-1 plan_3c8c4a49 cancel + 4-plan split)
+- Updated: 2026-06-11 (D-75 Plan A-2 T-v5-sync-1 5.1 적응 완료 — 5.1 의 22 file 직접 mirror 가 아닌 **개념만 차용** + my_harness 의 5 separate MCP 프로토타입에 codex/opencode spawn 가이드 적응. 4 file 1 commit (5d9ad1b dual push). 이전: D-74 LLM Wiki 정상화 + D-73 4-plan split)
 - Related docs: [Project Profile](../../docs/PROJECT_PROFILE.md), [Work Backlog](./work_backlog.md), [State Cache](./state.json), [CONCEPT.md](../../docs/CONCEPT.md) (SSOT)
 
 ## Current Focus
@@ -80,7 +80,7 @@
 - 2026-06-09 — **TASK-005-1 W10 완료 (D-48)**: myharness-tui crate v1. 51 tests pass
 - 2026-06-09 — **TASK-005-1 W11 완료 (D-49)**: myharness-core crate v1. 32 tests pass
 - 2026-06-11 — **D-74 LLM Wiki 정상화** (R-4 SSOT drift = D-73 Plan D 마지막 chunk 보다 먼저 해소). lint 0/98/0 → **0/0/0** (pages=72). 3 sub-task: (1) **L08 fix** — `~/wiki/index.md` entry 마다 backtick-fenced full path 추가 (L08 검사가 backtick 안의 .md 만 인식, 72 page 등록). (2) **L03 skip patch** — `run_wiki_lint.py` L03 호출에 `_is_skipped` 가드 추가 (L07 패턴 정합, 5 line patch). (3) **skip config 보강** — 3 project 의 `.wiki-lint.toml` (my-harness / devhub / cross) + `load_project_config` cross 분기. **R-4 drift 정정**: `docs/architecture/DETAILED_DESIGN_LLM_WIKI.md` 의 §2.1 tree + §2.3 (167, 174) + §5.1 flow (313) + §8.2 (412, 414) + §11.5 (452) 의 `raw/ai-workflow/` 경로를 `raw/projects/my-harness/ai-workflow/` 로 갱신 (D-72 cross-project 통합 반영). 검증: **26/26 wiki-lint unit + 3/3 D-72 cross-project tests pass**. wiki commit `bd9b108` (Gitea push). my_harness commit `5407f82` (dual push Gitea + GitHub). main = 5407f82. 다음: T-v5-sync-1 Plan A launch (yklee 결정 대기).
-## 다음에 할 일 (Next Actions)
+- 2026-06-11 — **D-75 Plan A-2 T-v5-sync-1 5.1 적응** (Plan A 완료, Plan B/C/D 결정 보류). **WHY 5.1 적응**: D-73 plan_3c8c4a49 abort 후 5.1 scope 측정 결과 22 file (4 conflict + 17 NEW + 1 large 2204 lines script) — my_harness ↔ upstream standard_ai_workflow divergence 가 D-73 추정보다 훨씬 큼 (2204 lines flat script vs 55 lines upstream, 9 mcp_servers/ vs upstream 의 1 server-multi-tools). yklee 결정: **Plan A-2 (개념만 차용)**. **결과**: 4 file 1 commit (5d9ad1b dual push Gitea + GitHub). (1) `ai-workflow/core/mcp_installation_by_harness.md` (NEW) — 5.1 의 transport 비교 + 6 troubleshooting 의 my_harness 적응. (2) `ai-workflow/examples/mcp_config_examples/codex-mcp.toml` (NEW) — 5 server entry. (3) `ai-workflow/examples/mcp_config_examples/opencode-mcp.json` (NEW) — 5 server entry. (4) `ai-workflow/mcp_servers/README.md` (UPDATE) — per-harness 가이드 reference. **검증**: opencode-mcp.json JSON valid, codex-mcp.toml TOML valid. **D-73 의 4 plan 중 Plan A 완료**, Plan B (5.2 bootstrap_lib refactor, 73 files / 7,941+ ins) 결정 보류, Plan C/D skip 가능성 (my_harness 자체 evolution). **다음**: yklee 의 Plan B/C/D 결정 대기. main = 5d9ad1b.
 
 - [x] **v1 컨셉 확립** (D-22~D-38) — 5/5 결정 검토 완료 (4 ✅, 1 ⏸)
 - [x] **TASK-005-1 환경 검증 (D-41)** ✅
