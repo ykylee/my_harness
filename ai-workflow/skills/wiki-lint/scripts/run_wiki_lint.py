@@ -245,16 +245,23 @@ def rule_l03(p: Page, idx: dict[str, str]) -> list[Finding]:
     return []
 
 
-def rule_l04(pages: list[Page]) -> list[Finding]:
-    """중복 title 감지. L07 의 부분집합이지만, 'mod 진화' 와 'exact 중복' 구분 위해 별도 규칙."""
+def rule_l04(pages: list[Page], skip_paths: set[str] | None = None) -> list[Finding]:
+    """중복 title 감지. L07 의 부분집합이지만, 'mod 진화' 와 'exact 중복' 구분 위해 별도 규칙.
+
+    D-97: skip_paths 의 page 가 all_paths 에 포함된 finding 은 skip
+    (cross-project 의도적 mirror 면제, D-72 정책과 정합).
+    """
     by_title: dict[str, list[str]] = {}
     for p in pages:
         t = p.frontmatter.get("title")
         if isinstance(t, str) and t.strip():
             by_title.setdefault(t.strip().lower(), []).append(p.rel_path)
     findings: list[Finding] = []
+    import fnmatch
     for title, paths in by_title.items():
         if len(paths) > 1:
+            if skip_paths and any(fnmatch.fnmatch(p, pat) for p in paths for pat in skip_paths):
+                continue
             findings.append(
                 Finding(
                     "L04",
@@ -375,7 +382,7 @@ def rule_l07_one(p: Page, pages: list[Page]) -> list[Finding]:
     ]
 
 
-def rule_l08(pages: list[Page], index_path: Path) -> list[Finding]:
+def rule_l08(pages: list[Page], index_path: Path, skip_paths: set[str] | None = None) -> list[Finding]:
     if not index_path.is_file():
         return [
             Finding(
@@ -396,9 +403,12 @@ def rule_l08(pages: list[Page], index_path: Path) -> list[Finding]:
         for m in re.findall(r"`?([\w\-./]+\.md)`?", line):
             registered.add(m)
     findings: list[Finding] = []
+    import fnmatch
     for p in pages:
         rel = p.rel_path
         if rel not in registered:
+            if skip_paths and any(fnmatch.fnmatch(rel, pat) for pat in skip_paths):
+                continue
             findings.append(
                 Finding(
                     "L08",
@@ -580,7 +590,10 @@ def run_lint(
                 continue
             findings.extend(rule_l03(p, idx))
     if "L04" in active:
-        findings.extend(rule_l04(pages))
+        l04_skip_paths: set[str] = set()
+        for proj_cfg in [cfg, *project_configs.values()]:
+            l04_skip_paths.update(proj_cfg.get("rules", {}).get("L04", {}).get("skip_paths", []))
+        findings.extend(rule_l04(pages, l04_skip_paths))
     if "L05" in active:
         for p in pages:
             findings.extend(rule_l05(p, today))
@@ -595,7 +608,10 @@ def run_lint(
                 continue
             findings.extend(rule_l07_one(p, pages))
     if "L08" in active:
-        findings.extend(rule_l08(pages, vault / "index.md"))
+        l08_skip_paths: set[str] = set()
+        for proj_cfg in [cfg, *project_configs.values()]:
+            l08_skip_paths.update(proj_cfg.get("rules", {}).get("L08", {}).get("skip_paths", []))
+        findings.extend(rule_l08(pages, vault / "index.md", l08_skip_paths))
     if "L09" in active:
         findings.extend(rule_l09(vault, today))
     if "L10" in active:
