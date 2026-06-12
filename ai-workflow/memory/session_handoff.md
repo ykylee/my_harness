@@ -163,4 +163,6 @@
 - **cross-check 정확성** (D-62 lesson): 머지 commit stat 만 보고 '누락분' 결론 내리지 말 것. 반드시 `git log main --grep='WAVE'` + `grep '<symbol>'` 로 file 직접 검증
 - **D-73 T-v5-sync-1 lesson (2026-06-11)**: 1 plan = 6 batch × 11 minor = scope 3x underestimate 사망. 31min 중 25min = exploration 후 0 write. **mavis-team-patterns §1-B 패턴**: exploration 단계에서 죽음 (worker death 방지). **해결 5가지**: (1) prompt 작성 전 `git diff --shortstat` 1줄로 scope 측정, (2) 1 plan = 1 batch 의 1 sub-task, (3) prompt 의 module name / function name 은 upstream source 에서 직접 확인 후 박기, (4) exploration 5분 강제 cap (scratch check 30s + ls-tree 1번 3min + write 시작), (5) 30min cap 도달 시 1 fail internal / 2 fail steer (split) / 3 fail manual takeover. **cross-project 적용**: 모든 major version sync 작업 시
 
+**Drift 해소 (D-96, 2026-06-12)**: D-85~D-95 vault 운영 11결정 → wiki 측 SSOT 격리 (raw 12 prompt path my-harness→wiki mv, AGENTS.md §12 신설). cross-project 결정만 my_harness 메모리에도 반영. my_harness 측 결정 = 21 유지, 누적 카운트 갭 해소.
+
 (End of file - total 102 lines)
