@@ -244,10 +244,12 @@ impl ModelManager {
     }
 }
 
+#[allow(clippy::format_collect)] // sha2 0.11 Array<u8, U32> 가 LowerHex 미구현 → byte 단위 hex (의도적, D-75 batch)
 async fn sha256_file(path: &PathBuf) -> Result<String> {
     let data = tokio::fs::read(path).await.context("read file for sha256")?;
     let hash = Sha256::digest(&data);
-    Ok(format!("{hash:x}"))
+    // sha2 0.11: Output (= Array<u8, U32>) 가 LowerHex 미구현 → byte 단위 hex encoding
+    Ok(hash.as_slice().iter().map(|b| format!("{b:02x}")).collect())
 }
 
 #[cfg(test)]
@@ -267,10 +269,17 @@ mod tests {
     }
 
     #[test]
+    #[allow(clippy::format_collect)] // sha2 0.11 Array<u8, U32> 가 LowerHex 미구현 → byte 단위 hex (의도적, D-75 batch)
     fn sha256_of_known_data_is_correct() {
         let mut hasher = Sha256::new();
         hasher.update(b"hello world");
-        let result = format!("{:x}", hasher.finalize());
+        // sha2 0.11: Output (= Array<u8, U32>) 가 LowerHex 미구현 → byte 단위 hex encoding
+        let result: String = hasher
+            .finalize()
+            .as_slice()
+            .iter()
+            .map(|b| format!("{b:02x}"))
+            .collect();
         assert_eq!(
             result,
             "b94d27b9934d3e08a52e52d7da7dabfac484efe37a5380ee9088f7ace2efcde9"
