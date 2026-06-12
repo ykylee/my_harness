@@ -165,4 +165,14 @@
 
 **Drift 해소 (D-96, 2026-06-12)**: D-85~D-95 vault 운영 11결정 → wiki 측 SSOT 격리 (raw 12 prompt path my-harness→wiki mv, AGENTS.md §12 신설). cross-project 결정만 my_harness 메모리에도 반영. my_harness 측 결정 = 21 유지, 누적 카운트 갭 해소.
 
+**Lint 0/0/0 회복 (D-97, 2026-06-12)**: D-86~D-95 결정 + D-90 의 wiki-source-sync 111 page 갱신으로 lint 2/278/0 (420 pages) 회귀 → 0/0/0 회복. L04 6 cross-project mirror 면제 (.wiki-lint.toml 2 file) + L08 272 sources/*.md page-per-source 면제. wiki-lint script 에 fnmatch glob skip_paths 지원 추가 (rule_l04 + rule_l08).
+
+**D-75 batch (2026-06-12)**: inquire 0.7.5 → 0.9.4 bump (crossterm 0.25 + bitflags v1.3.2 중복 제거) + D-84 lint fix cherry-pick 회귀 해소 (11 file). cargo build clean / test 447 pass / 0 fail / 2 ignored / clippy pedantic 0 warning.
+
+**D-75 batch follow-up (2026-06-12)**: 4 dep bump (sha2 0.10→0.11, dirs 5→6, reqwest 0.12→0.13, toml 0.8→0.9) + 영향 file fix (sha2 LowerHex 미구현 → byte hex + reqwest feature 갱신). cargo tree -d 단일화 (4 dep transitive 중복 모두 해소). binary 13MB → 11MB.
+
+**D-82 follow-up (cross-project, 2026-06-12)**: DevHub 측 PR #552 머지 + dry-run 검증 완료 처리. T-d-79-3/4 + T-d-80-3/4/5/6 잔여 0. my_harness 측 잔여 없음. D-72 §11.1 thin-wrapper 정공법 cycle (의뢰 수락 → SSOT 6 file 작성 → DevHub 검증) 완전 종료.
+
+**세션 종료 (2026-06-12)**: 누적 결정 갱신 (D-84 21 → D-96 22 → D-97 23 → D-75 batch 24 → D-75 batch follow-up 25 → D-82 follow-up 26 = **26 결정**). main = `c8d2ca2` (D-75 batch follow-up). 5 commit (D-96 memory + D-97 wiki-lint + D-75 batch + D-75 batch follow-up + D-82 follow-up 완료 처리) + 3 wiki vault commit (D-96 + D-96 follow-up L06 + D-97 lint skip config). 다음 진입 결정 (yklee): TASK-005-2 v2.0 (Plugin 4-계층 / Kompress-back / 외부 blocker 해결) 또는 추가 안정화.
+
 (End of file - total 102 lines)
