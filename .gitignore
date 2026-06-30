@@ -52,3 +52,6 @@ scratch/
 # Local memory per-host branches
 # (the framework supports ai-workflow/memory/<host>/.../ ; ignore non-current host)
 ai-workflow/memory/environments/
+
+# Per-upgrade metadata field patch backups (e.g. state.json.bak-pre-v0.11.16-meta)
+ai-workflow/memory/*.bak-*

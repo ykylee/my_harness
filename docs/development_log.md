@@ -335,8 +335,8 @@ yklee 가 판단: 외부 워커 컨슈밍만으로는 **yklee 만이 진화 가�
 
 | 우선순위 | milestone | 의존 |
 | --- | --- | --- |
-| ★★★ | **TASK-005 스택 결정** (Rust vs TS) | **결정 완료 — Rust 1안 (D-36, PROJECT_PROFILE.md §1)**. TASK-005-1 W2 (`myharness/` workspace init) 진행 중. 의존성 고정: `rig-core = "0.38"`, `rmcp = "1.7"`, `ratatui`, `keyring`, `cargo-dist`. 후속 의존 결정들은 모두 Rust 확정. |
-| ★★★ | **TASK-006 TUI 라이브러리** (ratatui vs React/Ink) | **결정 완료 — ratatui** (TASK-005 Rust 정합). v0.1.0 부터 `myharness/crates/tui/` 진행. |
+| ★★★ | **TASK-005 스택 결정** (Rust vs TS) | **결정 완료 — Rust 1안** (D-36, 2026-06-07, 본 문서 §5 정식 기록). TASK-005-1 W2 (`myharness/` workspace init) 진행 중. 의존성 고정: `rig-core = "0.38"`, `rmcp = "1.7"`, `ratatui`, `keyring`, `cargo-dist`. 후속 의존 결정들은 모두 Rust 확정. |
+| ★★★ | **TASK-006 TUI 라이브러리** (ratatui vs React/Ink) | **결정 완료 — ratatui** (D-36 의 TASK-005 Rust 1안 정합 자동 확정, 본 문서 §5). v0.1.0 부터 `myharness/crates/tui/` 진행. |
 | ★★★ | **docs/references/README.md** 통합 인덱스 | §5.3 의 모든 파일 |
 | ★★ | **TASK-002 도메인별 명령 가이드** | yklee 인프라 정보 (별도 세션) |
 | ★★ | **TASK-007 headroom 통합 설계** (library/proxy/MCP) | `headroom.md` §13.1-13.5 |
@@ -346,9 +346,4 @@ yklee 가 판단: 외부 워커 컨슈밍만으로는 **yklee 만이 진화 가�
 | ★ | **claude-code 정식 14섹션** | §5.2 의 정식 repo 분석 |
 | ★ | **TASK-008 Provider fallback list** (3 모델) | yklee 의 LLM 선호/비용 |
 
-### 6.1 추가 결정 추적 (D-시리즈 누적)
-
-본 섹션은 D-NN 결정 ID 의 누적 추적 (D-25~D-84 이후):
-
-- **D-101** (2026-06-30): **TASK-005 = done / Rust 1안 / TASK-005-1 W2** 확정. PROJECT_PROFILE.md §1 line 39 의 "Rust 1안" 표기와 README.md 의 "다음에 정해야 할 것" 표 동기화. 본 결정은 별도 commit (chore/task-005-decision-log-codegen-todo) 으로 정식화.
-- **D-102** (2026-06-30): **TASK-006 = done / ratatui** 확정. v0.1.0 부터 `myharness/crates/tui/` Cargo workspace 내 진행.
+> **Note**: 본 §6 표의 결정 표기는 README.md / PROJECT_PROFILE.md / AGENTS.md / MiniMax.md 의 결정 표시와 SSOT 정합. 결정 본 기록은 본 문서 §5 (D-NN) 가 1차 출처.

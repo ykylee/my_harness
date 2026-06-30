@@ -79,8 +79,8 @@ context_summary: <필요한 컨텍스트>
 ### 코드 개발
 
 - v1 명령: `myharness code review|implement|test|commit` (CONCEPT.md §5.2 코드 도메인)
-- **TASK-005 결정 (D-101, 2026-06-30)**: 스택 = **Rust 1안**. Cargo workspace (`myharness/Cargo.toml`) + 8 member crates (core / llm / tui / tools / context / cli / auth / compression). 의존성: `rig-core = "0.38"`, `rmcp = "1.7"`, `ratatui`, `keyring`, `cargo-dist`.
-- **TASK-006 결정 (D-102, 2026-06-30)**: TUI = **ratatui** (`myharness/crates/tui/`).
+- **TASK-005 결정 (D-36, 2026-06-07, `docs/development_log.md` §5)**: 스택 = **Rust 1안**. Cargo workspace (`myharness/Cargo.toml`) + 8 member crates (core / llm / tui / tools / context / cli / auth / compression). 의존성: `rig-core = "0.38"`, `rmcp = "1.7"`, `ratatui`, `keyring`, `cargo-dist`.
+- **TASK-006 결정 (D-36 의 TASK-005 Rust 정합 자동 확정)**: TUI = **ratatui** (`myharness/crates/tui/`).
 - 설치 (Rust 1안 기반): `cargo build --release --manifest-path myharness/Cargo.toml` — release binary `myharness/target/release/myharness` 산출
 - 로컬 실행: `./target/release/myharness --mode=orchestrator` (D-29, 3-모드: orchestrator/single/loop)
 - 빠른 테스트: `cargo test --manifest-path myharness/Cargo.toml --workspace --lib`
