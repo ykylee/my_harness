@@ -132,6 +132,9 @@ impl Orchestrator {
     /// dispatch + `sub-agent.run()`. tools/llm 통합:
     /// - tools 가 있으면 `def.allowed_tools` 와 registry 교집합 검증 (log warn if mismatched)
     /// - `llm_client` 가 있으면 system prompt + user input 으로 LLM 호출 추가
+    /// - A-min (2026-06-30) **text-based tool dispatch loop** — LLM 응답에서
+    ///   ```tool_call ... ``` block parse → ToolRegistry::get → execute → 결과 message 추가
+    ///   → LLM 재호출. 최대 3 round. tool call 없으면 즉시 final 응답.
     ///
     /// # Errors
     /// 서브 에이전트를 찾을 수 없거나 LLM 호출 중 오류 발생 시 `SubAgentError` 를 반환합니다.
@@ -153,36 +156,135 @@ impl Orchestrator {
         // base sub-agent response
         let mut response = agent.run(&decision.extracted_input).await?;
 
-        // llm enhance: if llm_client available, send (system + user) and append
+        // llm enhance: if llm_client available, send (system + user) and append.
+        // A-min tool dispatch loop: LLM 응답에 tool_call block 있으면 실행 + 재호출.
         if let Some(llm) = &self.llm_client {
-            let req = myharness_llm::CompletionRequest {
-                model: String::new(),
-                system: Some(agent.def().system_prompt.to_string()),
-                messages: vec![myharness_llm::client::Message::user(decision.extracted_input.clone())],
-                max_tokens: Some(256),
-                temperature: Some(0.2),
-                stop: vec![],
-                stream: false,
-                metadata: serde_json::Value::Null,
-            };
-            match llm.complete(req).await {
-                Ok(r) if !r.content.is_empty() => {
-                    response.push_str("\n\n[LLM] ");
-                    response.push_str(&r.content);
-                }
-                Ok(_) => {}
-                Err(e) => {
-                    if self.fatal_llm_error {
-                        return Err(SubAgentError::Llm(e));
+            let system_prompt = format!(
+                "{}{}",
+                agent.def().system_prompt,
+                crate::agent::tool_spec_section(agent.def().allowed_tools)
+            );
+            let mut messages: Vec<myharness_llm::client::Message> =
+                vec![myharness_llm::client::Message::user(decision.extracted_input.clone())];
+
+            const MAX_TOOL_ROUNDS: usize = 3;
+            for _round in 0..MAX_TOOL_ROUNDS {
+                let req = myharness_llm::CompletionRequest {
+                    model: String::new(),
+                    system: Some(system_prompt.clone()),
+                    messages: messages.clone(),
+                    max_tokens: Some(2048),
+                    temperature: Some(0.2),
+                    stop: vec![],
+                    stream: false,
+                    metadata: serde_json::Value::Null,
+                };
+
+                match llm.complete(req).await {
+                    Ok(r) if !r.content.is_empty() => {
+                        // tool_call block 추출 시도
+                        if let Some((name, args)) = extract_tool_call(&r.content) {
+                            // tool dispatch
+                            let tool_result_text = self
+                                .dispatch_tool_call(&name, args)
+                                .await
+                                .unwrap_or_else(|e| {
+                                    format!("[tool-error] {e}")
+                                });
+                            // 결과를 assistant 응답 + tool 메시지로 메시지 추가 → 다음 round
+                            messages.push(myharness_llm::client::Message::assistant(
+                                r.content.clone(),
+                            ));
+                            messages.push(myharness_llm::client::Message::tool(
+                                tool_result_text,
+                                name.clone(),
+                            ));
+                            // 중간 응답을 누적 (디버그 가시화)
+                            response.push_str(&format!(
+                                "\n\n[tool_call] {} → ok\n[LLM-round-{}] dispatching next",
+                                name,
+                                _round + 1
+                            ));
+                            continue;
+                        }
+                        // tool_call 없으면 final 응답
+                        response.push_str("\n\n[LLM] ");
+                        response.push_str(&r.content);
+                        break;
                     }
-                    use std::fmt::Write as _;
-                    let _ = write!(response, "\n\n[LLM-error] {e}");
+                    Ok(_) => {
+                        // 빈 응답 — loop 중단
+                        break;
+                    }
+                    Err(e) => {
+                        if self.fatal_llm_error {
+                            return Err(SubAgentError::Llm(e));
+                        }
+                        use std::fmt::Write as _;
+                        let _ = write!(response, "\n\n[LLM-error] {e}");
+                        break;
+                    }
                 }
             }
         }
 
         Ok(response)
     }
+
+    /// A-min tool dispatch — name + args 받아서 ToolRegistry 에서 찾아 실행.
+    /// 결과는 string (성공/실패 모두). permission/cwd 는 `default` mode + cwd=현재.
+    async fn dispatch_tool_call(
+        &self,
+        name: &str,
+        args: serde_json::Value,
+    ) -> Result<String, SubAgentError> {
+        let registry = self
+            .tool_registry
+            .as_ref()
+            .ok_or_else(|| SubAgentError::Tool("no tool registry configured".into()))?;
+        let tool = registry
+            .get(name)
+            .ok_or_else(|| SubAgentError::Tool(format!("tool not found: {name}")))?;
+        let cwd = std::env::current_dir().unwrap_or_else(|_| std::path::PathBuf::from("."));
+        let ctx = myharness_tools::ToolContext::new(
+            cwd,
+            myharness_tools::PermissionMode::AcceptEdits, // A-min: AcceptEdits 모드 (자동 yes)
+        );
+        match tool.execute(&ctx, args).await {
+            Ok(r) => Ok(r.output),
+            Err(e) => Err(SubAgentError::Tool(e.to_string())),
+        }
+    }
+}
+
+/// A-min (2026-06-30) — LLM 응답에서 첫 번째 ```tool_call``` block 추출.
+/// 형식: ```tool_call\n{"name": "...", "args": {...}}\n```\n
+/// 발견 안되면 None.
+fn extract_tool_call(content: &str) -> Option<(String, serde_json::Value)> {
+    let start = content.find("```tool_call")?;
+    let after = &content[start..];
+    let open = after.find('{')?;
+    // balanced braces 추출 (단순 카운팅 — nested object 1단까지)
+    let bytes = after.as_bytes();
+    let mut depth = 0usize;
+    let mut end = None;
+    for (i, &b) in bytes.iter().enumerate().skip(open) {
+        if b == b'{' {
+            depth += 1;
+        } else if b == b'}' {
+            depth -= 1;
+            if depth == 0 {
+                end = Some(i + 1);
+                break;
+            }
+        }
+    }
+    let end = end?;
+    let json_str = &after[open..end];
+    let parsed: serde_json::Value = serde_json::from_str(json_str).ok()?;
+    let name = parsed.get("name")?.as_str()?.to_string();
+    let args = parsed.get("args").cloned().unwrap_or(serde_json::json!({}));
+    Some((name, args))
 }
 
 // helper extension trait for case-insensitive prefix strip
@@ -311,5 +413,75 @@ mod tests {
     fn strip_prefix_ci_basic() {
         assert_eq!(("Code Review foo").strip_prefix_ci("code "), Some("Review foo"));
         assert_eq!(("xyz").strip_prefix_ci("code "), None);
+    }
+
+    // === A-min (2026-06-30) — text-based tool dispatch tests ===
+
+    #[test]
+    fn extract_tool_call_basic() {
+        let content = r#"Sure, reading the file.
+
+```tool_call
+{"name": "Read", "args": {"file_path": "foo.rs"}}
+```
+
+Then I'll analyze."#;
+        let (name, args) = extract_tool_call(content).unwrap();
+        assert_eq!(name, "Read");
+        assert_eq!(args.get("file_path").unwrap().as_str().unwrap(), "foo.rs");
+    }
+
+    #[test]
+    fn extract_tool_call_missing_returns_none() {
+        assert!(extract_tool_call("just plain text response").is_none());
+        assert!(extract_tool_call("```\n{\"name\": \"Read\"}\n```").is_none()); // wrong fence
+    }
+
+    #[test]
+    fn extract_tool_call_nested_args() {
+        let content = r#"```tool_call
+{"name": "Bash", "args": {"command": "ls -la", "timeout_ms": 5000}}
+```"#;
+        let (name, args) = extract_tool_call(content).unwrap();
+        assert_eq!(name, "Bash");
+        assert_eq!(args.get("command").unwrap().as_str().unwrap(), "ls -la");
+        assert_eq!(args.get("timeout_ms").unwrap().as_u64().unwrap(), 5000);
+    }
+
+    #[tokio::test]
+    async fn run_with_llm_tool_call_dispatches_and_continues() {
+        // 1st response: tool_call (Read foo.rs)
+        // 2nd response: final answer
+        let c = Arc::new(MockClient::new(ProviderId::Claude, "claude-sonnet-4-6"));
+        c.push(MockResponse::Text(
+            r#"```tool_call
+{"name": "Read", "args": {"file_path": "Cargo.toml"}}
+```"#
+            .into(),
+        ));
+        c.push(MockResponse::Text("After reading: looks good.".into()));
+        let reg = Arc::new(myharness_tools::ToolRegistry::default_tools());
+        let o = Orchestrator::new()
+            .with_llm(c.clone())
+            .with_tools(reg);
+        let out = o.run("code review").await.unwrap();
+        assert!(out.contains("[tool_call] Read"));
+        assert!(out.contains("After reading: looks good."));
+        // 2 LLM calls
+        assert_eq!(c.calls.lock().unwrap().len(), 2);
+    }
+
+    #[tokio::test]
+    async fn run_with_llm_no_tool_call_returns_immediately() {
+        let c = Arc::new(MockClient::new(ProviderId::Claude, "claude-sonnet-4-6"));
+        c.push(MockResponse::Text("plain answer, no tools needed".into()));
+        let reg = Arc::new(myharness_tools::ToolRegistry::default_tools());
+        let o = Orchestrator::new()
+            .with_llm(c.clone())
+            .with_tools(reg);
+        let out = o.run("code review").await.unwrap();
+        assert!(out.contains("plain answer"));
+        assert!(!out.contains("[tool_call]"));
+        assert_eq!(c.calls.lock().unwrap().len(), 1);
     }
 }

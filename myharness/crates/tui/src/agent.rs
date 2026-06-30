@@ -4,6 +4,58 @@
 
 use async_trait::async_trait;
 
+/// A-min (2026-06-30) — SubAgent 의 system prompt 끝에 자동으로 합성되는 tool spec section.
+///
+/// LLM 은 이 형식 그대로 ```tool_call``` block 을 emit 하면 Orchestrator 가 dispatch 한다.
+/// 형식 고정 (regex parser 가 의존): ` ```tool_call\n{...}\n``` `.
+pub fn tool_spec_section(allowed_tools: &[&str]) -> String {
+    const ALL: &[(&str, &str)] = &[
+        (
+            "Read",
+            "Read(file_path: string, offset?: number, limit?: number) — read file content with optional offset/limit",
+        ),
+        (
+            "Write",
+            "Write(file_path: string, content: string) — write file content (creates parent dirs)",
+        ),
+        (
+            "Edit",
+            "Edit(file_path: string, old_string: string, new_string: string, replace_all?: bool) — exact text replace",
+        ),
+        (
+            "Bash",
+            "Bash(command: string, timeout_ms?: number) — execute shell command, returns stdout+stderr",
+        ),
+        (
+            "Grep",
+            "Grep(pattern: string, path?: string, include?: string, case_insensitive?: bool) — search text",
+        ),
+        (
+            "Glob",
+            "Glob(pattern: string, path?: string) — match file paths against glob pattern",
+        ),
+    ];
+
+    let mut out = String::new();
+    out.push_str("\n\n## Tool use (text-based, A-min 2026-06-30)\n\n");
+    out.push_str("You can call the tools above by emitting a ```tool_call``` block in your response:\n\n");
+    out.push_str("```tool_call\n");
+    out.push_str("{\"name\": \"Read\", \"args\": {\"file_path\": \"path/to/file.rs\"}}\n");
+    out.push_str("```\n\n");
+    out.push_str("The Orchestrator will run the tool, append the result to the conversation, and let you continue. ");
+    out.push_str("You may call multiple tools across turns (max 3 rounds). ");
+    out.push_str("When you are done, respond with plain markdown (no tool_call block).\n\n");
+    out.push_str("Available tools in this session:\n");
+    for name in allowed_tools {
+        if let Some((_, desc)) = ALL.iter().find(|(n, _)| *n == *name) {
+            out.push_str("- ");
+            out.push_str(desc);
+            out.push('\n');
+        }
+    }
+    out
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum SubAgentDomain {
     Code,

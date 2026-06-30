@@ -55,3 +55,6 @@ ai-workflow/memory/environments/
 
 # Per-upgrade metadata field patch backups (e.g. state.json.bak-pre-v0.11.16-meta)
 ai-workflow/memory/*.bak-*
+
+# Per-session git worktrees (transient, not tracked in main repo)
+.worktrees/
