@@ -33,6 +33,8 @@ pub struct Orchestrator {
     pub llm_client: Option<Arc<dyn LLMClient>>,
     /// W11.3 (D-49) — LLM err 를 fatal 로 처리. false (default) 면 [LLM-error] 로 wrap 후 Ok.
     pub fatal_llm_error: bool,
+    /// D-101 (2026-06-30) — A-min tool dispatch loop 최대 round. default 10.
+    pub max_tool_rounds: usize,
 }
 
 impl Default for Orchestrator {
@@ -44,7 +46,12 @@ impl Default for Orchestrator {
 impl Orchestrator {
     #[must_use]
     pub fn new() -> Self {
-        Self { tool_registry: None, llm_client: None, fatal_llm_error: false }
+        Self {
+            tool_registry: None,
+            llm_client: None,
+            fatal_llm_error: false,
+            max_tool_rounds: 10, // D-101 (2026-06-30) — A-min follow-up, 기본 10 round
+        }
     }
 
     #[must_use]
@@ -63,6 +70,13 @@ impl Orchestrator {
     #[must_use]
     pub fn with_fatal_llm_error(mut self, fatal: bool) -> Self {
         self.fatal_llm_error = fatal;
+        self
+    }
+
+    /// D-101 (2026-06-30) — A-min tool dispatch loop 의 max round 설정.
+    #[must_use]
+    pub fn with_max_tool_rounds(mut self, n: usize) -> Self {
+        self.max_tool_rounds = n;
         self
     }
 
@@ -167,8 +181,8 @@ impl Orchestrator {
             let mut messages: Vec<myharness_llm::client::Message> =
                 vec![myharness_llm::client::Message::user(decision.extracted_input.clone())];
 
-            const MAX_TOOL_ROUNDS: usize = 3;
-            for _round in 0..MAX_TOOL_ROUNDS {
+            // D-101 (2026-06-30) — max_tool_rounds default 10 (configurable via with_max_tool_rounds)
+            for round in 0..self.max_tool_rounds {
                 let req = myharness_llm::CompletionRequest {
                     model: String::new(),
                     system: Some(system_prompt.clone()),
@@ -184,26 +198,36 @@ impl Orchestrator {
                     Ok(r) if !r.content.is_empty() => {
                         // tool_call block 추출 시도
                         if let Some((name, args)) = extract_tool_call(&r.content) {
-                            // tool dispatch
-                            let tool_result_text = self
+                            // tool dispatch (AcceptEdits + confirm_override true → prompt skip)
+                            let (tool_result_text, tool_is_error) = match self
                                 .dispatch_tool_call(&name, args)
                                 .await
-                                .unwrap_or_else(|e| {
-                                    format!("[tool-error] {e}")
-                                });
+                            {
+                                Ok(text) => (text, false),
+                                Err(e) => (format!("[tool-error] {e}"), true),
+                            };
                             // 결과를 assistant 응답 + tool 메시지로 메시지 추가 → 다음 round
                             messages.push(myharness_llm::client::Message::assistant(
                                 r.content.clone(),
                             ));
                             messages.push(myharness_llm::client::Message::tool(
-                                tool_result_text,
+                                tool_result_text.clone(),
                                 name.clone(),
                             ));
-                            // 중간 응답을 누적 (디버그 가시화)
+                            // D-101 (2026-06-30) — tool result 를 response 에도 누적 (이전엔 "[tool_call] X → ok" 만)
+                            // 너무 길면 첫 2000자만 출력 (response 가독성)
+                            let truncated = if tool_result_text.len() > 2000 {
+                                format!("{}…[truncated {} chars]", &tool_result_text[..2000], tool_result_text.len() - 2000)
+                            } else {
+                                tool_result_text.clone()
+                            };
                             response.push_str(&format!(
-                                "\n\n[tool_call] {} → ok\n[LLM-round-{}] dispatching next",
+                                "\n\n[tool_call] {} ({}) → {}\n[tool_result] {}\n[LLM-round-{}] dispatching next",
                                 name,
-                                _round + 1
+                                if tool_is_error { "error" } else { "ok" },
+                                if tool_is_error { "see [tool-error]" } else { "see below" },
+                                truncated,
+                                round + 1
                             ));
                             continue;
                         }
@@ -232,7 +256,9 @@ impl Orchestrator {
     }
 
     /// A-min tool dispatch — name + args 받아서 ToolRegistry 에서 찾아 실행.
-    /// 결과는 string (성공/실패 모두). permission/cwd 는 `default` mode + cwd=현재.
+    /// 결과는 (text, is_error). D-101 (2026-06-30) follow-up:
+    /// - PermissionMode::AcceptEdits (sub-agent 가 file edit 자동 yes)
+    /// - confirm_override=true (Bash prompt skip, 비대화형 환경 hang 방지)
     async fn dispatch_tool_call(
         &self,
         name: &str,
@@ -248,8 +274,9 @@ impl Orchestrator {
         let cwd = std::env::current_dir().unwrap_or_else(|_| std::path::PathBuf::from("."));
         let ctx = myharness_tools::ToolContext::new(
             cwd,
-            myharness_tools::PermissionMode::AcceptEdits, // A-min: AcceptEdits 모드 (자동 yes)
-        );
+            myharness_tools::PermissionMode::AcceptEdits,
+        )
+        .with_confirm_override(true); // D-101: 비대화형 hang 방지
         match tool.execute(&ctx, args).await {
             Ok(r) => Ok(r.output),
             Err(e) => Err(SubAgentError::Tool(e.to_string())),
@@ -483,5 +510,72 @@ Then I'll analyze."#;
         assert!(out.contains("plain answer"));
         assert!(!out.contains("[tool_call]"));
         assert_eq!(c.calls.lock().unwrap().len(), 1);
+    }
+
+    // === D-101 (2026-06-30) — A-min follow-up polish tests ===
+
+    #[test]
+    fn default_max_tool_rounds_is_ten() {
+        let o = Orchestrator::new();
+        assert_eq!(o.max_tool_rounds, 10);
+    }
+
+    #[test]
+    fn with_max_tool_rounds_overrides() {
+        let o = Orchestrator::new().with_max_tool_rounds(5);
+        assert_eq!(o.max_tool_rounds, 5);
+    }
+
+    #[tokio::test]
+    async fn run_with_tool_call_appends_tool_result_in_response() {
+        // D-101 — tool result stdout 이 response 에 visible 해야 함.
+        // 1st response: tool_call Bash "echo hello"
+        // 2nd response: final answer
+        let c = Arc::new(MockClient::new(ProviderId::Claude, "claude-sonnet-4-6"));
+        c.push(MockResponse::Text(
+            r#"```tool_call
+{"name": "Bash", "args": {"command": "echo hello-d101"}}
+```"#
+            .into(),
+        ));
+        c.push(MockResponse::Text("done.".into()));
+        let reg = Arc::new(myharness_tools::ToolRegistry::default_tools());
+        let o = Orchestrator::new()
+            .with_llm(c.clone())
+            .with_tools(reg);
+        let out = o.run("env diagnose").await.unwrap();
+        assert!(out.contains("[tool_call] Bash"));
+        assert!(out.contains("[tool_result]"));
+        assert!(out.contains("hello-d101"), "tool stdout visible in response: {out}");
+        assert!(out.contains("done."));
+        assert_eq!(c.calls.lock().unwrap().len(), 2);
+    }
+
+    #[tokio::test]
+    async fn run_with_max_tool_rounds_two_stops_after_two() {
+        // LLM 이 매번 tool_call 만 emit → max_tool_rounds=2 에서 2 round 후 break
+        let c = Arc::new(MockClient::new(ProviderId::Claude, "claude-sonnet-4-6"));
+        c.push(MockResponse::Text(
+            r#"```tool_call
+{"name": "Bash", "args": {"command": "echo r1"}}
+```"#
+            .into(),
+        ));
+        c.push(MockResponse::Text(
+            r#"```tool_call
+{"name": "Bash", "args": {"command": "echo r2"}}
+```"#
+            .into(),
+        ));
+        // 3rd 응답은 안 옴 (max round 초과로 dispatch 중단)
+        let reg = Arc::new(myharness_tools::ToolRegistry::default_tools());
+        let o = Orchestrator::new()
+            .with_llm(c.clone())
+            .with_tools(reg)
+            .with_max_tool_rounds(2);
+        let out = o.run("env diagnose").await.unwrap();
+        assert!(out.contains("r1"));
+        assert!(out.contains("r2"));
+        assert_eq!(c.calls.lock().unwrap().len(), 2); // 2 round 후 break, 3번째 호출 안 함
     }
 }

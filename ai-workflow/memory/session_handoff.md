@@ -187,5 +187,7 @@
 - **D-100 A-min text-based tool dispatch 1차 cycle**: `agent.rs` +52 (tool_spec_section), `orchestrator.rs` +194 (extract_tool_call + dispatch loop max 3 round), 5 test 추가 (18/18 tui PASS). clippy clean. Real LLM `code review myharness/crates/cli/src/main.rs` → `[tool_call] Read → ok` × 3 round 자동 dispatch. `env diagnose` → `[tool_call] Bash → ok` × 3 round.
 - 한계: max_round 3 → 5/10, Bash 결과 stdout visible, A-proper native tool calling (v1.5+ CompletionRequest::tools + CompletionResponse::tool_calls + provider wire format).
 - 누적 결정 47 → **48** (D-100). main = `5fe1e90` (D-100 final, post-amend).
+- **D-101 (2026-06-30) A-min follow-up polish**: max_tool_rounds 3 → **10 default** + `with_max_tool_rounds(n)` builder (configurable). tool result stdout **visible in response** (2000자 truncation, 이전엔 `[tool_call] X → ok` 마커만). `dispatch_tool_call` 에 `with_confirm_override(true)` 추가 — AcceptEdits + confirm_override → Bash prompt skip (비대화형 환경 hang 방지). 4 test 추가. **22/22 tui PASS (D-100 18 + D-101 4 신규), clippy clean**. Real LLM `env diagnose` → 10 round 자동 dispatch + `[tool_result]` 에 uname/PATH/whoami/pwd stdout visible + prompt 안 뜸. 한계: max_round 10 도 큰 file 부족 + LLM 같은 Bash 반복 (prompt 개선 필요) + A-proper native tool calling (v1.5+).
+- 누적 결정 48 → **49** (D-101). main = D-101 commit (hash 다음 세션 확정).
 
 (End of file - total 102 lines)
