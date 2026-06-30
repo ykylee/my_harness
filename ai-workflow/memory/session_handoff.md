@@ -181,4 +181,34 @@
 
 **Sub-task 1 완료 (D-98 + D-99, 2026-06-14)**: TASK-005-2 v2.0 Plugin 4-계층 의 첫 sub-task (Layer 1: Auto Memory) 완료. **2 commit dual push (Gitea + GitHub)**. **(1) D-98 (57db117) Commit A — Auto Memory pure refactor**: 단일 `myharness/crates/context/src/auto_memory.rs` (293 lines, D-46 NDJSON append-only) → 4 file 모듈 (mod.rs + types.rs + store.rs + query.rs) 분할 + `MemoryStore` async trait 추출 + `NdjsonMemoryStore` adapter (back-compat 100%, sync wrappers via `Arc::clone + async move` + `block_on` bridge). 7 new tests (`ndjson_*`) ported from 8 existing (drop: `append_and_recent_roundtrip` merged). lib.rs re-export 확장. Cargo.toml 변경 없음. **(2) D-99 (c64d0ff) Commit B — SqliteMemoryStore (rusqlite FTS5 + BM25)**: `auto_memory/sqlite_store.rs` (303 lines) 신규 + `tests/auto_memory.rs` (220 lines, 6 integration tests) 신규 + Cargo.toml (workspace + context, `rusqlite = { version = '0.31', features = ['bundled'] }`) 추가. FTS5 virtual table schema (memory + memory_fts + 3 triggers) + bm25(memory_fts) ranking + porter unicode61 tokenizer. default backend = NDJSON (back-compat), opt-in via `MYHARNESS_MEMORY_BACKEND=sqlite`. block_on bridge 단순화: std::thread::spawn escape for `#[tokio::test]` context (current_thread runtime executor deadlock 회피) + Runtime::block_on fallback. clippy 1 `#[allow(clippy::collapsible_if)]` on query method (let-chain 회피). **3-way verify**: cargo build clean / cargo clippy --workspace --all-targets -- -D warnings clean / cargo test --workspace **453 pass + 0 fail + 2 ignored** (baseline 447 + 6 Commit B integration, Commit A 의 7 ndjson test 는 context crate 의 55 안에 포함, 회귀 0). **누적 결정 카운트 갱신 (2026-06-14)**: 28 → **30** (D-98 + D-99 추가). state.json decisions.decided.length = **47**. main = `c64d0ff`. **다음 1순위 (yklee 결정)**: Sub-task 2 (provider-auto-config Skill 정식, llm + cli 영향, MEDIUM effort, 의존성 없음, parallel 가능) / Sub-task 3 (Plugin Installer, HIGH effort) / Sub-task 4 (Marketplace) / 세션 종료.
 
+**워크플로우 점검 결과 (2026-06-14)** — 협업 측면 개선:
+
+**[문제]** AGENTS.md 의 "세션 종료 전 메모리 갱신" 원칙대로 코드 commit → push → 메모리 sync → push 패턴 사용 시, 코드 commit push 직후 협업자가 메모리를 fetch 받으면 stale. 즉 **코드 commit 의 결정 ID 가 메모리 (state.json/handoff) 에 미반영** 상태로 협업자에게 노출. 결정 ID 검색 불가 + 결정 상세 description 누락.
+
+**[개선 패턴 — Sub-task 2 부터 적용]** 코드 commit message trailer 에 결정 ID 명시:
+
+```text
+feat(<scope>): <subject>
+
+<body>
+
+Refs: D-NN (TASK-005-2 v2.0 Sub-task N Commit X)
+Tests: <count> pass + <N> ignored
+Clippy: 0 warning
+Binary: <delta>
+```
+
+**[권장 워크플로우]**:
+1. 로컬: 코드/문서 작업 + 검증 + 메모리 동기화 (state.json + handoff + work_backlog + 신규 2026-06-XX.md)
+2. staging: `git add feat_files + memory_files` (함께 stage)
+3. commit + push: 1 commit (코드 + 메모리 함께) **또는** 2 commit (코드 commit → 메모리 commit) + 단일 push 에 둘 다 포함
+4. 협업자가 main fetch 시 항상 결정 ID + 메모리 정합 상태
+
+**[현재 main 상태 (d879ddf)]**: retroactive fix 불요 — `4491c53` (06-13 sync) + `d879ddf` (06-14 sync) 가 메모리 정합화 완료. `c64d0ff` (Sub-task 1 Commit B) 의 협업자 fetch 시점이 `d879ddf` 직후면 모든 결정 ID + 메모리 정합.
+
+**[Sub-task 2 권장 적용 순서]**:
+1. `feat(llm): D-100 provider-auto-config SKILL.md runtime loader` — message trailer `Refs: D-100`
+2. `chore(memory): 2026-06-XX sync (D-100)` — 같은 push 에 포함
+3. dual push (Gitea + GitHub)
+
 (End of file - total 102 lines)
