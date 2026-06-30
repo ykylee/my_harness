@@ -15,7 +15,10 @@ pub mod claude_md;
 pub mod compression;
 pub mod config;
 
-pub use auto_memory::{AutoMemory, MemoryKind, MemoryRecord};
+pub use auto_memory::{
+    AutoMemory, AutoMemoryConfig, MemoryBackend, MemoryError, MemoryHit, MemoryKind, MemoryQuery,
+    MemoryRecord, MemoryStore,
+};
 pub use budget::{BudgetConfig, BudgetReport, CompactStrategy, ContextManager, Role, Message as ContextMessage};
 pub use claude_md::{ContextLoader, ContextSource, DiscoveredContext};
 pub use compression::{detect_content_type, smart_crush, code_compress, BuiltinConfig, BuiltinPipeline, ContentType};

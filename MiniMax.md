@@ -33,6 +33,23 @@
 - 작업 상태는 `planned`, `in_progress`, `blocked`, `done` 중 하나로 관리한다.
 - 검증하지 않은 결과는 완료로 확정하지 않는다.
 - 세션 종료 전에는 `state.json`, `session_handoff.md`, 최신 backlog 를 갱신한다.
+- **코드 commit + 메모리 동기화는 단일 push 에 포함한다** (2026-06-14 워크플로우 점검). 협업자가 main fetch 시점에 결정 ID + 메모리가 항상 정합하도록:
+  1. 로컬: 코드/문서 작업 + 검증 + 메모리 동기화 (`state.json` + `session_handoff.md` + `work_backlog.md` + 신규 `backlog/YYYY-MM-DD.md`)
+  2. staging: `git add feat_files + memory_files` (함께)
+  3. commit + push:
+     - 옵션 A: 1 commit (코드 + 메모리 한 commit)
+     - 옵션 B: 2 commit (feat commit → 메모리 commit) + **단일 push** 에 둘 다
+  4. **코드 commit message trailer 에 결정 ID 명시**:
+     ```
+     feat(<scope>): <subject>
+
+     <body>
+
+     Refs: D-NN (TASK-XXXX v2.0 Sub-task N Commit X)
+     Tests: <count> pass + <N> ignored
+     Clippy: 0 warning
+     Binary: <delta>
+     ```
 - 가능한 한 메인 orchestrator는 조정과 통합에 집중하고, 도구 호출/탐색/수정은 `.MiniMax/agents/workflow-*.md` 워커에 위임한다.
 
 ## 오케스트레이터 / 워커 운영 원칙 (Multi-Agent Topology)
@@ -61,11 +78,13 @@
 ### 코드 개발
 
 - v1 명령: `myharness code review|implement|test|commit` (CONCEPT.md §5.2 코드 도메인)
-- 설치: `TODO` (대상 프로젝트별 — 일반적으로 `pnpm install` / `npm ci` / `go mod download` 등)
-- 로컬 실행: `TODO`
-- 빠른 테스트: `TODO` (vitest / jest / go test 등)
-- 격리 테스트: `TODO`
-- 실행 확인: `TODO`
+- **TASK-005 결정 (D-36, 2026-06-07, `docs/development_log.md` §5)**: 스택 = **Rust 1안**. Cargo workspace (`myharness/Cargo.toml`) + 8 member crates (core / llm / tui / tools / context / cli / auth / compression). 의존성: `rig-core = "0.38"`, `rmcp = "1.7"`, `ratatui`, `keyring`, `cargo-dist`.
+- **TASK-006 결정 (D-36 의 TASK-005 Rust 정합 자동 확정)**: TUI = **ratatui** (`myharness/crates/tui/`).
+- 설치 (Rust 1안 기반): `cargo build --release --manifest-path myharness/Cargo.toml` — release binary `myharness/target/release/myharness` 산출
+- 로컬 실행: `./target/release/myharness --mode=orchestrator` (D-29, 3-모드: orchestrator/single/loop)
+- 빠른 테스트: `cargo test --manifest-path myharness/Cargo.toml --workspace --lib`
+- 격리 테스트: `cargo test --manifest-path myharness/Cargo.toml -p <crate-name> --lib` (예: `-p myharness-core`, `-p myharness-llm`)
+- 실행 확인: `./target/release/myharness --version` 또는 `./target/release/myharness --mode=single "echo hello"` (단일 에이전트 smoke)
 
 ### 서버 관리
 

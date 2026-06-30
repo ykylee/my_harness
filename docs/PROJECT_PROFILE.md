@@ -69,7 +69,7 @@
 
 **v1 명령 구조는 [`CONCEPT.md` §5.2](./CONCEPT.md) 가 SSOT** (단일 진실 공급원). 본 섹션은 v1 명령 + 점진 채움 항목 (yklee 인프라 정보 의존) 통합.
 
-- **코드 개발** (CONCEPT.md §5.2): `myharness code review|implement|test|commit` — 각 명령 = 1 sub-agent (mini_coder_max / fullstack-dev) 위임. 설치/로컬 실행/테스트는 `TASK-002` 에서 가이드라인 추가 예정. 현재는 `gh pr`, vitest/jest, Next.js 빌드 등 도구별 표준 명령을 워커 호출 시 컨텍스트로 전달.
+- **코드 개발** (CONCEPT.md §5.2): `myharness code review|implement|test|commit` — 각 명령 = 1 sub-agent (mini_coder_max / fullstack-dev) 위임. **TASK-005 / TASK-006 결정 (D-36, 2026-06-07, `docs/development_log.md` §5) — Rust 1안 + ratatui**. 표준 명령은 Cargo workspace 기준: `cargo build --release --manifest-path myharness/Cargo.toml`, `./target/release/myharness --mode=orchestrator`, `cargo test --manifest-path myharness/Cargo.toml --workspace --lib`, `cargo test --manifest-path myharness/Cargo.toml -p <crate-name> --lib`, `./target/release/myharness --version` smoke. 서버 관리 / 환경 셋업 의 TODO 는 TASK-002 후속 (yklee 인프라 정보 필요).
 - **서버 관리** (CONCEPT.md §5.2): `myharness server status|logs|deploy|config` — 원격 서버 호스트 목록 / SSH 별칭 / 헬스체크 명령 — yklee 개인 인프라 정보 필요. 초기값은 본 문서 하단 "## 부록" 섹션에 TODO 로 적는다.
 - **환경 셋업** (CONCEPT.md §5.2): `myharness env setup|install|shell|diagnose` — Homebrew 패키지 목록, asdf/rtx 런타임 버전, dotfiles 저장소 경로 — yklee의 macOS 셋업에 맞춰 점진적으로 채운다.
 
