@@ -4,7 +4,7 @@
 - Scope: current focus, task status, key changes, next actions, risks
 - Audience: yklee, Mavis orchestrator, .MiniMax 워커 에이전트
 - Status: active
-- Updated: 2026-06-11 (D-84 pedantic clippy residual final 완료 — 21→0 warnings, 7 카테고리 fix, 11 file / +58 -46, 1 commit `5fc7f56` dual push Gitea + GitHub, branch `fix/d83-pedantic-residual-final` 보존. 누적 결정 21. 이전: D-83 pedantic clippy batch + D-82 D-81 follow-up + D-80 추가 안정화 + D-79 DevHub ingest + D-78 T-v5-sync-1 종료)
+- Updated: 2026-06-13 (06-13 docs cleanup — 3 commit / 11 file / +47 -36, 새 결정 ID 불요. **d1c64e3** D-36 cross-reference 정정 (D-101/D-102 잘못된 결정 ID 정리, 6 file / +14 -16) + **ab3713b** TASK-002 코드 개발 5 TODO 자동 채움 + MiniMax.md 동기화 (12 line 변경) + **d1f4a39** TASK-005/006 결정 log 보강 (3 file / +19 -10). main = `d1f4a39`. 이전: 06-12 closeout 5 commit 결정 D-96 + D-97 + D-75 batch + D-75 batch follow-up + D-82 follow-up)
 - Related docs: [Project Profile](../../docs/PROJECT_PROFILE.md), [Work Backlog](./work_backlog.md), [State Cache](./state.json), [CONCEPT.md](../../docs/CONCEPT.md) (SSOT)
 
 ## Current Focus
@@ -174,5 +174,9 @@
 **D-82 follow-up (cross-project, 2026-06-12)**: DevHub 측 PR #552 머지 + dry-run 검증 완료 처리. T-d-79-3/4 + T-d-80-3/4/5/6 잔여 0. my_harness 측 잔여 없음. D-72 §11.1 thin-wrapper 정공법 cycle (의뢰 수락 → SSOT 6 file 작성 → DevHub 검증) 완전 종료.
 
 **세션 종료 (2026-06-12)**: 누적 결정 갱신 (D-84 21 → D-96 22 → D-97 23 → D-75 batch 24 → D-75 batch follow-up 25 → D-82 follow-up 26 = **26 결정**). main = `c8d2ca2` (D-75 batch follow-up). 5 commit (D-96 memory + D-97 wiki-lint + D-75 batch + D-75 batch follow-up + D-82 follow-up 완료 처리) + 3 wiki vault commit (D-96 + D-96 follow-up L06 + D-97 lint skip config). 다음 진입 결정 (yklee): TASK-005-2 v2.0 (Plugin 4-계층 / Kompress-back / 외부 blocker 해결) 또는 추가 안정화.
+
+**06-13 docs cleanup (2026-06-13)**: 3 commit / 11 file / +47 -36. **새 결정 ID 추가 없음** (기존 결정의 docs 정합 + 보강만). **(1) d1c64e3 — D-36 cross-reference 정정**: D-101/D-102 잘못된 결정 ID 정리. 6 file (AGENTS.md + MiniMax.md + README.md + PROJECT_PROFILE.md + development_log.md + .gitignore 3 line 신규) / +14 -16. AGENTS.md/MiniMax.md 의 v1 결정 표에서 잘못된 ID cross-reference 수정. **(2) ab3713b — TASK-002 코드 개발 5 TODO 자동 채움 + MiniMax.md 동기화**: 2 file (AGENTS.md + MiniMax.md) / 12 line 변경. 코드 개발 명령 5 TODO (설치 / 로컬 실행 / 빠른 테스트 / 격리 테스트 / 실행 확인) 의 v1 Rust 명령 패턴 (`cargo build/test --manifest-path myharness/Cargo.toml --workspace`) 자동 반영. README.md 의 "다음에 정해야 할 것 (TASK-NNN)" 표의 TASK-002 상태 = "코드 개발 5 TODO 자동 채움 완료, 서버 관리 / 환경 셋업 TODO 별도 세션 trigger 후 진행" 으로 갱신. **(3) d1f4a39 — D-101/102 TASK-005/006 결정 log 보강**: 3 file (README.md + PROJECT_PROFILE.md + development_log.md) / +19 -10. README.md "다음에 정해야 할 것 (TASK-NNN)" 표 + PROJECT_PROFILE.md §1/§3.1 + development_log.md 의 TASK-005/006 결정 log 보강. main = `d1f4a39`. 누적 결정 카운트 불요 (state.json decisions.decided.length = **45**, TASK-005/006/007/008 + D-42 + D-50~D-84 + D-96/D-97/D-75-batch/D-75-batch-followup/D-82-followup = 45 entry).
+
+**task_list drift 정정 (2026-06-13)**: opencode task_list 의 T-a5ced899/ae2b2c5e/97a66732 (D-83 follow-up "Step 3/4/5") = **stale**. D-83 batch + D-84 follow-up 모두 06-11 closeout 으로 완료 처리됨 (commit `634d269` + `732d6eb` + `5fc7f56`). 06-12 closeout 결정 5 commit (D-96/D-97/D-75 batch/D-75 batch follow-up/D-82 follow-up) 으로 모든 Step 이 stale. 다음 세션 시작 시 opencode task_list 정리 또는 그대로 두기 (자동 만료 대기).
 
 (End of file - total 102 lines)
