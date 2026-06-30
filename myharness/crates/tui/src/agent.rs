@@ -10,11 +10,12 @@ use async_trait::async_trait;
 /// 형식 고정 (regex parser 가 의존): ` ```tool_call\n{...}\n``` `.
 ///
 /// D-102 (2026-06-30) follow-up — stop condition 추가: LLM 무한 루프 방지.
+/// D-103 (2026-06-30) follow-up — large file chunked Read + offset overlap dedup.
 pub fn tool_spec_section(allowed_tools: &[&str]) -> String {
     const ALL: &[(&str, &str)] = &[
         (
             "Read",
-            "Read(file_path: string, offset?: number, limit?: number) — read file content with optional offset/limit",
+            "Read(file_path: string, offset?: number, limit?: number) — read file content with optional offset/limit. **For large files (>500 lines), use offset+limit to read in chunks of ~200 lines at a time** (e.g. Read(file_path, offset=0, limit=200) then Read(file_path, offset=200, limit=200) etc.). The default full-file Read can waste tokens for 1000+ line files.",
         ),
         (
             "Write",
@@ -53,6 +54,12 @@ pub fn tool_spec_section(allowed_tools: &[&str]) -> String {
     out.push_str("3. The last 2-3 tool calls returned similar information — don't repeat.\n");
     out.push_str("4. You're about to call a tool that the previous turn already covered.\n\n");
     out.push_str("The Orchestrator also enforces a safety net: same (name, args) repeated 2+ times will break the loop with a synthetic answer. So don't try to repeat — just respond.\n\n");
+    // D-103 (2026-06-30) — large file chunked Read + overlap dedup
+    out.push_str("**Large files (read strategy)**:\n");
+    out.push_str("- For files >500 lines, **always** Read with `offset` and `limit` (default chunk ~200 lines).\n");
+    out.push_str("- Use `Glob` first to find files, then chunked Read for large ones.\n");
+    out.push_str("- Don't re-read overlapping ranges (offset=0,limit=200 then offset=50,limit=200 is wasteful).\n");
+    out.push_str("- If you've read chunks 0-200 and 200-400, you don't need chunks 100-300 — progress forward instead.\n\n");
     out.push_str("Available tools in this session:\n");
     for name in allowed_tools {
         if let Some((_, desc)) = ALL.iter().find(|(n, _)| *n == *name) {
@@ -383,5 +390,36 @@ mod tests {
     #[test]
     fn registry_by_name_unknown() {
         assert!(SubAgentRegistry::by_name("nonexistent").is_none());
+    }
+
+    // === D-103 (2026-06-30) — tool_spec_section large file strategy ===
+
+    #[test]
+    fn tool_spec_section_includes_large_file_strategy() {
+        let spec = tool_spec_section(&["Read", "Bash"]);
+        // D-102 — stop conditions
+        assert!(spec.contains("Stop conditions"));
+        assert!(spec.contains("enough information"));
+        // D-103 — large file strategy
+        assert!(spec.contains("Large files"));
+        assert!(spec.contains("offset+limit") || spec.contains("offset"));
+        assert!(spec.contains("chunk"));
+    }
+
+    #[test]
+    fn tool_spec_section_read_description_warns_chunked() {
+        let spec = tool_spec_section(&["Read"]);
+        assert!(spec.contains(">500 lines") || spec.contains("large files"));
+        assert!(spec.contains("~200"));
+    }
+
+    #[test]
+    fn tool_spec_section_lists_only_allowed_tools() {
+        let spec = tool_spec_section(&["Read", "Bash"]);
+        assert!(spec.contains("- Read("));
+        assert!(spec.contains("- Bash("));
+        assert!(!spec.contains("- Write("));
+        assert!(!spec.contains("- Edit("));
+        assert!(!spec.contains("- Glob("));
     }
 }
