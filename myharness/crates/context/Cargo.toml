@@ -17,6 +17,7 @@ dirs = { workspace = true }
 chrono = { workspace = true }
 async-trait = { workspace = true }
 tokio = { workspace = true }
+rusqlite = { workspace = true }
 myharness-llm = { path = "../llm" }
 myharness-compression = { path = "../compression" }
 

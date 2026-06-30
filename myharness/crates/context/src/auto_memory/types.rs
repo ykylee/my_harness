@@ -60,8 +60,8 @@ pub struct MemoryHit {
 
 /// 모든 backend 공통 에러.
 ///
-/// Commit A: `Sqlite` variant 는 `String` (rusqlite 미도입). Commit B 에서
-/// `#[from] rusqlite::Error` 로 tighten 예정 — variant 이름/표시 메시지 동일.
+/// Commit B: `Sqlite` variant 가 `#[from] rusqlite::Error` 로 tighten —
+/// `?` operator 한 줄로 sqlite 에러 → `MemoryError::Sqlite` 변환 가능.
 #[derive(Debug, Error)]
 pub enum MemoryError {
     #[error("io: {0}")]
@@ -69,7 +69,7 @@ pub enum MemoryError {
     #[error("json: {0}")]
     Json(#[from] serde_json::Error),
     #[error("sqlite: {0}")]
-    Sqlite(String),
+    Sqlite(#[from] rusqlite::Error),
     #[error("home dir unavailable")]
     NoHome,
     #[error("invalid query: {0}")]

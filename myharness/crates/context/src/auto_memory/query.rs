@@ -4,6 +4,7 @@
 //! - `effective_limit`: 기본 20, 상한 1000 (과도한 결과 방지).
 //! - `bm25_normalize`: sqlite FTS5 `bm25()` 가 음수를 반환 (낮을수록 좋음) —
 //!   우리 컨벤션 (높을수록 좋음) 으로 부호 반전.
+//! - `to_fts5_match`: sqlite FTS5 `MATCH` 표현식 빌더 (Commit B Sqlite backend).
 
 use crate::auto_memory::types::{MemoryKind, MemoryQuery};
 
@@ -47,6 +48,21 @@ impl MemoryQuery {
     #[must_use]
     pub fn effective_limit(&self) -> usize {
         self.limit.unwrap_or(20).min(1000)
+    }
+
+    /// sqlite FTS5 `MATCH` 표현식으로 변환. `None` keyword 면 `None`.
+    ///
+    /// 각 whitespace-separated token 을 `"..."` 으로 wrap 하고 내부 `"` 는
+    /// `""` 로 escape. token 간 `AND` 결합 — `rust async` → `"rust" AND "async"`.
+    /// FTS5 reserved chars (`*`, `-`, `:`, `(`, `)`) 는 무력화 (no-op token).
+    #[must_use]
+    pub fn to_fts5_match(&self) -> Option<String> {
+        self.keyword.as_ref().map(|kw| {
+            kw.split_whitespace()
+                .map(|t| format!("\"{}\"", t.replace('"', "\"\"")))
+                .collect::<Vec<_>>()
+                .join(" AND ")
+        })
     }
 }
 

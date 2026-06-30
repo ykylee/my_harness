@@ -57,6 +57,8 @@ url = "2"
 inquire = "0.9"
 # Hashing (W21 hash8 + W23 tract ONNX model SHA256 verify)
 sha2 = "0.11"
+# Storage (TASK-005-2 v2.0 Plugin Sub-task 1 Commit B — sqlite FTS5 + BM25)
+rusqlite = { version = "0.31", features = ["bundled"] }
 
 [profile.release]
 lto = "thin"

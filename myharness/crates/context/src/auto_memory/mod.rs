@@ -23,12 +23,14 @@ use std::sync::Arc;
 
 // 서브모듈 선언 — `crate::auto_memory::types::MemoryError` 등의 절대 경로 활성화.
 mod query;
+mod sqlite_store;
 mod store;
 mod types;
 
-// Sibling re-exports: `NdjsonMemoryStore` 는 facade 내부 전용 (private).
+// Sibling re-exports: `NdjsonMemoryStore` / `SqliteMemoryStore` 는 facade 내부 전용.
 pub use store::MemoryStore;
 pub use types::{MemoryError, MemoryHit, MemoryKind, MemoryQuery, MemoryRecord};
+use sqlite_store::SqliteMemoryStore;
 use store::NdjsonMemoryStore;
 
 /// Backend 선택. `MYHARNESS_MEMORY_BACKEND` env 로 override.
@@ -122,18 +124,13 @@ impl AutoMemory {
     }
 
     /// Config 기반 backend 선택 (async — Commit B 의 Sqlite store init 위함).
-    /// v1 에서는 NDJSON 만 활성화.
     ///
     /// # Errors
     /// backend init 실패 시 (Commit B 의 sqlite open 실패 등).
     pub async fn open(config: AutoMemoryConfig) -> Result<Self, MemoryError> {
         let inner: Arc<dyn MemoryStore> = match config.backend {
             MemoryBackend::Ndjson => Arc::new(NdjsonMemoryStore::new(config.base_dir.clone())?),
-            MemoryBackend::Sqlite => {
-                return Err(MemoryError::BackendInit(
-                    "sqlite backend not yet implemented (Commit B)".to_string(),
-                ));
-            }
+            MemoryBackend::Sqlite => Arc::new(SqliteMemoryStore::open(&config.base_dir)?),
         };
         Ok(Self { inner, config })
     }
@@ -145,7 +142,9 @@ impl AutoMemory {
     /// # Errors
     /// 파일 I/O 또는 직렬화 실패 시 [`MemoryError`].
     pub fn append(&self, record: &MemoryRecord) -> Result<(), MemoryError> {
-        block_on(self.inner.append(record.clone()))
+        let inner = std::sync::Arc::clone(&self.inner);
+        let record = record.clone();
+        block_on(async move { inner.append(record).await })
     }
 
     /// tool 호출 event 기록.
@@ -196,7 +195,8 @@ impl AutoMemory {
     /// # Errors
     /// 파일 읽기 또는 역직렬화 실패 시.
     pub fn recent(&self, n: usize) -> Result<Vec<MemoryRecord>, MemoryError> {
-        block_on(self.inner.recent(n))
+        let inner = std::sync::Arc::clone(&self.inner);
+        block_on(async move { inner.recent(n).await })
     }
 
     /// kind 필터 + 최근 N.
@@ -208,7 +208,8 @@ impl AutoMemory {
         kind: MemoryKind,
         n: usize,
     ) -> Result<Vec<MemoryRecord>, MemoryError> {
-        block_on(self.inner.recent_by_kind(kind, n))
+        let inner = std::sync::Arc::clone(&self.inner);
+        block_on(async move { inner.recent_by_kind(kind, n).await })
     }
 
     /// system prompt injection 텍스트. 최근 N (default 20) 를 kind 별 요약.
@@ -216,7 +217,8 @@ impl AutoMemory {
     /// # Errors
     /// 파일 읽기 실패 시.
     pub fn to_system_prompt_section(&self, n: usize) -> Result<String, MemoryError> {
-        block_on(self.inner.to_system_prompt_section(n))
+        let inner = std::sync::Arc::clone(&self.inner);
+        block_on(async move { inner.to_system_prompt_section(n).await })
     }
 
     // ── async new methods (Commit B 사용 예정) ──────────────────────────
@@ -246,11 +248,30 @@ impl AutoMemory {
     }
 }
 
-/// sync → async bridge. tokio runtime 이 scope 에 있으면 재사용, 없으면
-/// `current_thread` runtime 새로 생성. NDJSON I/O 한 건당 overhead 는 미미.
-fn block_on<F: std::future::Future>(f: F) -> F::Output {
-    if let Ok(handle) = tokio::runtime::Handle::try_current() {
-        return handle.block_on(f);
+/// sync → async bridge. tokio runtime 이 scope 에 있으면 별도 OS thread + 자체
+/// current_thread runtime 으로 escape (current_thread 의 executor 점유 회피).
+/// runtime 없으면 직접 `Runtime::block_on`.
+///
+/// ## 제약
+/// - caller 가 sync wrapper 에서 `Arc::clone(&self.inner)` 후 `async move` block
+///   으로 호출해야 함 (E0521 방지 — self borrow 가 'static 이 아닌 문제 회피).
+/// - F: `Send + 'static` 필수 (std::thread::spawn closure bound).
+fn block_on<F>(f: F) -> F::Output
+where
+    F: std::future::Future + Send + 'static,
+    F::Output: Send,
+{
+    if tokio::runtime::Handle::try_current().is_ok() {
+        return std::thread::spawn(move || {
+            let mut builder = tokio::runtime::Builder::new_current_thread();
+            builder.enable_all();
+            let rt = builder
+                .build()
+                .expect("create escape runtime");
+            rt.block_on(f)
+        })
+        .join()
+        .expect("join escape thread");
     }
     let mut builder = tokio::runtime::Builder::new_current_thread();
     builder.enable_all();
