@@ -4,6 +4,7 @@
 
 pub mod adapter;
 pub mod bash;
+pub mod content_hash;
 pub mod edit;
 pub mod error;
 pub mod glob_;
@@ -17,6 +18,7 @@ pub mod tool;
 pub mod write;
 
 pub use adapter::execute_by_name;
+pub use content_hash::{compute_content_hash, format_line_anchored, HASH_TAG_LENGTH};
 pub use error::ToolError;
 pub use permission::{PermissionDecision, PermissionGuard};
 pub use registry::ToolRegistry;
