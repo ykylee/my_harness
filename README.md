@@ -163,13 +163,13 @@ python3 ./ai-workflow/scripts/bootstrap_workflow_kit.py \
 
 ## 다음에 정해야 할 것 (TASK-NNN)
 
-| task_id | 결정 | 보류 이유 |
+| task_id | 결정 | 보류 이유 / 상태 |
 | --- | --- | --- |
-| **TASK-002** | 도메인별 명령 가이드 | yklee 인프라 정보 필요 |
-| **TASK-005** | 스택 (Rust 1안 vs TypeScript 2안) | yklee 의 desktop 우선순위 |
-| **TASK-006** | TUI 라이브러리 (ratatui vs React/Ink) | TASK-005 결정 의존 |
+| **TASK-002** | 도메인별 명령 가이드 | yklee 인프라 정보 필요 (서버 호스트 / SSH / B / dotfiles / asdf-mise) — **별도 세션 trigger 후 진행**. 코드 개발 5 TODO 는 본 PR 에서 자동 채움 완료. |
+| **TASK-005** | 스택 (Rust 1안 vs TypeScript 2안) | **결정 완료 — Rust 1안** (D-36, 2026-06-XX. PROJECT_PROFILE.md §1 line 39 명시). TASK-005-1 W2 (`myharness/` workspace init) 진행 중. 의존성: `rig-core = "0.38"`, `rmcp = "1.7"`. |
+| **TASK-006** | TUI 라이브러리 (ratatui vs React/Ink) | **결정 완료 — ratatui** (TASK-005 의존 해소, Rust 1안 정합). v0.1.0 부터 `myharness/crates/tui/` 진행 중. |
 | **TASK-007** | headroom built-in 알고리즘 우선순위 | yklee 우선순위 결정 |
 | **TASK-008** | Provider fallback list (3 모델) | yklee 의 LLM 선호/비용 |
 | **D-42** | config 포맷 = TOML | (yklee 결정, 2026-06-09, W1 prerequisite 검증 중) |
 
-`MiniMax.md` 의 TODO 명령 5종 (설치 / 로컬 실행 / 빠른 테스트 / 격리 테스트 / 실행 확인) — 실제 my_harness 운영 명령으로 채우기 (TASK-002 후)
+`MiniMax.md` / `AGENTS.md` 의 코드 개발 TODO 5종 (설치 / 로컬 실행 / 빠른 테스트 / 격리 테스트 / 실행 확인) — 본 PR 에서 `cargo build/test --manifest-path myharness/Cargo.toml --workspace` 패턴으로 자동 채움. **서버 관리 / 환경 셋업** 의 TODO 는 yklee 인프라 정보 별도 세션 trigger 후 진행.
