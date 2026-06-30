@@ -181,6 +181,10 @@ impl Orchestrator {
             let mut messages: Vec<myharness_llm::client::Message> =
                 vec![myharness_llm::client::Message::user(decision.extracted_input.clone())];
 
+            // D-102 (2026-06-30) — 같은 tool_call (name+canonical_args) 가 2회 이상이면 loop break + synthetic final prompt.
+            let mut call_counts: std::collections::HashMap<String, u32> =
+                std::collections::HashMap::new();
+
             // D-101 (2026-06-30) — max_tool_rounds default 10 (configurable via with_max_tool_rounds)
             for round in 0..self.max_tool_rounds {
                 let req = myharness_llm::CompletionRequest {
@@ -198,6 +202,53 @@ impl Orchestrator {
                     Ok(r) if !r.content.is_empty() => {
                         // tool_call block 추출 시도
                         if let Some((name, args)) = extract_tool_call(&r.content) {
+                            // D-102 — canonical signature (key 순서 무관) 로 중복 체크
+                            let sig = canonical_tool_call(&name, &args);
+                            let count = call_counts.entry(sig.clone()).or_insert(0);
+                            *count += 1;
+                            if *count >= 2 {
+                                // 같은 tool + args 2회 반복 → loop break + synthetic final prompt
+                                tracing::warn!(
+                                    sig = %sig,
+                                    count = *count,
+                                    "tool-loop-detected: same tool+args repeated; breaking loop"
+                                );
+                                messages.push(myharness_llm::client::Message::assistant(
+                                    r.content.clone(),
+                                ));
+                                messages.push(myharness_llm::client::Message::user(
+                                    "[orchestrator] You have called the same tool with the same arguments multiple times. \
+                                     The result will not change. Please provide your final answer based on the tool results so far. \
+                                     Do not call any more tools."
+                                        .to_string(),
+                                ));
+                                let final_req = myharness_llm::CompletionRequest {
+                                    model: String::new(),
+                                    system: Some(system_prompt.clone()),
+                                    messages: messages.clone(),
+                                    max_tokens: Some(2048),
+                                    temperature: Some(0.2),
+                                    stop: vec![],
+                                    stream: false,
+                                    metadata: serde_json::Value::Null,
+                                };
+                                match llm.complete(final_req).await {
+                                    Ok(fr) if !fr.content.is_empty() => {
+                                        response.push_str(&format!(
+                                            "\n\n[tool-loop-detected] {sig} repeated {count} times, breaking loop"
+                                        ));
+                                        response.push_str("\n\n[LLM-final] ");
+                                        response.push_str(&fr.content);
+                                    }
+                                    _ => {
+                                        response.push_str(&format!(
+                                            "\n\n[tool-loop-detected] {sig} repeated {count} times, no final response"
+                                        ));
+                                    }
+                                }
+                                break;
+                            }
+
                             // tool dispatch (AcceptEdits + confirm_override true → prompt skip)
                             let (tool_result_text, tool_is_error) = match self
                                 .dispatch_tool_call(&name, args)
@@ -312,6 +363,36 @@ fn extract_tool_call(content: &str) -> Option<(String, serde_json::Value)> {
     let name = parsed.get("name")?.as_str()?.to_string();
     let args = parsed.get("args").cloned().unwrap_or(serde_json::json!({}));
     Some((name, args))
+}
+
+/// D-102 (2026-06-30) — tool_call canonical signature.
+/// key 순서 무관 (BTreeMap 정렬) 으로 중복 체크 가능.
+fn canonical_tool_call(name: &str, args: &serde_json::Value) -> String {
+    let canonical = canonicalize_json(args.clone());
+    let args_str = serde_json::to_string(&canonical).unwrap_or_default();
+    format!("{name}|{args_str}")
+}
+
+/// D-102 — JSON value 의 object key 를 재귀적으로 BTreeMap 으로 정렬 (canonical form).
+fn canonicalize_json(v: serde_json::Value) -> serde_json::Value {
+    match v {
+        serde_json::Value::Object(map) => {
+            let mut sorted: std::collections::BTreeMap<String, serde_json::Value> =
+                std::collections::BTreeMap::new();
+            for (k, val) in map {
+                sorted.insert(k, canonicalize_json(val));
+            }
+            serde_json::Value::Object(
+                sorted
+                    .into_iter()
+                    .collect::<serde_json::Map<String, serde_json::Value>>(),
+            )
+        }
+        serde_json::Value::Array(arr) => {
+            serde_json::Value::Array(arr.into_iter().map(canonicalize_json).collect())
+        }
+        other => other,
+    }
 }
 
 // helper extension trait for case-insensitive prefix strip
@@ -577,5 +658,96 @@ Then I'll analyze."#;
         assert!(out.contains("r1"));
         assert!(out.contains("r2"));
         assert_eq!(c.calls.lock().unwrap().len(), 2); // 2 round 후 break, 3번째 호출 안 함
+    }
+
+    // === D-102 (2026-06-30) — LLM 무한 루프 방지 (canonical dedup + synthetic final prompt) ===
+
+    #[test]
+    fn canonical_tool_call_same_args_same_sig() {
+        let args1 = serde_json::json!({"command": "ls", "timeout_ms": 1000});
+        let args2 = serde_json::json!({"command": "ls", "timeout_ms": 1000});
+        assert_eq!(
+            canonical_tool_call("Bash", &args1),
+            canonical_tool_call("Bash", &args2)
+        );
+    }
+
+    #[test]
+    fn canonical_tool_call_key_order_doesnt_matter() {
+        let args1 = serde_json::json!({"command": "ls", "timeout_ms": 1000});
+        let args2 = serde_json::json!({"timeout_ms": 1000, "command": "ls"});
+        assert_eq!(
+            canonical_tool_call("Bash", &args1),
+            canonical_tool_call("Bash", &args2)
+        );
+    }
+
+    #[test]
+    fn canonical_tool_call_different_args_different_sig() {
+        let args1 = serde_json::json!({"command": "ls"});
+        let args2 = serde_json::json!({"command": "pwd"});
+        assert_ne!(
+            canonical_tool_call("Bash", &args1),
+            canonical_tool_call("Bash", &args2)
+        );
+    }
+
+    #[tokio::test]
+    async fn run_with_repeated_tool_call_breaks_loop_at_2nd() {
+        // D-102 — 같은 tool + 같은 args 가 2회 반복 시 loop break + synthetic final prompt
+        // LLM 응답 시퀀스:
+        //   1st: tool_call Bash echo dup (dispatch)
+        //   2nd: tool_call Bash echo dup (canonical sig 일치 → break + synthetic final prompt)
+        //   3rd: synthetic final prompt 응답 ("final answer")
+        let c = Arc::new(MockClient::new(ProviderId::Claude, "claude-sonnet-4-6"));
+        c.push(MockResponse::Text(
+            r#"```tool_call
+{"name": "Bash", "args": {"command": "echo dup"}}
+```"#
+            .into(),
+        ));
+        c.push(MockResponse::Text(
+            r#"```tool_call
+{"name": "Bash", "args": {"command": "echo dup"}}
+```"#
+            .into(),
+        ));
+        c.push(MockResponse::Text("FINAL: enough info, done.".into()));
+        let reg = Arc::new(myharness_tools::ToolRegistry::default_tools());
+        let o = Orchestrator::new()
+            .with_llm(c.clone())
+            .with_tools(reg);
+        let out = o.run("env diagnose").await.unwrap();
+        assert!(out.contains("[tool-loop-detected]"));
+        assert!(out.contains("repeated"));
+        assert!(out.contains("FINAL: enough info, done."));
+        assert_eq!(c.calls.lock().unwrap().len(), 3); // 2 tool rounds + 1 final prompt
+    }
+
+    #[tokio::test]
+    async fn run_with_repeated_tool_call_different_args_continues() {
+        // canonical sig 가 다르면 (args 가 다름) 계속 진행
+        let c = Arc::new(MockClient::new(ProviderId::Claude, "claude-sonnet-4-6"));
+        c.push(MockResponse::Text(
+            r#"```tool_call
+{"name": "Bash", "args": {"command": "echo r1"}}
+```"#
+            .into(),
+        ));
+        c.push(MockResponse::Text(
+            r#"```tool_call
+{"name": "Bash", "args": {"command": "echo r2"}}
+```"#
+            .into(),
+        ));
+        c.push(MockResponse::Text("done.".into()));
+        let reg = Arc::new(myharness_tools::ToolRegistry::default_tools());
+        let o = Orchestrator::new()
+            .with_llm(c.clone())
+            .with_tools(reg);
+        let out = o.run("env diagnose").await.unwrap();
+        assert!(!out.contains("[tool-loop-detected]"));
+        assert!(out.contains("done."));
+        assert_eq!(c.calls.lock().unwrap().len(), 3); // 2 tool rounds + 1 final (no tool_call)
     }
 }

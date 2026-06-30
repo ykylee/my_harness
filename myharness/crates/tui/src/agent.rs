@@ -8,6 +8,8 @@ use async_trait::async_trait;
 ///
 /// LLM 은 이 형식 그대로 ```tool_call``` block 을 emit 하면 Orchestrator 가 dispatch 한다.
 /// 형식 고정 (regex parser 가 의존): ` ```tool_call\n{...}\n``` `.
+///
+/// D-102 (2026-06-30) follow-up — stop condition 추가: LLM 무한 루프 방지.
 pub fn tool_spec_section(allowed_tools: &[&str]) -> String {
     const ALL: &[(&str, &str)] = &[
         (
@@ -43,8 +45,14 @@ pub fn tool_spec_section(allowed_tools: &[&str]) -> String {
     out.push_str("{\"name\": \"Read\", \"args\": {\"file_path\": \"path/to/file.rs\"}}\n");
     out.push_str("```\n\n");
     out.push_str("The Orchestrator will run the tool, append the result to the conversation, and let you continue. ");
-    out.push_str("You may call multiple tools across turns (max 3 rounds). ");
-    out.push_str("When you are done, respond with plain markdown (no tool_call block).\n\n");
+    out.push_str("You may call multiple tools across turns (typically up to ~10 rounds).\n\n");
+    // D-102 (2026-06-30) — stop condition: 무한 루프 방지
+    out.push_str("**Stop conditions** — respond with plain markdown (no tool_call block) when ANY of:\n");
+    out.push_str("1. You have enough information to fully answer the user's request.\n");
+    out.push_str("2. You've already called the same tool with essentially the same arguments (the result won't change).\n");
+    out.push_str("3. The last 2-3 tool calls returned similar information — don't repeat.\n");
+    out.push_str("4. You're about to call a tool that the previous turn already covered.\n\n");
+    out.push_str("The Orchestrator also enforces a safety net: same (name, args) repeated 2+ times will break the loop with a synthetic answer. So don't try to repeat — just respond.\n\n");
     out.push_str("Available tools in this session:\n");
     for name in allowed_tools {
         if let Some((_, desc)) = ALL.iter().find(|(n, _)| *n == *name) {

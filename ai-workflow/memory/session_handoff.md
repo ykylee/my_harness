@@ -189,5 +189,7 @@
 - 누적 결정 47 → **48** (D-100). main = `5fe1e90` (D-100 final, post-amend).
 - **D-101 (2026-06-30) A-min follow-up polish**: max_tool_rounds 3 → **10 default** + `with_max_tool_rounds(n)` builder (configurable). tool result stdout **visible in response** (2000자 truncation, 이전엔 `[tool_call] X → ok` 마커만). `dispatch_tool_call` 에 `with_confirm_override(true)` 추가 — AcceptEdits + confirm_override → Bash prompt skip (비대화형 환경 hang 방지). 4 test 추가. **22/22 tui PASS (D-100 18 + D-101 4 신규), clippy clean**. Real LLM `env diagnose` → 10 round 자동 dispatch + `[tool_result]` 에 uname/PATH/whoami/pwd stdout visible + prompt 안 뜸. 한계: max_round 10 도 큰 file 부족 + LLM 같은 Bash 반복 (prompt 개선 필요) + A-proper native tool calling (v1.5+).
 - 누적 결정 48 → **49** (D-101). main = D-101 commit (hash 다음 세션 확정).
+- **D-102 (2026-06-30) prompt 개선 + dedup 안전망** — LLM 무한 루프 방지. (1) `tool_spec_section` 에 Stop conditions 4가지 (enough info / same tool+args 반복 / last 2-3 similar / previous turn covered) + safety net 명시. (2) `canonical_tool_call(name, args)` helper (BTreeMap key 정렬, 순서 무관) + `call_counts: HashMap` 추적 + 2회 중복 시 synthetic final prompt + break. 5 test 추가. **27/27 tui PASS (D-100 18 + D-101 4 + D-102 5), clippy clean**. Real LLM `ask "1+1은?"` → LLM tool 안 쓰고 즉시 plain 응답 (`2입니다.`) — prompt stop condition 작동 확인. **효과**: 2회 중복 시점에 즉시 break → 효율 + 비용 절감. 한계: synthetic final prompt 1회만 / A-proper native tool calling (v1.5+) 미적용 / 큰 file chunked Read 권장 prompt 필요.
+- 누적 결정 49 → **50** (D-102). main = D-102 commit (hash 다음 세션 확정).
 
 (End of file - total 102 lines)
