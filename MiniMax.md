@@ -33,6 +33,23 @@
 - 작업 상태는 `planned`, `in_progress`, `blocked`, `done` 중 하나로 관리한다.
 - 검증하지 않은 결과는 완료로 확정하지 않는다.
 - 세션 종료 전에는 `state.json`, `session_handoff.md`, 최신 backlog 를 갱신한다.
+- **코드 commit + 메모리 동기화는 단일 push 에 포함한다** (2026-06-14 워크플로우 점검). 협업자가 main fetch 시점에 결정 ID + 메모리가 항상 정합하도록:
+  1. 로컬: 코드/문서 작업 + 검증 + 메모리 동기화 (`state.json` + `session_handoff.md` + `work_backlog.md` + 신규 `backlog/YYYY-MM-DD.md`)
+  2. staging: `git add feat_files + memory_files` (함께)
+  3. commit + push:
+     - 옵션 A: 1 commit (코드 + 메모리 한 commit)
+     - 옵션 B: 2 commit (feat commit → 메모리 commit) + **단일 push** 에 둘 다
+  4. **코드 commit message trailer 에 결정 ID 명시**:
+     ```
+     feat(<scope>): <subject>
+
+     <body>
+
+     Refs: D-NN (TASK-XXXX v2.0 Sub-task N Commit X)
+     Tests: <count> pass + <N> ignored
+     Clippy: 0 warning
+     Binary: <delta>
+     ```
 - 가능한 한 메인 orchestrator는 조정과 통합에 집중하고, 도구 호출/탐색/수정은 `.MiniMax/agents/workflow-*.md` 워커에 위임한다.
 
 ## 오케스트레이터 / 워커 운영 원칙 (Multi-Agent Topology)
