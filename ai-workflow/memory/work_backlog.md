@@ -4,7 +4,7 @@
 - 범위: 전체 태스크 목록, 우선순위, 진행 상태, 날짜별 기록 연결
 - 대상 독자: 개발자, AI 에이전트, 프로젝트 매니저
 - 상태: stable
-- 최종 수정일: 2026-07-01 (**D-105 Edit v2 line_anchored mode 완료** — oh-my-pi Hashline 점진 차용 2차 cycle. **D-105 (`5e39f5e`)** = Edit v2 line_anchored mode (`LineAnchoredEdit` struct + `apply_line_replacement` helper + `execute_line_anchored` path + 10 test 추가, tools 62 → 72 / 회귀 0 / clippy clean). **D-104 (`43bc908`)** = Read v2 LINE:TEXT + 4-hex content_hash (이전 세션). main = `5e39f5e`. 446 tests pass + 0 fail + 2 ignored. 이전: 2026-06-30 D-100/D-101/D-102/D-103 (A-min tool dispatch + follow-up polish + prompt 개선 + dedup 안전망 + large file chunked Read) + 2026-06-14 D-98/D-99 (Plugin 4-계층 Sub-task 1 Auto Memory))
+- 최종 수정일: 2026-07-01 (**세션 종료** — D-105 Edit v2 line_anchored mode 완료 + commit + dual-push 완료. main = `d52ef78` (코드 `5e39f5e` + 메모리 `d52ef78` 2 commit, 단일 push). **D-105 (`5e39f5e`)** = Edit v2 line_anchored mode (`LineAnchoredEdit` struct + `apply_line_replacement` helper + `execute_line_anchored` path + 10 test 추가, tools 62 → 72 / 회귀 0 / clippy clean). **D-104 (`43bc908`)** = Read v2 LINE:TEXT + 4-hex content_hash (이전 세션). 누적 결정 **53** (D-105 추가). 446 tests pass + 0 fail + 2 ignored. 다음 세션 시작 시 yklee 결정 옵션: D-106+ tree-sitter / pure insert/delete / A-proper native tool calling / TASK-002 / MiniMax OAuth real flow / TUI shell / 추가 안정화 / TASK-005-2 v2.0 Plugin 후속. 이전: 2026-06-30 D-100/D-101/D-102/D-103 + 2026-06-14 D-98/D-99)
 - 관련 문서: [세션 인계](./session_handoff.md), [프로젝트 프로필](../../docs/PROJECT_PROFILE.md), [CONCEPT.md](../../docs/CONCEPT.md)
 
 ## 1. 운영 원칙
