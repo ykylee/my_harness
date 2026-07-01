@@ -41,6 +41,140 @@ struct BlockAnchoredEdit {
     replacement: String,
 }
 
+/// Hashline v2 (D-107) pure insert/delete payload.
+///
+/// `insertions` and `deletions` are both optional. If both are empty
+/// the patch is a no-op (and is rejected — see execute_pure below).
+/// Lines refer to the ORIGINAL file (pre-patch); all ops are applied
+/// in line-descending order so a deletion or insertion at a higher
+/// line number never shifts the anchor of a lower one.
+///
+/// `insert_after_block` requires tree-sitter (D-106 Rust only) and
+/// uses the same `resolve_block_span` as `block_anchored`.
+#[derive(Debug, Deserialize, Default)]
+struct PureEdit {
+    #[serde(default)]
+    expected_hash: Option<String>,
+    #[serde(default)]
+    insertions: Vec<PureInsertion>,
+    #[serde(default)]
+    deletions: Vec<PureDeletion>,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(tag = "op")]
+enum PureInsertion {
+    /// Insert `content` immediately before the line with the given
+    /// 1-indexed line number. `line` is the anchor — existing line
+    /// shifts down by `content.lines().count()` lines.
+    #[serde(rename = "insert_before")]
+    Before { line: usize, content: String },
+    /// Insert `content` immediately after the line with the given
+    /// 1-indexed line number. The anchor line stays put; the new
+    /// rows land right below it.
+    #[serde(rename = "insert_after")]
+    After { line: usize, content: String },
+    /// Insert `content` at the very start of the file (before line 1).
+    #[serde(rename = "insert_head")]
+    Head { content: String },
+    /// Insert `content` at the very end of the file (after the last
+    /// line; if the file has no trailing newline, the new content
+    /// is glued onto the last line — callers should end `content`
+    /// with `\n` when targeting a line-oriented file).
+    #[serde(rename = "insert_tail")]
+    Tail { content: String },
+    /// Insert `content` immediately after the END of the syntactic
+    /// block that BEGINS on the given 1-indexed line (tree-sitter
+    /// resolution — see D-106). Rust only in v1.5.
+    #[serde(rename = "insert_after_block")]
+    AfterBlock { line: usize, content: String },
+}
+
+#[derive(Debug, Deserialize)]
+struct PureDeletion {
+    start_line: usize,
+    end_line: usize,
+}
+
+/// Internal op representation for `pure_edit` mode (D-107).
+///
+/// `anchor` is a line number in the ORIGINAL file (pre-patch). For
+/// `InsertBefore` it is the line the new content lands in front of;
+/// for `InsertAfter` it is the line the new content lands after; for
+/// `Delete` it is the start of the deleted range; `InsertHead` uses
+/// `0` and `InsertTail` uses `total_lines + 1` as anchor values that
+/// sort to the edges.
+struct PendingOp<'a> {
+    anchor: usize,
+    kind: OpKind<'a>,
+}
+
+#[derive(Debug)]
+enum OpKind<'a> {
+    Head(&'a str),
+    Tail(&'a str),
+    Before(&'a str),
+    After(&'a str),
+    Delete { start: usize, end: usize },
+}
+
+impl<'a> OpKind<'a> {
+    /// Sort priority within a single anchor line (lower runs first).
+    /// Delete before InsertAfter on the same line so the inserted
+    /// content lands after the (now-shorter) original block.
+    fn priority(&self) -> u8 {
+        match self {
+            OpKind::Delete { .. } => 0,
+            OpKind::After(_) => 1,
+            OpKind::Before(_) => 2,
+            OpKind::Head(_) | OpKind::Tail(_) => 3,
+        }
+    }
+}
+
+/// Insert `content` immediately before the given 1-indexed line of
+/// `src`. Returns the new string. Empty `content` is a no-op.
+fn apply_insert_before(src: &str, line_1: usize, content: &str) -> String {
+    if content.is_empty() {
+        return src.to_string();
+    }
+    let lines: Vec<&str> = src.split_inclusive('\n').collect();
+    let idx = line_1.saturating_sub(1).min(lines.len());
+    let mut out = String::with_capacity(src.len() + content.len());
+    for l in &lines[..idx] {
+        out.push_str(l);
+    }
+    out.push_str(content);
+    // Note: if  ends with a newline and  happens
+    // to be empty, the surrounding lines keep their own newlines, so
+    // no double-newline is introduced.
+    for l in &lines[idx..] {
+        out.push_str(l);
+    }
+    out
+}
+
+/// Insert `content` immediately after the given 1-indexed line of
+/// `src`. Returns the new string. Empty `content` is a no-op.
+fn apply_insert_after(src: &str, line_1: usize, content: &str) -> String {
+    if content.is_empty() {
+        return src.to_string();
+    }
+    let lines: Vec<&str> = src.split_inclusive('\n').collect();
+    // `line_1` 1-indexed into lines. If line_1 == lines.len(), we
+    // append after the final line.
+    let idx = line_1.min(lines.len());
+    let mut out = String::with_capacity(src.len() + content.len());
+    for l in &lines[..idx] {
+        out.push_str(l);
+    }
+    out.push_str(content);
+    for l in &lines[idx..] {
+        out.push_str(l);
+    }
+    out
+}
+
 /// Resolve the smallest syntactic block that *begins* on the given
 /// 1-indexed line of a Rust source string, returning its 1-indexed
 /// inclusive end line plus a human-readable node kind ("function_item",
@@ -269,6 +403,14 @@ impl Tool for EditTool {
         // mid-block. Same stale-anchor gate as `line_anchored`.
         if input.get("block_anchored").is_some() {
             return self.execute_block_anchored(ctx, &file_path, &input).await;
+        }
+
+        // Hashline v2 (D-107): opt-in `pure_edit` mode — multi-section
+        // insert/delete ops applied line-descending so anchors never
+        // shift. Single op = `insertions: [{...}]` or `deletions: [{...}]`
+        // with one entry; multi-section = both arrays populated.
+        if input.get("pure_edit").is_some() {
+            return self.execute_pure(ctx, &file_path, &input).await;
         }
 
         let old_string = input
@@ -526,6 +668,236 @@ impl EditTool {
                 "replaced_lines": replaced_lines,
                 "node_kind": node_kind,
                 "old_hash": ba.expected_hash,
+                "new_hash": new_hash,
+            })),
+        })
+    }
+
+    /// Hashline v2 (D-107) `pure_edit` mode — multi-section
+    /// insert/delete with stale-anchor gate, applied in
+    /// line-descending order so each op's anchor is computed against
+    /// the ORIGINAL file lines and cannot be shifted by a sibling op
+    /// at a higher line number.
+    async fn execute_pure(
+        &self,
+        ctx: &ToolContext,
+        file_path: &str,
+        input: &serde_json::Value,
+    ) -> Result<ToolResult, ToolError> {
+        let path = if PathBuf::from(file_path).is_absolute() {
+            PathBuf::from(file_path)
+        } else {
+            ctx.cwd.join(file_path)
+        };
+
+        let content = fs::read_to_string(&path)
+            .await
+            .map_err(ToolError::IoError)?;
+
+        let pe: PureEdit = serde_json::from_value(
+            input
+                .get("pure_edit")
+                .cloned()
+                .ok_or_else(|| ToolError::InvalidInput("missing pure_edit".into()))?,
+        )
+        .map_err(|e| ToolError::InvalidInput(format!("invalid pure_edit: {e}")))?;
+
+        // Stale-anchor gate. If `expected_hash` is provided we enforce
+        // it; if not, this is an opt-in lenient mode for callers that
+        // do not want the gate (e.g. a batch that re-reads inside the
+        // same tool call). For safety we REQUIRE the gate for v1.5.
+        let expected_hash = pe.expected_hash.as_deref().ok_or_else(|| {
+            ToolError::InvalidInput("pure_edit requires expected_hash (stale-anchor gate)".into())
+        })?;
+        let current_hash = compute_content_hash(&content);
+        if current_hash != expected_hash {
+            return Err(ToolError::InvalidInput(format!(
+                "stale anchor: file modified; re-read with `Read` tool (current hash {current_hash}, expected {expected_hash})"
+            )));
+        }
+
+        if pe.insertions.is_empty() && pe.deletions.is_empty() {
+            return Err(ToolError::InvalidInput(
+                "pure_edit: at least one of `insertions` or `deletions` must be non-empty".into(),
+            ));
+        }
+
+        // Validate deletions first (cheaper) and resolve
+        // `insert_after_block` ops to concrete (insert_after) targets.
+        let total_lines = content.lines().count();
+        for d in &pe.deletions {
+            if d.start_line == 0 || d.end_line < d.start_line {
+                return Err(ToolError::InvalidInput(format!(
+                    "deletion: invalid range {}..={}",
+                    d.start_line, d.end_line
+                )));
+            }
+            if d.start_line > total_lines {
+                return Err(ToolError::InvalidInput(format!(
+                    "deletion: start_line {} out of range (file has {total_lines} line(s))",
+                    d.start_line
+                )));
+            }
+        }
+
+        // For `insert_after_block`, only Rust is supported in v1.5.
+        // We resolve each op to a concrete insertion point now so the
+        // line-descending sort below can mix insert/deletion ops
+        // uniformly.
+        let extension = path
+            .extension()
+            .and_then(|e| e.to_str())
+            .unwrap_or("");
+        let block_after_ops: Vec<(usize, &PureInsertion)> = pe
+            .insertions
+            .iter()
+            .enumerate()
+            .filter(|(_, ins)| matches!(ins, PureInsertion::AfterBlock { .. }))
+            .collect();
+        if !block_after_ops.is_empty() && extension != "rs" {
+            return Err(ToolError::InvalidInput(format!(
+                "pure_edit.insert_after_block: tree-sitter grammar for extension .{extension} not yet supported; use line_anchored / block_anchored for non-Rust files"
+            )));
+        }
+
+        // Build a concrete (anchor_line, op) list. For deletions the
+        // anchor is `start_line - 1` (insert the deletion marker
+        // before that line, conceptually); for insertions the anchor
+        // is the line number the spec defines.
+        //
+        // We'll apply them line-DESCENDING, which means: process
+        // highest anchor first. For each op:
+        //   - deletion [s..=e]: remove lines s..=e (inclusive)
+        //   - insert_before N: insert content immediately before N
+        //   - insert_after  N: insert content immediately after N
+        //   - insert_head: insert at byte 0
+        //   - insert_tail: insert at byte len
+        //
+        // We process them sorted by (anchor_line DESC, op_kind
+        // priority), where priority ensures a deletion at line N is
+        // applied before a same-line insert_after (so the inserted
+        // content is preserved).
+        let mut ops: Vec<PendingOp<'_>> = Vec::new();
+        for ins in &pe.insertions {
+            match ins {
+                PureInsertion::Before { line, content } => {
+                    if *line == 0 || *line > total_lines + 1 {
+                        return Err(ToolError::InvalidInput(format!(
+                            "insert_before: line {line} out of range (file has {total_lines} line(s))"
+                        )));
+                    }
+                    ops.push(PendingOp {
+                        anchor: *line,
+                        kind: OpKind::Before(content.as_str()),
+                    });
+                }
+                PureInsertion::After { line, content } => {
+                    if *line == 0 || *line > total_lines {
+                        return Err(ToolError::InvalidInput(format!(
+                            "insert_after: line {line} out of range (file has {total_lines} line(s))"
+                        )));
+                    }
+                    ops.push(PendingOp {
+                        anchor: *line,
+                        kind: OpKind::After(content.as_str()),
+                    });
+                }
+                PureInsertion::Head { content } => {
+                    ops.push(PendingOp {
+                        anchor: 0,
+                        kind: OpKind::Head(content.as_str()),
+                    });
+                }
+                PureInsertion::Tail { content } => {
+                    ops.push(PendingOp {
+                        anchor: total_lines + 1,
+                        kind: OpKind::Tail(content.as_str()),
+                    });
+                }
+                PureInsertion::AfterBlock { line, content } => {
+                    let (resolved_end_line, _kind) =
+                        resolve_block_span(content, *line).map_err(ToolError::InvalidInput)?;
+                    ops.push(PendingOp {
+                        anchor: resolved_end_line,
+                        kind: OpKind::After(content.as_str()),
+                    });
+                }
+            }
+        }
+        for d in &pe.deletions {
+            // Represent the deletion as an "insert" of an empty span
+            // at the boundary that, when sorted descending, lands
+            // first. We use the same OpKind::Delete variant and
+            // resolve it below.
+            ops.push(PendingOp {
+                anchor: d.start_line,
+                kind: OpKind::Delete { start: d.start_line, end: d.end_line },
+            });
+        }
+
+        // Sort: line-DESCENDING so higher anchors are applied first
+        // and never shift lower ones. Tie-breaker: among ops on the
+        // same line, deletion first (it removes a line that an
+        // insert_after on the same line should still apply AFTER),
+        // then InsertAfter, then InsertBefore, then Head/Tail.
+        ops.sort_by(|a, b| {
+            b.anchor.cmp(&a.anchor).then_with(|| a.kind.priority().cmp(&b.kind.priority()))
+        });
+
+        // Apply.
+        let mut new_content = content.clone();
+        let mut applied: Vec<serde_json::Value> = Vec::new();
+        for op in &ops {
+            match op.kind {
+                OpKind::Before(s) => {
+                    let line_count = s.lines().count();
+                    new_content = apply_insert_before(&new_content, op.anchor, s);
+                    applied.push(serde_json::json!({"op": "insert_before", "line": op.anchor, "lines_added": line_count}));
+                }
+                OpKind::After(s) => {
+                    let line_count = s.lines().count();
+                    new_content = apply_insert_after(&new_content, op.anchor, s);
+                    applied.push(serde_json::json!({"op": "insert_after", "line": op.anchor, "lines_added": line_count}));
+                }
+                OpKind::Head(s) => {
+                    let line_count = s.lines().count();
+                    new_content = format!("{s}{new_content}");
+                    applied.push(serde_json::json!({"op": "insert_head", "lines_added": line_count}));
+                }
+                OpKind::Tail(s) => {
+                    let line_count = s.lines().count();
+                    new_content.push_str(s);
+                    applied.push(serde_json::json!({"op": "insert_tail", "lines_added": line_count}));
+                }
+                OpKind::Delete { start, end } => {
+                    let removed = end - start + 1;
+                    new_content = apply_line_replacement(&new_content, start, end, "")
+                        .map_err(ToolError::InvalidInput)?;
+                    applied.push(serde_json::json!({"op": "delete", "start_line": start, "end_line": end, "lines_removed": removed}));
+                }
+            }
+        }
+
+        fs::write(&path, &new_content)
+            .await
+            .map_err(ToolError::IoError)?;
+
+        let new_hash = compute_content_hash(&new_content);
+
+        Ok(ToolResult {
+            output: format!(
+                "applied {} op(s) to {} (deletions={}, insertions={})",
+                applied.len(),
+                path.display(),
+                pe.deletions.len(),
+                pe.insertions.len(),
+            ),
+            is_error: false,
+            metadata: Some(serde_json::json!({
+                "path": path.to_string_lossy(),
+                "mode": "pure_edit",
+                "applied": applied,
+                "old_hash": expected_hash,
                 "new_hash": new_hash,
             })),
         })
@@ -1135,5 +1507,242 @@ mod tests {
         let err = tool.execute(&ctx, input).await.unwrap_err();
         let msg = format!("{err}");
         assert!(msg.contains("no syntactic block"), "msg was: {msg}");
+    }
+
+    // --- pure_edit mode (Hashline v2 / D-107) --------------------------------
+
+    fn make_pure_ctx() -> ToolContext {
+        ToolContext {
+            cwd: PathBuf::from("/"),
+            permission_mode: PermissionMode::Default,
+            confirm_override: true,
+            sanitizer_mode: SanitizerMode::default(),
+        }
+    }
+
+    #[test]
+    fn test_apply_insert_before_basic() {
+        let src = "a\nb\nc\n";
+        assert_eq!(apply_insert_before(src, 2, "X\n"), "a\nX\nb\nc\n");
+        assert_eq!(apply_insert_before(src, 1, "HEAD\n"), "HEAD\na\nb\nc\n");
+        assert_eq!(apply_insert_before(src, 99, "TAIL\n"), "a\nb\nc\nTAIL\n");
+        assert_eq!(apply_insert_before(src, 2, ""), "a\nb\nc\n"); // empty = no-op
+    }
+
+    #[test]
+    fn test_apply_insert_after_basic() {
+        let src = "a\nb\nc\n";
+        assert_eq!(apply_insert_after(src, 1, "X\n"), "a\nX\nb\nc\n");
+        assert_eq!(apply_insert_after(src, 3, "X\n"), "a\nb\nc\nX\n");
+        assert_eq!(apply_insert_after(src, 99, "X\n"), "a\nb\nc\nX\n");
+        assert_eq!(apply_insert_after(src, 2, ""), "a\nb\nc\n"); // empty = no-op
+    }
+
+    #[tokio::test]
+    async fn test_pure_edit_insert_before() {
+        let dir = tempdir().unwrap();
+        let file_path = dir.path().join("lib.txt");
+        let original = "alpha\nbeta\ngamma\n";
+        fs::write(&file_path, original).await.unwrap();
+        let content = fs::read_to_string(&file_path).await.unwrap();
+        let expected_hash = compute_content_hash(&content);
+
+        let tool = make_tool();
+        let ctx = make_pure_ctx();
+        let input = serde_json::json!({
+            "file_path": file_path.to_string_lossy(),
+            "pure_edit": {
+                "expected_hash": expected_hash,
+                "insertions": [
+                    {"op": "insert_before", "line": 2, "content": "BETA-INSERT\n"}
+                ]
+            }
+        });
+        let result = tool.execute(&ctx, input).await.unwrap();
+        assert!(!result.is_error, "result: {result:?}");
+
+        let read_back = fs::read_to_string(&file_path).await.unwrap();
+        assert_eq!(read_back, "alpha\nBETA-INSERT\nbeta\ngamma\n");
+
+        let meta = result.metadata.expect("metadata");
+        assert_eq!(meta["mode"], "pure_edit");
+        assert_eq!(meta["applied"][0]["op"], "insert_before");
+        assert_eq!(meta["applied"][0]["line"], 2);
+        assert_eq!(meta["applied"][0]["lines_added"], 1);
+    }
+
+    #[tokio::test]
+    async fn test_pure_edit_insert_after_head_tail() {
+        let dir = tempdir().unwrap();
+        let file_path = dir.path().join("lib.txt");
+        let original = "middle\n";
+        fs::write(&file_path, original).await.unwrap();
+        let content = fs::read_to_string(&file_path).await.unwrap();
+        let expected_hash = compute_content_hash(&content);
+
+        let tool = make_tool();
+        let ctx = make_pure_ctx();
+        let input = serde_json::json!({
+            "file_path": file_path.to_string_lossy(),
+            "pure_edit": {
+                "expected_hash": expected_hash,
+                "insertions": [
+                    {"op": "insert_head", "content": "HEAD\n"},
+                    {"op": "insert_tail", "content": "\nTAIL"}
+                ]
+            }
+        });
+        tool.execute(&ctx, input).await.unwrap();
+
+        let read_back = fs::read_to_string(&file_path).await.unwrap();
+        assert_eq!(read_back, "HEAD\nmiddle\n\nTAIL");
+    }
+
+    #[tokio::test]
+    async fn test_pure_edit_delete_single_line() {
+        let dir = tempdir().unwrap();
+        let file_path = dir.path().join("lib.txt");
+        let original = "a\nb\nc\nd\n";
+        fs::write(&file_path, original).await.unwrap();
+        let content = fs::read_to_string(&file_path).await.unwrap();
+        let expected_hash = compute_content_hash(&content);
+
+        let tool = make_tool();
+        let ctx = make_pure_ctx();
+        let input = serde_json::json!({
+            "file_path": file_path.to_string_lossy(),
+            "pure_edit": {
+                "expected_hash": expected_hash,
+                "deletions": [{"start_line": 2, "end_line": 2}]
+            }
+        });
+        tool.execute(&ctx, input).await.unwrap();
+
+        let read_back = fs::read_to_string(&file_path).await.unwrap();
+        assert_eq!(read_back, "a\nc\nd\n");
+    }
+
+    #[tokio::test]
+    async fn test_pure_edit_delete_range() {
+        let dir = tempdir().unwrap();
+        let file_path = dir.path().join("lib.txt");
+        let original = "a\nb\nc\nd\ne\n";
+        fs::write(&file_path, original).await.unwrap();
+        let content = fs::read_to_string(&file_path).await.unwrap();
+        let expected_hash = compute_content_hash(&content);
+
+        let tool = make_tool();
+        let ctx = make_pure_ctx();
+        let input = serde_json::json!({
+            "file_path": file_path.to_string_lossy(),
+            "pure_edit": {
+                "expected_hash": expected_hash,
+                "deletions": [{"start_line": 2, "end_line": 4}]
+            }
+        });
+        tool.execute(&ctx, input).await.unwrap();
+
+        let read_back = fs::read_to_string(&file_path).await.unwrap();
+        assert_eq!(read_back, "a\ne\n");
+    }
+
+    #[tokio::test]
+    async fn test_pure_edit_multi_section_atomic() {
+        // Two non-adjacent ops applied in the same patch: insert
+        // before line 2 AND delete line 4. With line-descending sort,
+        // the deletion runs first (anchor 4 > 2), so the insert's
+        // anchor stays valid.
+        let dir = tempdir().unwrap();
+        let file_path = dir.path().join("lib.txt");
+        let original = "a\nb\nc\nd\ne\n";
+        fs::write(&file_path, original).await.unwrap();
+        let content = fs::read_to_string(&file_path).await.unwrap();
+        let expected_hash = compute_content_hash(&content);
+
+        let tool = make_tool();
+        let ctx = make_pure_ctx();
+        let input = serde_json::json!({
+            "file_path": file_path.to_string_lossy(),
+            "pure_edit": {
+                "expected_hash": expected_hash,
+                "insertions": [
+                    {"op": "insert_before", "line": 2, "content": "INSERTED\n"}
+                ],
+                "deletions": [{"start_line": 4, "end_line": 4}]
+            }
+        });
+        tool.execute(&ctx, input).await.unwrap();
+
+        let read_back = fs::read_to_string(&file_path).await.unwrap();
+        assert_eq!(read_back, "a\nINSERTED\nb\nc\ne\n");
+    }
+
+    #[tokio::test]
+    async fn test_pure_edit_stale_anchor() {
+        let dir = tempdir().unwrap();
+        let file_path = dir.path().join("lib.txt");
+        let original = "a\nb\nc\n";
+        fs::write(&file_path, original).await.unwrap();
+        let expected_hash = compute_content_hash(original);
+
+        // External write changes the file before Edit.
+        fs::write(&file_path, "a\n// comment\nb\nc\n").await.unwrap();
+
+        let tool = make_tool();
+        let ctx = make_pure_ctx();
+        let input = serde_json::json!({
+            "file_path": file_path.to_string_lossy(),
+            "pure_edit": {
+                "expected_hash": expected_hash,
+                "insertions": [{"op": "insert_after", "line": 1, "content": "X\n"}]
+            }
+        });
+        let err = tool.execute(&ctx, input).await.unwrap_err();
+        let msg = format!("{err}");
+        assert!(msg.contains("stale anchor"), "msg was: {msg}");
+    }
+
+    #[tokio::test]
+    async fn test_pure_edit_empty_rejected() {
+        let dir = tempdir().unwrap();
+        let file_path = dir.path().join("lib.txt");
+        let original = "a\n";
+        fs::write(&file_path, original).await.unwrap();
+        let content = fs::read_to_string(&file_path).await.unwrap();
+        let expected_hash = compute_content_hash(&content);
+
+        let tool = make_tool();
+        let ctx = make_pure_ctx();
+        let input = serde_json::json!({
+            "file_path": file_path.to_string_lossy(),
+            "pure_edit": {
+                "expected_hash": expected_hash,
+                "insertions": [],
+                "deletions": []
+            }
+        });
+        let err = tool.execute(&ctx, input).await.unwrap_err();
+        let msg = format!("{err}");
+        assert!(msg.contains("at least one"), "msg was: {msg}");
+    }
+
+    #[tokio::test]
+    async fn test_pure_edit_missing_hash_rejected() {
+        let dir = tempdir().unwrap();
+        let file_path = dir.path().join("lib.txt");
+        let original = "a\n";
+        fs::write(&file_path, original).await.unwrap();
+
+        let tool = make_tool();
+        let ctx = make_pure_ctx();
+        let input = serde_json::json!({
+            "file_path": file_path.to_string_lossy(),
+            "pure_edit": {
+                "insertions": [{"op": "insert_after", "line": 1, "content": "X\n"}]
+            }
+        });
+        let err = tool.execute(&ctx, input).await.unwrap_err();
+        let msg = format!("{err}");
+        assert!(msg.contains("expected_hash"), "msg was: {msg}");
     }
 }
