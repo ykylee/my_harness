@@ -501,3 +501,32 @@
   - (h) 추가 안정화
   - (i) Lark multi-section parser
   - (j) block-aware insert/replace
+
+## 세션 종료 (2026-07-01 12th)
+
+- **상태**: **D-116 DeviceAuthorization 단위 contract 명시 완료** — 옵션 f-3, D-114 의 deferred 2순위. `expired_in` / `interval` 단위를 **ms** 로 일원화 + doc-comment 명시 + mock spec 갱신.
+- **main**: D-116 commit (코드 + 메모리 단일 push 2 commit, hash push 후 확정).
+- **누적 결정**: **64** (D-22~D-38 + D-42~D-84 + D-96~D-116).
+- **build/test 상태**: `cargo build --workspace` = clean / `cargo clippy --workspace --all-targets -- -D warnings` = **0 warning** / `cargo test --workspace --lib` = **502 pass + 0 fail + 4 ignored** (D-115 baseline 500 → +2, 회귀 0) / D-113 real network 재실행 **PASS** (`interval=3000` ms invariant 그대로 통과).
+- **구현 요약** (옵션 f-3, D-116):
+  - `myharness/crates/auth/src/device_flow.rs`:
+    - doc-comment 4 곳 단위 contract 명시: `DeviceAuthorization::expired_in` (ms unix timestamp) / `::interval` (ms) / `TokenPoll::Success::expired_in` (ms) / `DeviceToken::expired_in` (ms).
+    - `default_interval()` 변경: `2` → `2_000` (2초 = 2000ms).
+    - `poll_until_success(interval_ms, expired_in_unix)` 시그니처: `interval: u64` → `interval_ms: u64` + 내부에서 `(interval_ms / 1000).clamp(1, 10)` 으로 seconds 변환. mock test 의 `interval=1_000` (1초) / real `MiniMax` 의 `interval=3_000` (3초) 모두 정상 sleep.
+    - **2 신규 invariant test**: `d116_interval_is_milliseconds_unit` (3000 ms invariant + 1-60초 범위) / `d116_expired_in_is_milliseconds_unix_timestamp` (1e12+ ms + now+5y cap).
+  - `myharness/crates/auth/src/manager.rs`:
+    - mock server test 응답 spec 갱신 (2 test × code + token): `interval=1` → `1000` / `expired_in=now+60` → `now+60_000` / `expired_in=now+3600` → `now+3_600_000`.
+    - mock test assertion 2곳: `req.authorization.interval == 1` → `1_000`.
+- **안전망**: `expired_in_to_chrono` (W14.7) 의 ms/μs/s auto-detect 로직 그대로 유지 — production 안전망. token 단계의 mixed-unit 응답도 흡수.
+- **효과**:
+  - mock spec = real spec (ms) — `poll_until_success` 의 `interval_ms / 1000` 변환으로 통일.
+  - D-116 invariant test 가 추후 spec 변경 (e.g. seconds 전환) 시 즉시 fail.
+  - doc-comment 4 곳 단위 명시 → 새 contributor 의 혼란 방지.
+- **다음 세션 시작 시 yklee 결정 옵션**:
+  - (f-4) **D-117 response_type 제거** (optional, mock test 호환성 위해 유지 — v1.5+)
+  - (B) Anthropic wire format
+  - (e) TASK-002 도메인 명령
+  - (g) TUI shell 검증
+  - (h) 추가 안정화
+  - (i) Lark multi-section parser
+  - (j) block-aware insert/replace

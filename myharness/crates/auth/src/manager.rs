@@ -611,9 +611,10 @@ mod tests {
                             .unwrap_or_else(|| "placeholder".to_string());
                         let now = chrono::Utc::now().timestamp_millis() as u64;
                         // D-115: real `MiniMax` API envelope — `base_resp.status_code=0` (성공)
+                        // D-116: mock spec = real spec (ms). `interval=1000` (1초), `expired_in=now+60_000` (60초 후)
                         let body = format!(
-                            r#"{{"base_resp":{{"status_code":0,"status_msg":"success"}},"user_code":"{}","verification_uri":"https://platform.test/oauth-authorize?user_code={}","interval":1,"expired_in":{},"state":"{}"}}"#,
-                            uc, uc, now + 60, state_param
+                            r#"{{"base_resp":{{"status_code":0,"status_msg":"success"}},"user_code":"{}","verification_uri":"https://platform.test/oauth-authorize?user_code={}","interval":1000,"expired_in":{},"state":"{}"}}"#,
+                            uc, uc, now + 60_000, state_param
                         );
                         let resp = format!(
                             "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{}",
@@ -623,9 +624,10 @@ mod tests {
                     } else if request_line.contains("POST /oauth/token") {
                         let now = chrono::Utc::now().timestamp_millis() as u64;
                         // D-115: real `MiniMax` API envelope — `base_resp.status_code=0` + legacy `status:success` 동시 emit
+                        // D-116: expired_in=now+3_600_000 ms (1시간 후, real spec)
                         let body = format!(
                             r#"{{"base_resp":{{"status_code":0,"status_msg":"success"}},"status":"success","access_token":"{}","refresh_token":"{}","expired_in":{},"token_type":"Bearer"}}"#,
-                            at, rt, now + 3600
+                            at, rt, now + 3_600_000
                         );
                         let resp = format!(
                             "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{}",
@@ -662,7 +664,8 @@ mod tests {
         let req = request_code(&provider).await.expect("request_code failed");
         assert_eq!(req.authorization.user_code, user_code_returned);
         assert!(req.authorization.verification_uri.contains("platform.test/oauth-authorize"));
-        assert_eq!(req.authorization.interval, 1);
+        // D-116: mock spec = real spec (ms). `interval=1000` = 1초.
+        assert_eq!(req.authorization.interval, 1_000);
 
         let poll = poll_token(&provider, &req.authorization.user_code, &req.pkce.verifier)
             .await
@@ -739,9 +742,10 @@ mod tests {
                             .unwrap_or_else(|| "placeholder".to_string());
                         let now = chrono::Utc::now().timestamp_millis() as u64;
                         // D-115: real `MiniMax` API envelope — `base_resp.status_code=0` (성공)
+                        // D-116: mock spec = real spec (ms). `interval=1000` (1초), `expired_in=now+60_000` (60초 후)
                         let body = format!(
-                            r#"{{"base_resp":{{"status_code":0,"status_msg":"success"}},"user_code":"{}","verification_uri":"https://platform.test/oauth-authorize?user_code={}","interval":1,"expired_in":{},"state":"{}"}}"#,
-                            uc, uc, now + 60, state_param
+                            r#"{{"base_resp":{{"status_code":0,"status_msg":"success"}},"user_code":"{}","verification_uri":"https://platform.test/oauth-authorize?user_code={}","interval":1000,"expired_in":{},"state":"{}"}}"#,
+                            uc, uc, now + 60_000, state_param
                         );
                         let resp = format!(
                             "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{}",
@@ -753,9 +757,10 @@ mod tests {
                         // status: success + access_token + refresh_token + expired_in
                         let now = chrono::Utc::now().timestamp_millis() as u64;
                         // D-115: real `MiniMax` API envelope — `base_resp.status_code=0` + legacy `status:success` 동시 emit
+                        // D-116: expired_in=now+3_600_000 ms (1시간 후, real spec)
                         let body = format!(
                             r#"{{"base_resp":{{"status_code":0,"status_msg":"success"}},"status":"success","access_token":"{}","refresh_token":"{}","expired_in":{},"token_type":"Bearer"}}"#,
-                            at, rt, now + 3600
+                            at, rt, now + 3_600_000
                         );
                         let resp = format!(
                             "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{}",
@@ -796,7 +801,8 @@ mod tests {
         let req = request_code(&provider).await.expect("request_code failed");
         assert_eq!(req.authorization.user_code, user_code_returned);
         assert!(req.authorization.verification_uri.contains("platform.test/oauth-authorize"));
-        assert_eq!(req.authorization.interval, 1);
+        // D-116: mock spec = real spec (ms). `interval=1000` = 1초.
+        assert_eq!(req.authorization.interval, 1_000);
 
         // 3) poll_token 1회 (success 직접 반환)
         let poll = poll_token(&provider, &req.authorization.user_code, &req.pkce.verifier)

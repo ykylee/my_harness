@@ -48,21 +48,30 @@ pub enum DeviceError {
 
 /// Device Authorization Grant 응답 (POST /oauth/code).
 ///
-/// `expired_in` 은 **unix timestamp** (초). OpenClaw/Hermes 와 동일 convention.
+/// **D-116 단위 contract (2026-07-01)**:
+/// - `expired_in` 은 **milliseconds 단위 unix timestamp** (real `MiniMax` API 응답 형식,
+///   D-52 follow-up / D-113 검증). OpenClaw/Hermes 와 동일 convention.
+/// - `interval` 은 **milliseconds** (real `MiniMax` 는 `3000` = 3초 응답, D-113 검증).
+///   `poll_until_success` 가 호출 시 seconds 로 변환 (`interval_ms / 1000` + `clamp(1, 10)`).
+/// - mock test 의 `interval=1` / `expired_in=now+60` 은 **legacy 초 단위** (`W14.7
+///   expired_in_to_chrono` 가 ms/μs/s 자동감지). D-116 에서 mock 도 `interval=1000` /
+///   `expired_in=now+60_000` (ms) 으로 갱신.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DeviceAuthorization {
     pub user_code: String,
     pub verification_uri: String,
-    /// 기본 2s. `OpenClaw` 는 1.5x backoff, 우리 v1 은 고정값 사용.
+    /// 기본 2s (mock). real `MiniMax` 는 3000ms = 3초. **D-116: 단위 = ms**.
     #[serde(default = "default_interval")]
     pub interval: u64,
-    /// unix timestamp (초). user 가 이 시각 전에 authorize 해야 함.
+    /// **D-116: milliseconds 단위 unix timestamp** (real `MiniMax` API 응답 형식).
+    /// user 가 이 시각 전에 authorize 해야 함.
     pub expired_in: u64,
     pub state: String,
 }
 
+/// **D-116**: legacy mock 호환 default (초). real spec 의 2초 = `2000` ms.
 fn default_interval() -> u64 {
-    2
+    2_000
 }
 
 /// D-115: real `MiniMax` API 의 응답 envelope.
@@ -84,7 +93,8 @@ pub enum TokenPoll {
     Success {
         access_token: String,
         refresh_token: String,
-        /// unix timestamp (초). 만료 시각.
+        /// **D-116: milliseconds 단위 unix timestamp** (real `MiniMax` API 응답 형식).
+        /// 만료 시각. manager.rs 의 `expired_in_to_chrono` 가 ms/μs/s 자동감지.
         expired_in: u64,
         /// optional. `token_type` (default "Bearer").
         token_type: Option<String>,
@@ -99,6 +109,8 @@ pub enum TokenPoll {
 pub struct DeviceToken {
     pub access_token: String,
     pub refresh_token: String,
+    /// **D-116: milliseconds 단위 unix timestamp** (real `MiniMax` API 응답 형식).
+    /// manager.rs 의 `expired_in_to_chrono` 가 ms/μs/s 자동감지.
     pub expired_in: u64,
     pub token_type: String,
     pub resource_url: Option<String>,
@@ -300,20 +312,26 @@ pub async fn poll_token(
 /// This function returns an error if the underlying operation fails.
 /// 만료 시각까지 interval 으로 polling. 성공/실패 시 종료.
 ///
+/// **D-116 단위 contract**:
+/// - `interval`: **milliseconds** (real `MiniMax` 응답). 내부에서 `(interval_ms / 1000)`
+///   로 seconds 변환 후 `clamp(1, 10)` 적용 (sleep 1-10초).
+/// - `expired_in_unix`: **milliseconds 단위 unix timestamp** (real `MiniMax` 응답).
+///   `chrono::Utc::now().timestamp_millis()` 와 직접 비교.
+///
 /// `OpenClaw` 와 동일한 backoff 정책 (W14.5): `cur_interval *= 1.5` (cap 10s).
-/// `MiniMax` 가 `interval=3000` 으로 응답해도 polling 1회 사이가 너무 길지 않도록
+/// `MiniMax` 가 `interval=3000` (3초) 으로 응답해도 polling 1회 사이가 너무 길지 않도록
 /// 1.5x backoff + cap. 단 `MiniMax` 가 명시한 interval 보다 작아지지 않음
 /// (서버 권고 존중, 1초 floor).
-///
-/// `expired_in` 은 **milliseconds 단위 unix timestamp** (`MiniMax` 응답, D-52 follow-up 확인).
 pub async fn poll_until_success(
     provider: &dyn DeviceCodeProvider,
     user_code: &str,
     verifier: &str,
-    interval: u64,
+    interval_ms: u64,
     expired_in_unix: u64,
 ) -> Result<DeviceToken, DeviceError> {
-    let mut cur_interval = interval.clamp(1, 10);
+    // D-116: ms → s 변환 + clamp(1, 10). mock test 의 interval_ms=1000 (1초) 와
+    // real `MiniMax` 의 interval_ms=3000 (3초) 모두 seconds 로 변환되어 sleep.
+    let mut cur_interval = (interval_ms / 1000).clamp(1, 10);
     let floor = 1u64;
     let cap = 10u64;
     let mut attempt = 0u32;
@@ -651,5 +669,53 @@ Connection: close
             other => panic!("expected TokenPoll::Error, got: {other:?}"),
         }
         drop(server);
+    }
+
+    // --- D-116: 단위 invariant (expired_in/interval 은 ms) ---
+
+    /// D-116 invariant: real `MiniMax` API 의 `interval` 은 ms 단위
+    /// (`3000` = 3초, D-113 검증). 1:1 정합성 + 추후 format 변경 시 빠른 진단.
+    #[test]
+    fn d116_interval_is_milliseconds_unit() {
+        let v: serde_json::Value = serde_json::from_str(
+            r#"{"user_code":"X","verification_uri":"https://platform.minimax.io/oauth-authorize?user_code=X&client=OpenClaw","interval":3000,"expired_in":1782881072225,"state":"x"}"#,
+        )
+        .unwrap();
+        let auth: DeviceAuthorization = serde_json::from_value(v).unwrap();
+        assert_eq!(auth.interval, 3_000, "interval must be ms (3_000 = 3s)");
+        assert!(
+            auth.interval >= 1_000,
+            "interval (ms) must be >= 1s (1_000 ms), got: {}",
+            auth.interval
+        );
+        assert!(
+            auth.interval <= 60_000,
+            "interval (ms) must be <= 60s (60_000 ms), got: {}",
+            auth.interval
+        );
+    }
+
+    /// D-116 invariant: `expired_in` 은 milliseconds 단위 unix timestamp.
+    /// 2026-07-01 시점 unix ms ≈ 1.78e12. 초 단위로 해석하면 2026+56년 (잘못).
+    #[test]
+    fn d116_expired_in_is_milliseconds_unix_timestamp() {
+        let v: serde_json::Value = serde_json::from_str(
+            r#"{"user_code":"X","verification_uri":"https://platform.minimax.io/oauth-authorize","interval":3000,"expired_in":1782881072225,"state":"x"}"#,
+        )
+        .unwrap();
+        let auth: DeviceAuthorization = serde_json::from_value(v).unwrap();
+        let now_ms = chrono::Utc::now().timestamp_millis() as u64;
+        assert!(
+            auth.expired_in >= 1_000_000_000_000,
+            "expired_in (ms) must be >= 1e12 (2001-09-09 in ms), got: {}",
+            auth.expired_in
+        );
+        let max_future = now_ms + 5 * 365 * 24 * 60 * 60 * 1_000_u64;
+        assert!(
+            auth.expired_in <= max_future,
+            "expired_in (ms) must be <= now + 5y, got: {} (now_ms={})",
+            auth.expired_in,
+            now_ms
+        );
     }
 }

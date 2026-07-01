@@ -1,6 +1,6 @@
 {
   "schema_version": "1",
-  "generated_at": "2026-07-01T06:30:00Z",
+  "generated_at": "2026-07-01T07:00:00Z",
   "source_of_truth": {
     "project_profile_path": "docs/PROJECT_PROFILE.md",
     "session_handoff_path": "ai-workflow/memory/session_handoff.md",
@@ -104,9 +104,9 @@
       "Gitea PAT (D-44) — ~/.git-credentials (chmod 600). 회전 권고",
       "GitHub auth via gh CLI (ykylee)"
     ],
-    "last_decision_id": "D-115",
+    "last_decision_id": "D-116",
     "last_session_date": "2026-07-01",
-    "decision_count": 63
+    "decision_count": 64
   },
   "decisions": {
     "decided": [
@@ -529,6 +529,20 @@
         "build_status": "clean",
         "clippy_status": "0 warning",
         "decision_count": 63
+      },
+      {
+        "id": "D-116",
+        "title": "DeviceAuthorization 단위 contract 명시 (ms 일원화, D-114 follow-up)",
+        "summary": "D-114 의 deferred 2순위. `DeviceAuthorization::expired_in` / `interval`, `TokenPoll::Success::expired_in`, `DeviceToken::expired_in`, `poll_until_success` 의 interval 인자 의 단위 contract 를 **ms** 로 명시. **scope**: (1) doc-comment 4 곳 단위 명시, (2) `poll_until_success` 의 `interval` 인자 이름 `interval_ms` 로 변경 + 내부에서 `(interval_ms / 1000).clamp(1, 10)` 으로 seconds 변환, (3) mock test 응답 spec 갱신 (`interval=1`→`1000` / `expired_in=now+60`→`now+60_000` / `expired_in=now+3600`→`now+3_600_000`), (4) mock test assertion `req.authorization.interval == 1` → `1_000` (2곳), (5) **2 신규 test** (interval/expired_in ms invariant). 2 files (`device_flow.rs` + `manager.rs`) / +~50 lines test + ~10 lines production. **이미 ms/μs/s auto-detect** 하던 `expired_in_to_chrono` (manager.rs W14.7) 는 그대로 유지 — production 안전망. **검증**: cargo build --workspace clean / cargo clippy --workspace --all-targets -- -D warnings 0 warning / cargo test --workspace --lib **502 pass + 0 fail + 4 ignored** (D-115 baseline 500 → +2, 회귀 0) / D-113 real network PASS (`interval=3000` ms 그대로 통과).",
+        "type": "refactor",
+        "scope": "myharness-auth (doc-comment + poll_until_success signature + mock test spec, +2 신규 test)",
+        "main_hash": "D-116 commit (push 후 확정)",
+        "test_count": 502,
+        "test_delta": 2,
+        "files_changed": 2,
+        "build_status": "clean",
+        "clippy_status": "0 warning",
+        "decision_count": 64
       }
     ],
     "deferred": [
