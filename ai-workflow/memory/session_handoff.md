@@ -348,3 +348,19 @@
   - (h) 추가 안정화
   - (i) D-109+ Lark multi-section parser
   - (j) D-109+ block-aware insert/replace
+
+## 세션 종료 (2026-07-01 6th)
+
+- **상태**: D-110 Real MiniMax native E2E test 추가 (옵션 D) — test-only 변경. **이 세션에서 API key 부재로 실제 실행은 다음 세션에 yklee 가 `MINIMAX_API_KEY` 주입 후**.
+- **main**: D-110 commit (코드 + 메모리 단일 push 2 commit, hash push 후 확정).
+- **누적 결정**: **58** (D-22~D-38 + D-42~D-84 + D-96~D-110).
+- **build/test 상태**: `cargo test --workspace --lib` = **490 pass + 0 fail + 3 ignored** (D-109 baseline 489 → +1 ignored, 회귀 0) / `cargo clippy --workspace --all-targets -- -D warnings` = **0 warning** / `cargo build --workspace` = clean.
+- **구현 요약** (옵션 D, D-110):
+  - `myharness/crates/llm/src/client_openai_compat.rs::tests::minimax_real_native_tool_call` — D-108 follow-up + D-109 의 wire format 이 실제 MiniMax API 까지 도달하는지 검증하는 `#[ignore]` test.
+  - 검증 단계 5가지: (1) `complete_wire_format` 분기 발동, (2) payload 가 D-109 description + input_schema 정확히 실어 나르는지 dump, (3) 응답 `tool_calls` 비어있지 않음, (4) `tool_calls[0].name == "Read"`, (5) arguments 에 `file_path` 존재.
+  - 실행 명령: `MINIMAX_API_KEY=... cargo test -p myharness-llm minimax_real_native_tool_call -- --ignored --nocapture`.
+  - API key 부재 시 `eprintln!` + `return` 으로 silently skip → CI 안전.
+- **다음 세션 시작 시 yklee 결정**:
+  - **(D 실행)**: `export MINIMAX_API_KEY=...` → 위 명령 실행 → 결과 dump → 옵션 (B) / 다음 backlog 로 진행
+  - 또는 (B) Anthropic wire format (test-only 가능, API key 불요 — mock server)
+  - 또는 (d)~(j) 잔여 backlog
