@@ -599,6 +599,13 @@
         "status": "decided",
         "date": "2026-07-01",
         "summary": "feat(tools): edit.rs pure_edit 에 replace_block op 추가. start_line 으로 syntactic block anchor → tree-sitter resolve_block_span 으로 closing line resolve → start..=end span 전체를 content 로 교체. PureInsertion::ReplaceBlock variant + OpKind::Replace variant + priority 0 (Delete 와 동순위). 2 신규 test: d123_replace_block_replaces_entire_fn (fn foo 전체 5줄을 3줄로 교체), d123_replace_block_in_pure_edit_multi_op (replace_block + insert_before 동시, line-descending sort). bug 발견/fix: arm pattern 의 content 가 outer content (file string) 를 가리는 scope shadow — arm field 를 replacement 로 rename. 회귀 0. workspace 514/514 pass + 4 ignored (D-122 512 -> +2). tools 105 -> 107."
+      },
+      {
+        "id": "D-124",
+        "title": "pure_edit insert_before_block op 추가 (옵션 j-추가)",
+        "status": "decided",
+        "date": "2026-07-01",
+        "summary": "feat(tools): edit.rs pure_edit 에 insert_before_block op 추가 (AfterBlock 의 짝). PureInsertion::BeforeBlock { line, content } (serde: insert_before_block) + OpKind::Before (기존). D-123 의 follow-up 으로 AfterBlock 의 scope-shadow bug 도 fix (arm pattern content -> replacement). block_ops filter 에 BeforeBlock 추가 + validation message 갱신. 2 신규 test: d124_insert_before_block_inserts_at_block_start (fn bar 직전 use std::fmt; insert), d124_insert_before_block_with_replace_block (insert_before_block + replace_block 동시, line-descending sort). 회귀 0. workspace 516/516 pass + 4 ignored (D-123 514 -> +2). tools 107 -> 109."
       }
     ],
     "deferred": [
@@ -736,7 +743,7 @@
     "path": null,
     "present": false
   },
-  "decision_count": 66,
+  "decision_count": 67,
   "last_updated": "2026-07-01",
   "decided": []
 }

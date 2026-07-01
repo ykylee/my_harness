@@ -693,3 +693,26 @@
   - (j-추가) `insert_before_block` op (mirror of `AfterBlock`)
   - (B-추가) Anthropic streaming / tool_result 매핑 추가 test
   - (i) Lark multi-section parser — 의미 정의 후 재개
+
+## 세션 종료 (2026-07-01 20th)
+
+- **상태**: **D-124 pure_edit insert_before_block op 추가 완료** — 옵션 j-추가, AfterBlock 의 짝 + AfterBlock scope-shadow bug fix.
+- **main**: D-124 commit (코드 + 메모리 단일 push, hash push 후 확정).
+- **누적 결정**: **71 + D-124 = 72** (decision_count handoff SSOT 갱신).
+- **build/test 상태**: `cargo build --workspace` = clean / `cargo clippy --workspace --all-targets -- -D warnings` = **0 warning** / `cargo test --workspace --lib` = **516 pass + 0 fail + 4 ignored** (D-123 514 → +2, 회귀 0) / tools 107 → 109.
+- **구현 요약** (옵션 j-추가, D-124):
+  - `myharness/crates/tools/src/edit.rs`:
+    - `PureInsertion::BeforeBlock { line, content }` variant 추가 (serde rename: `insert_before_block`).
+    - dispatch: `resolve_block_span(&content, *line)` 로 block resolve → anchor = `*line` (caller 가 start_line 명시) + `OpKind::Before(replacement.as_str())`.
+    - **bug fix**: AfterBlock 의 scope-shadow bug (D-123 코멘트에서 "구분" 이라 적었지만 실제로 fix 안 됨) → arm pattern `content` 를 `replacement` 로 rename + `resolve_block_span(&content, *line)` 로 원본 file resolve.
+    - `block_ops` filter 에 BeforeBlock 추가 + validation message 갱신 ("insert_after_block / insert_before_block / replace_block").
+  - **2 신규 test**:
+    1. `d124_insert_before_block_inserts_at_block_start` — `fn bar` 직전에 `use std::fmt;` insert. anchor line 5 (fn 시작점) 사용 — line 6 (indent) 은 fail.
+    2. `d124_insert_before_block_with_replace_block` — `insert_before_block` + `replace_block` 동시. 같은 block 의 start/end anchor 가 양쪽에서 쓰여도 line-descending sort 가 안전 적용.
+- **scope 명확화**:
+  - D-124 = `insert_before_block` op + AfterBlock bug fix. 6종 insert op (Before/After/Head/Tail/AfterBlock/BeforeBlock/ReplaceBlock 7종이 맞음).
+  - `pure_edit.insertions` 가 6종 → **7종** 으로 확장 (BeforeBlock 추가).
+- **다음 세션 시작 시 yklee 결정 옵션**:
+  - (e) TASK-002 도메인 명령
+  - (B-추가) Anthropic streaming / tool_result 매핑 추가 test
+  - (i) Lark multi-section parser — 의미 정의 후 재개

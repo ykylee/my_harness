@@ -94,6 +94,12 @@ enum PureInsertion {
     /// Rust only in v1.5.
     #[serde(rename = "replace_block")]
     ReplaceBlock { line: usize, content: String },
+    /// D-124: Insert `content` immediately before the START of the
+    /// syntactic block that BEGINS on the given 1-indexed line. tree-sitter
+    /// 가 *시작* line 을 resolve (D-123 ReplaceBlock 와 같은 function 재사용,
+    /// `start` 만 가져옴). 새 line 이 block 직전에 들어감. Rust only in v1.5.
+    #[serde(rename = "insert_before_block")]
+    BeforeBlock { line: usize, content: String },
 }
 
 #[derive(Debug, Deserialize)]
@@ -806,12 +812,12 @@ impl EditTool {
             .iter()
             .enumerate()
             .filter(|(_, ins)| {
-                matches!(ins, PureInsertion::AfterBlock { .. } | PureInsertion::ReplaceBlock { .. })
+                matches!(ins, PureInsertion::AfterBlock { .. } | PureInsertion::ReplaceBlock { .. } | PureInsertion::BeforeBlock { .. })
             })
             .collect();
         if !block_ops.is_empty() && extension != "rs" {
             return Err(ToolError::InvalidInput(format!(
-                "pure_edit.insert_after_block / replace_block: tree-sitter grammar for extension .{extension} not yet supported; use line_anchored / block_anchored for non-Rust files"
+                "pure_edit.insert_after_block / insert_before_block / replace_block: tree-sitter grammar for extension .{extension} not yet supported; use line_anchored / block_anchored for non-Rust files"
             )));
         }
 
@@ -869,19 +875,21 @@ impl EditTool {
                         kind: OpKind::Tail(content.as_str()),
                     });
                 }
-                PureInsertion::AfterBlock { line, content } => {
-                    let (resolved_end_line, _kind) =
-                        resolve_block_span(content, *line).map_err(ToolError::InvalidInput)?;
+                // D-124 BUG-FIX: AfterBlock 도 ReplaceBlock 와 동일 scope-shadow
+                // (arm pattern `content` 가 outer file content 가림). 원본 file 에서
+                // block END resolve 해야 함.
+                PureInsertion::AfterBlock { line, content: replacement } => {
+                    let (resolved_end_line, _kind) = resolve_block_span(&content, *line)
+                        .map_err(ToolError::InvalidInput)?;
                     ops.push(PendingOp {
                         anchor: resolved_end_line,
-                        kind: OpKind::After(content.as_str()),
+                        kind: OpKind::After(replacement.as_str()),
                     });
                 }
                 // D-123: block-aware replace. tree-sitter 가 block 의
                 // closing line 을 resolve → start..=end span 을
                 // replacement 로 교체. *원본* file content 에서
-                // resolve 해야 함 (replacement 가 아닌) — AfterBlock 의
-                // line 887 호출과 구분.
+                // resolve 해야 함 (replacement 가 아닌).
                 PureInsertion::ReplaceBlock { line, content: replacement } => {
                     // D-123: arm pattern 의 `content` 를 `replacement` 로 rename 해서
                     // outer `content` (file string) 와 구분. block END 는 원본 file 에서
@@ -895,6 +903,20 @@ impl EditTool {
                             end: resolved_end_line,
                             content: replacement.as_str(),
                         },
+                    });
+                }
+                // D-124: insert before block start. tree-sitter 가 block 의
+                // start_line 을 resolve → anchor 로 사용 → OpKind::Before
+                // → 정렬 후 line 직전에 insert. 같은 resolve_block_span 함수
+                // 재사용 (start_line == `*line` 으로 caller 가 anchor line 전달).
+                PureInsertion::BeforeBlock { line, content: replacement } => {
+                    // resolve_block_span 의 end_line 만 discard — start 는 *line 으로
+                    // caller 가 명시.
+                    let (_resolved_end_line, _kind) = resolve_block_span(&content, *line)
+                        .map_err(ToolError::InvalidInput)?;
+                    ops.push(PendingOp {
+                        anchor: *line,
+                        kind: OpKind::Before(replacement.as_str()),
                     });
                 }
             }
@@ -1909,5 +1931,79 @@ mod tests {
         let read_back = fs::read_to_string(&file_path).await.unwrap();
         let expected = "use std::fmt;\nuse std::io;\n\nfn greet() -> String {\n    \"hi\".to_string()\n}\n";
         assert_eq!(read_back, expected);
+    }
+
+    // --- D-124: pure_edit.insert_before_block op (옵션 j-추가) ---
+
+    /// D-124: `fn bar` 직전에 `use std::fmt;` insert. tree-sitter 가
+    /// `fn bar` 의 function_item 시작 (line 6) resolve → 그 직전에 insert.
+    /// AfterBlock 의 짝. line-descending sort 와 호환.
+    #[tokio::test]
+    async fn d124_insert_before_block_inserts_at_block_start() {
+        let dir = tempdir().unwrap();
+        let file_path = dir.path().join("lib.rs");
+        let original = "use std::io;\n\nfn foo() {}\n\nfn bar() {\n    42\n}\n";
+        fs::write(&file_path, original).await.unwrap();
+        let content = fs::read_to_string(&file_path).await.unwrap();
+        let expected_hash = compute_content_hash(&content);
+
+        let tool = make_tool();
+        let ctx = make_pure_ctx();
+        // fn bar() 의 시작 line (6) 을 anchor 로 → 그 직전에 use std::fmt; insert
+        let input = serde_json::json!({
+            "file_path": file_path.to_string_lossy(),
+            "pure_edit": {
+                "expected_hash": expected_hash,
+                "insertions": [{
+                    "op": "insert_before_block",
+                    "line": 5,
+                    "content": "use std::fmt;\n"
+                }]
+            }
+        });
+        let result = tool.execute(&ctx, input).await.unwrap();
+        assert!(!result.is_error, "execute failed: {result:?}");
+
+        let read_back = fs::read_to_string(&file_path).await.unwrap();
+        let expected = "use std::io;\n\nfn foo() {}\n\nuse std::fmt;\nfn bar() {\n    42\n}\n";
+        assert_eq!(read_back, expected);
+    }
+
+    /// D-124: `pure_edit` multi-section atomic context 에서
+    /// `insert_before_block` + `replace_block` 동시 사용. 같은
+    /// function_item (bar) 의 start anchor 와 end anchor 가 양쪽에서
+    /// 쓰여도 line-descending sort 가 안전하게 적용되어야 함.
+    #[tokio::test]
+    async fn d124_insert_before_block_with_replace_block() {
+        let dir = tempdir().unwrap();
+        let file_path = dir.path().join("lib.rs");
+        let original = "fn greet() -> String {\n    \"hello\".to_string()\n}\n";
+        fs::write(&file_path, original).await.unwrap();
+        let content = fs::read_to_string(&file_path).await.unwrap();
+        let expected_hash = compute_content_hash(&content);
+
+        let tool = make_tool();
+        let ctx = make_pure_ctx();
+        // 1) fn greet 직전에 use std::fmt; insert
+        // 2) fn greet 전체를 새 body 로 교체
+        let new_greet = "fn greet() -> String {\n    \"hi\".to_string()\n}";
+        let input = serde_json::json!({
+            "file_path": file_path.to_string_lossy(),
+            "pure_edit": {
+                "expected_hash": expected_hash,
+                "insertions": [
+                    {"op": "insert_before_block", "line": 1, "content": "use std::fmt;\n"},
+                    {"op": "replace_block", "line": 1, "content": new_greet}
+                ]
+            }
+        });
+        let result = tool.execute(&ctx, input).await.unwrap();
+        assert!(!result.is_error, "execute failed: {result:?}");
+
+        let read_back = fs::read_to_string(&file_path).await.unwrap();
+        // line-descending sort: replace_block(anchor=3) 먼저, then insert_before_block(anchor=1)
+        // 1~3 (fn greet 전체) 교체 → new_greet (3줄, no trailing newline) + 직전 insert
+        // 새 결과: use std::fmt;\nfn greet() -> String {\n    "hi".to_string()\n}
+        assert_eq!(read_back, "use std::fmt;\nfn greet() -> String {\n    \"hi\".to_string()\n}\n");
     }
 }
