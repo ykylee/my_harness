@@ -1,5 +1,7 @@
 use std::path::PathBuf;
 
+use tree_sitter_rust as _ts_rust;
+
 use async_trait::async_trait;
 use serde::Deserialize;
 use tokio::fs;
@@ -23,6 +25,161 @@ struct LineAnchoredEdit {
     end_line: usize,
     expected_hash: String,
     replacement: String,
+}
+
+/// Hashline v2 (D-106) block-anchored edit payload.
+///
+/// `start_line` is 1-indexed and must point at the line that OPENS the
+/// syntactic construct (the `fn`/`struct`/`impl`/`if`/`for`/etc. line, or
+/// the first line of a leading decorator/doc-comment for languages that
+/// parse them as part of the same node). tree-sitter resolves the
+/// matching closing line.
+#[derive(Debug, Deserialize)]
+struct BlockAnchoredEdit {
+    start_line: usize,
+    expected_hash: String,
+    replacement: String,
+}
+
+/// Resolve the smallest syntactic block that *begins* on the given
+/// 1-indexed line of a Rust source string, returning its 1-indexed
+/// inclusive end line plus a human-readable node kind ("function_item",
+/// "struct_item", "impl_item", etc.).
+///
+/// "Smallest block that begins on line N" means: walk from the AST root
+/// and pick the deepest named node whose start line == N AND whose
+/// end line is `> N`. We deliberately do NOT include nodes whose start
+/// is before N (those cover the line but don't open on it) and we do
+/// NOT include nodes whose end equals N (zero-width).
+///
+/// Returns `Err(msg)` with an actionable error when:
+/// - the parser fails to consume the source,
+/// - the file has fewer lines than `start_line_1`,
+/// - no construct on `start_line_1` owns at least one additional line
+///   (the line is blank, a comment, a closing brace, etc.).
+fn resolve_block_span(
+    content: &str,
+    start_line_1: usize,
+) -> Result<(usize, String), String> {
+    if start_line_1 == 0 {
+        return Err("start_line must be >= 1 (1-indexed)".to_string());
+    }
+
+    let total_lines = content.lines().count();
+    if start_line_1 > total_lines {
+        return Err(format!(
+            "start_line ({start_line_1}) out of range (file has {total_lines} line(s))"
+        ));
+    }
+
+    let mut parser = tree_sitter::Parser::new();
+    let language = tree_sitter::Language::new(_ts_rust::LANGUAGE);
+    parser
+        .set_language(&language)
+        .map_err(|e| format!("tree-sitter set_language failed: {e}"))?;
+
+    let tree = parser
+        .parse(content, None)
+        .ok_or_else(|| "tree-sitter parse returned None".to_string())?;
+
+    let root = tree.root_node();
+    if root.has_error() {
+        return Err(format!(
+            "tree-sitter parse has syntax errors (root kind={})",
+            root.kind()
+        ));
+    }
+
+    // tree-sitter rows are 0-indexed.
+    let target_row = start_line_1 - 1;
+
+    fn collect_candidates(
+        node: tree_sitter::Node<'_>,
+        target_row: usize,
+        depth: usize,
+        candidates: &mut Vec<(usize, usize, String)>, // (end_row, depth, kind)
+    ) {
+        let start_row = node.start_position().row;
+        let end_row = node.end_position().row;
+
+        if start_row == target_row && end_row >= start_row {
+            // Require start column == 0: a line that is blank or
+            // whitespace-only is still a "row" in tree-sitter terms
+            // (any non-newline byte starts a row), but no syntactic
+            // construct can begin on it. This protects against
+            // `replace block 3` succeeding on a blank line that
+            // happens to share its row with a following single-line
+            // construct.
+            if node.start_position().column == 0 {
+                candidates.push((end_row, depth, node.kind().to_string()));
+            }
+        }
+
+        let mut cursor = node.walk();
+        for child in node.children(&mut cursor) {
+            collect_candidates(child, target_row, depth + 1, candidates);
+        }
+    }
+
+    let mut candidates: Vec<(usize, usize, String)> = Vec::new();
+    collect_candidates(root, target_row, 0, &mut candidates);
+
+    // Filter out nodes that don't carry useful edit semantics:
+    //  - `source_file`: the root, would swallow the whole file
+    //  - inner brace blocks: `block`, `field_declaration_list`,
+    //    `declaration_list`, `token_tree`, `where_clause`, etc.
+    //    These are CHILDREN of the construct the user actually meant
+    //    to anchor on (e.g. `block` is the `{ ... }` of a `fn`).
+    //  - anonymous tokens (`{`, `}`, `(`, `)`, `[`, `]`) — they have
+    //    no edit semantic, just punctuation.
+    //  - any node whose depth is 1 (direct child of `source_file`)
+    //    that is NOT itself an `item` — those are `use_list`, `attr`,
+    //    `vis`, etc., which are siblings of the real construct.
+    //
+    // We rely on the grammar's own naming: any node ending in
+    // `_item` is a real construct. Anonymous tokens are short (1-3
+    // chars) and never end in `_item`. This makes the filter
+    // grammar-agnostic without a hardcoded kind allowlist.
+    fn is_meaningful(kind: &str, _depth: usize) -> bool {
+        // Only accept `*_item` nodes. The Rust grammar names every
+        // top-level construct with the `_item` suffix (function_item,
+        // struct_item, impl_item, trait_item, mod_item, enum_item,
+        // type_item, const_item, static_item, etc.). This rules out:
+        //  - `source_file` (root)
+        //  - `block` / `field_declaration_list` / `declaration_list`
+        //    / `token_tree` (inner brace bodies)
+        //  - `struct` / `fn` / `impl` / `let` / `if` (keyword nodes)
+        //  - `use_list` / `attr` / `vis` (siblings of items)
+        //  - `{` / `(` / `;` (anonymous tokens)
+        kind.ends_with("_item")
+    }
+
+    let filtered: Vec<(usize, usize, String)> = candidates
+        .into_iter()
+        .filter(|(_, depth, kind)| {
+            if !is_meaningful(kind, *depth) {
+                return false;
+            }
+            true
+        })
+        .collect();
+
+    // Pick the DEEPEST remaining candidate (smallest specific construct)
+    // and use its end_row as the resolved span. If multiple candidates
+    // sit at the same depth, prefer the one with the smallest end_row
+    // (most local construct — though this is a tie-breaker, not the
+    // common case).
+    let best = filtered.into_iter().min_by(|a, b| {
+        // deeper = larger depth value; sort by depth descending first
+        b.1.cmp(&a.1).then(a.0.cmp(&b.0))
+    });
+
+    match best {
+        Some((end_row_0idx, _, kind)) => Ok((end_row_0idx + 1, kind)),
+        None => Err(format!(
+            "no syntactic block opens on line {start_line_1} (line is blank, a comment, a closing brace, or a non-block-brace construct)"
+        )),
+    }
 }
 
 /// Replace a 1-indexed inclusive line range with the given replacement text.
@@ -104,6 +261,14 @@ impl Tool for EditTool {
         // byte-identical for callers that have not opted in.
         if input.get("line_anchored").is_some() {
             return self.execute_line_anchored(ctx, &file_path, input).await;
+        }
+
+        // Hashline v2 (D-106): opt-in `block_anchored` mode — resolve the
+        // syntactic block that begins on the given line via tree-sitter, so
+        // a long body cannot be mis-counted and a stale end cannot clip it
+        // mid-block. Same stale-anchor gate as `line_anchored`.
+        if input.get("block_anchored").is_some() {
+            return self.execute_block_anchored(ctx, &file_path, &input).await;
         }
 
         let old_string = input
@@ -257,6 +422,110 @@ impl EditTool {
                 "end_line": la.end_line,
                 "replaced_lines": replaced_lines,
                 "old_hash": la.expected_hash,
+                "new_hash": new_hash,
+            })),
+        })
+    }
+
+    /// Hashline v2 (D-106) `block_anchored` mode — resolve the syntactic
+    /// block beginning on the given line via tree-sitter, so the closing
+    /// line is the actual end of the construct (function / `if` / loop /
+    /// struct / enum / impl / trait / fn / mod / closure) regardless of
+    /// hand-counting. Stale-anchor gate is identical to `line_anchored`.
+    async fn execute_block_anchored(
+        &self,
+        ctx: &ToolContext,
+        file_path: &str,
+        input: &serde_json::Value,
+    ) -> Result<ToolResult, ToolError> {
+        let path = if PathBuf::from(file_path).is_absolute() {
+            PathBuf::from(file_path)
+        } else {
+            ctx.cwd.join(file_path)
+        };
+
+        let content = fs::read_to_string(&path)
+            .await
+            .map_err(ToolError::IoError)?;
+
+        let ba: BlockAnchoredEdit = serde_json::from_value(
+            input
+                .get("block_anchored")
+                .cloned()
+                .ok_or_else(|| ToolError::InvalidInput("missing block_anchored".into()))?,
+        )
+        .map_err(|e| ToolError::InvalidInput(format!("invalid block_anchored: {e}")))?;
+
+        // Stale-anchor gate (spec §5.2 step 3 / D-106 same). Fail BEFORE
+        // any tree-sitter work so a stale payload can never silently
+        // corrupt a moved file.
+        let current_hash = compute_content_hash(&content);
+        if current_hash != ba.expected_hash {
+            return Err(ToolError::InvalidInput(format!(
+                "stale anchor: file modified; re-read with `Read` tool (current hash {current_hash}, expected {})",
+                ba.expected_hash
+            )));
+        }
+
+        // Resolve the block: Rust only in v1.5 (D-106 scope). Other
+        // extensions are an explicit error so callers learn to use
+        // `line_anchored` for non-Rust files instead of silently getting
+        // a wrong span.
+        let extension = path
+            .extension()
+            .and_then(|e| e.to_str())
+            .unwrap_or("");
+        if extension != "rs" {
+            return Err(ToolError::InvalidInput(format!(
+                "block_anchored: tree-sitter grammar for extension .{extension} not yet supported; use line_anchored for non-Rust files"
+            )));
+        }
+
+        let (resolved_end_line, node_kind) = match resolve_block_span(&content, ba.start_line) {
+            Ok(span) => span,
+            Err(msg) => return Err(ToolError::InvalidInput(msg)),
+        };
+
+        // range check (start_line must be within the file).
+        let total_lines = content.lines().count();
+        if ba.start_line == 0 || ba.start_line > total_lines {
+            return Err(ToolError::InvalidInput(format!(
+                "start_line ({}) out of range (file has {total_lines} line(s))",
+                ba.start_line
+            )));
+        }
+
+        let new_content = apply_line_replacement(
+            &content,
+            ba.start_line,
+            resolved_end_line,
+            &ba.replacement,
+        )
+        .map_err(ToolError::InvalidInput)?;
+
+        fs::write(&path, &new_content)
+            .await
+            .map_err(ToolError::IoError)?;
+
+        let new_hash = compute_content_hash(&new_content);
+        let replaced_lines = resolved_end_line - ba.start_line + 1;
+
+        Ok(ToolResult {
+            output: format!(
+                "replaced block ({}..={}) [tree-sitter: {node_kind}] in {}",
+                ba.start_line,
+                resolved_end_line,
+                path.display()
+            ),
+            is_error: false,
+            metadata: Some(serde_json::json!({
+                "path": path.to_string_lossy(),
+                "mode": "block_anchored",
+                "start_line": ba.start_line,
+                "end_line": resolved_end_line,
+                "replaced_lines": replaced_lines,
+                "node_kind": node_kind,
+                "old_hash": ba.expected_hash,
                 "new_hash": new_hash,
             })),
         })
@@ -654,5 +923,217 @@ mod tests {
         // end_line > total is rejected.
         let err = apply_line_replacement("a\nb\nc", 1, 99, "X").unwrap_err();
         assert!(err.contains("out of range") || err.contains("99"));
+    }
+
+    // --- block_anchored mode (Hashline v2 / D-106) ---------------------------
+
+    fn make_block_ctx() -> ToolContext {
+        ToolContext {
+            cwd: PathBuf::from("/"),
+            permission_mode: PermissionMode::Default,
+            confirm_override: true,
+            sanitizer_mode: SanitizerMode::default(),
+        }
+    }
+
+    #[test]
+    fn test_resolve_block_span_fn() {
+        // A small Rust file with two `fn`s; line 1 opens `alpha`, line 7 opens `beta`.
+        let content = "fn alpha(x: u32) -> u32 {\n    x + 1\n}\n\nfn beta(y: u32) -> u32 {\n    y * 2\n}\n";
+        let (end, kind) = resolve_block_span(content, 1).expect("alpha should resolve");
+        assert_eq!(kind, "function_item");
+        assert_eq!(end, 3, "alpha body is lines 1..=3");
+
+        let (end, kind) = resolve_block_span(content, 5).expect("beta should resolve");
+        assert_eq!(kind, "function_item");
+        assert_eq!(end, 7, "beta body is lines 5..=7");
+    }
+
+    #[test]
+    fn test_resolve_block_span_struct() {
+        let content = "struct Point {\n    x: i32,\n    y: i32,\n}\n";
+        let (end, kind) = resolve_block_span(content, 1).unwrap();
+        assert_eq!(kind, "struct_item");
+        assert_eq!(end, 4);
+    }
+
+    #[test]
+    fn test_resolve_block_span_impl() {
+        let content = "impl Foo {\n    fn bar(&self) -> i32 { 42 }\n}\n";
+        let (end, kind) = resolve_block_span(content, 1).unwrap();
+        assert_eq!(kind, "impl_item");
+        assert_eq!(end, 3);
+    }
+
+    #[test]
+    fn test_resolve_block_span_not_at_block_head() {
+        // Line 1 = `fn alpha`, line 2 = blank, line 3 = `fn beta`.
+        // Line 2 is blank — no construct opens on it.
+        let content = "fn alpha() {}\n\nfn beta() {}\n";
+        let err = resolve_block_span(content, 2).unwrap_err();
+        assert!(
+            err.contains("no syntactic block opens"),
+            "err was: {err}"
+        );
+    }
+
+    #[test]
+    fn test_resolve_block_span_start_out_of_range() {
+        let content = "fn alpha() {}\n";
+        let err = resolve_block_span(content, 99).unwrap_err();
+        assert!(err.contains("out of range"), "err was: {err}");
+    }
+
+    #[test]
+    fn test_resolve_block_span_start_zero() {
+        let err = resolve_block_span("fn alpha() {}\n", 0).unwrap_err();
+        assert!(err.contains("must be >= 1"), "err was: {err}");
+    }
+
+    #[tokio::test]
+    async fn test_edit_block_anchored_happy_path_fn() {
+        let dir = tempdir().unwrap();
+        let file_path = dir.path().join("lib.rs");
+        let original = "fn alpha(x: u32) -> u32 {\n    x + 1\n}\n\nfn beta(y: u32) -> u32 {\n    y * 2\n}\n";
+        fs::write(&file_path, original).await.unwrap();
+
+        let content = fs::read_to_string(&file_path).await.unwrap();
+        let expected_hash = compute_content_hash(&content);
+
+        let tool = make_tool();
+        let ctx = make_block_ctx();
+        let input = serde_json::json!({
+            "file_path": file_path.to_string_lossy(),
+            "block_anchored": {
+                "start_line": 1,
+                "expected_hash": expected_hash,
+                "replacement": "fn alpha(x: u32) -> u32 { x + 99 }",
+            }
+        });
+        let result = tool.execute(&ctx, input).await.unwrap();
+        assert!(!result.is_error, "result: {result:?}");
+
+        let read_back = fs::read_to_string(&file_path).await.unwrap();
+        assert_eq!(
+            read_back,
+            "fn alpha(x: u32) -> u32 { x + 99 }\n\nfn beta(y: u32) -> u32 {\n    y * 2\n}\n"
+        );
+
+        let meta = result.metadata.expect("metadata required");
+        assert_eq!(meta["mode"], "block_anchored");
+        assert_eq!(meta["start_line"], 1);
+        assert_eq!(meta["end_line"], 3);
+        assert_eq!(meta["replaced_lines"], 3);
+        assert_eq!(meta["node_kind"], "function_item");
+        assert_eq!(meta["old_hash"], expected_hash);
+        assert!(meta["new_hash"].as_str().is_some());
+        assert_ne!(meta["new_hash"], expected_hash);
+    }
+
+    #[tokio::test]
+    async fn test_edit_block_anchored_keeps_sibling() {
+        // Replacing the first `fn` must leave the second `fn` intact.
+        let dir = tempdir().unwrap();
+        let file_path = dir.path().join("lib.rs");
+        let original = "fn alpha() -> i32 { 1 }\nfn beta() -> i32 { 2 }\n";
+        fs::write(&file_path, original).await.unwrap();
+
+        let content = fs::read_to_string(&file_path).await.unwrap();
+        let expected_hash = compute_content_hash(&content);
+
+        let tool = make_tool();
+        let ctx = make_block_ctx();
+        let input = serde_json::json!({
+            "file_path": file_path.to_string_lossy(),
+            "block_anchored": {
+                "start_line": 1,
+                "expected_hash": expected_hash,
+                "replacement": "fn alpha() -> i32 { 42 }",
+            }
+        });
+        tool.execute(&ctx, input).await.unwrap();
+
+        let read_back = fs::read_to_string(&file_path).await.unwrap();
+        // beta must be byte-identical to its original.
+        assert!(read_back.contains("fn beta() -> i32 { 2 }"));
+    }
+
+    #[tokio::test]
+    async fn test_edit_block_anchored_stale_anchor() {
+        let dir = tempdir().unwrap();
+        let file_path = dir.path().join("lib.rs");
+        let original = "fn alpha() -> i32 { 1 }\nfn beta() -> i32 { 2 }\n";
+        fs::write(&file_path, original).await.unwrap();
+        let expected_hash = compute_content_hash(original);
+
+        // External write changes the file between Read and Edit.
+        fs::write(&file_path, "fn alpha() -> i32 { 1 }\n// someone added a comment\nfn beta() -> i32 { 2 }\n")
+            .await
+            .unwrap();
+
+        let tool = make_tool();
+        let ctx = make_block_ctx();
+        let input = serde_json::json!({
+            "file_path": file_path.to_string_lossy(),
+            "block_anchored": {
+                "start_line": 1,
+                "expected_hash": expected_hash,
+                "replacement": "fn alpha() -> i32 { 99 }",
+            }
+        });
+        let err = tool.execute(&ctx, input).await.unwrap_err();
+        let msg = format!("{err}");
+        assert!(msg.contains("stale anchor"), "msg was: {msg}");
+    }
+
+    #[tokio::test]
+    async fn test_edit_block_anchored_non_rust_rejected() {
+        let dir = tempdir().unwrap();
+        let file_path = dir.path().join("notes.txt");
+        let original = "fn alpha() -> i32 { 1 }\n";
+        fs::write(&file_path, original).await.unwrap();
+        let expected_hash = compute_content_hash(original);
+
+        let tool = make_tool();
+        let ctx = make_block_ctx();
+        let input = serde_json::json!({
+            "file_path": file_path.to_string_lossy(),
+            "block_anchored": {
+                "start_line": 1,
+                "expected_hash": expected_hash,
+                "replacement": "anything",
+            }
+        });
+        let err = tool.execute(&ctx, input).await.unwrap_err();
+        let msg = format!("{err}");
+        assert!(
+            msg.contains("not yet supported") && msg.contains(".txt"),
+            "msg was: {msg}"
+        );
+    }
+
+    #[tokio::test]
+    async fn test_edit_block_anchored_not_at_block_head() {
+        let dir = tempdir().unwrap();
+        let file_path = dir.path().join("lib.rs");
+        let original = "fn alpha() -> i32 { 1 }\n\nfn beta() -> i32 { 2 }\n";
+        fs::write(&file_path, original).await.unwrap();
+        let content = fs::read_to_string(&file_path).await.unwrap();
+        let expected_hash = compute_content_hash(&content);
+
+        let tool = make_tool();
+        let ctx = make_block_ctx();
+        // Line 2 is the blank between the two fns.
+        let input = serde_json::json!({
+            "file_path": file_path.to_string_lossy(),
+            "block_anchored": {
+                "start_line": 2,
+                "expected_hash": expected_hash,
+                "replacement": "x",
+            }
+        });
+        let err = tool.execute(&ctx, input).await.unwrap_err();
+        let msg = format!("{err}");
+        assert!(msg.contains("no syntactic block"), "msg was: {msg}");
     }
 }
