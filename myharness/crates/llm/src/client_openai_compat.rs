@@ -440,6 +440,109 @@ mod tests {
         assert!(!resp.content.is_empty(), "empty response from MiniMax");
     }
 
+    /// Option D (D-110) — real `MiniMax` API 호출. **D-108 follow-up wire
+    /// format + D-109 Tool description/input_schema 가 end-to-end 로
+    /// 도달하는지 검증**. `MINIMAX_API_KEY` env 가 있어야 동작.
+    /// 수동 실행:
+    /// `MINIMAX_API_KEY=... cargo test -p myharness-llm minimax_real_native_tool_call -- --ignored --nocapture`
+    ///
+    /// **검증 단계**:
+    /// 1. `OpenAiCompatProvider::complete_wire_format` 가 실제로 호출됨
+    ///    (tools 가 비어있지 않으면 wire format path 분기).
+    /// 2. payload 가 D-109 description + input_schema 를 정확히 실어 나르는지
+    ///    dump (`request` 의 `function.description` / `function.parameters`).
+    /// 3. 응답에 `tool_calls` 가 비어있지 않게 (LLM 이 native tool call emit).
+    /// 4. `tool_calls[0].name` 이 prompt 가 요청한 tool 이름과 일치.
+    ///
+    /// **실패 시 가능한 원인**:
+    /// - 모델이 native tool call 미지원 → MiniMax-M3 외 모델 시도
+    /// - prompt 가 모호 → 더 강한 강제 (e.g. system 에 "you must call ...")
+    /// - API key 권한 부족 → MiniMax console 에서 tool_use scope 확인
+    #[tokio::test]
+    #[ignore = "requires real MINIMAX_API_KEY + network access (Option D)"]
+    async fn minimax_real_native_tool_call() {
+        let Ok(api_key) = std::env::var("MINIMAX_API_KEY") else {
+            eprintln!("MINIMAX_API_KEY not set; skipping (Option D test requires real key)");
+            return;
+        };
+        let base_url = std::env::var("MINIMAX_API_HOST")
+            .unwrap_or_else(|_| "https://api.minimax.io/v1".into());
+        let p = OpenAiCompatProvider::new(
+            &base_url,
+            &api_key,
+            "MiniMax-M3",
+            ProviderId::Minimax,
+        )
+        .expect("OpenAiCompatProvider::new failed");
+
+        // D-109 surface: real description + JSON Schema (line_text format).
+        let tools = vec![ToolSpec {
+            name: "Read".into(),
+            description: Some(
+                "Read a file from the filesystem. Returns LINE:TEXT prefixed content                  for hashline addressing, with a final content hash line."
+                    .into(),
+            ),
+            input_schema: serde_json::json!({
+                "type": "object",
+                "properties": {
+                    "file_path": {
+                        "type": "string",
+                        "description": "Absolute or working-directory-relative path to the file to read."
+                    }
+                },
+                "required": ["file_path"]
+            }),
+        }];
+
+        let req = CompletionRequest {
+            model: "MiniMax-M3".into(),
+            system: Some(
+                "You are a tool user. When you need to read a file you MUST emit a Read tool call.                  Do not respond with prose — only a tool call."
+                    .into(),
+            ),
+            messages: vec![Message::user(
+                "Please read the file at /tmp/ping.txt using the Read tool.",
+            )],
+            max_tokens: Some(128),
+            temperature: Some(0.0),
+            stop: vec![],
+            stream: false,
+            metadata: serde_json::Value::Null,
+            tools,
+        };
+
+        let resp = p
+            .complete(req)
+            .await
+            .expect("MiniMax native tool call failed (network or auth?)");
+
+        eprintln!(
+            "MiniMax native response: model={} content={:?} tool_calls={}",
+            resp.model,
+            resp.content,
+            resp.tool_calls.len()
+        );
+        for (i, tc) in resp.tool_calls.iter().enumerate() {
+            eprintln!("  call[{i}]: id={} name={} args={}", tc.id, tc.name, tc.arguments);
+        }
+
+        // The whole point of Option D: D-108 follow-up + D-109 reach
+        // a real LLM and round-trip back as structured tool_calls.
+        assert!(
+            !resp.tool_calls.is_empty(),
+            "D-108 follow-up + D-109: MiniMax did not emit any tool_calls.              Got text response instead: {:?}",
+            resp.content
+        );
+        let first = &resp.tool_calls[0];
+        assert_eq!(first.name, "Read", "LLM picked wrong tool: {}", first.name);
+        // Arguments should at minimum carry file_path.
+        let args = &first.arguments;
+        assert!(
+            args.get("file_path").and_then(|v| v.as_str()).is_some(),
+            "tool_call arguments missing file_path: {args}"
+        );
+    }
+
     // --- D-108 follow-up: OpenAI wire format payload + response parse --------
 
 
