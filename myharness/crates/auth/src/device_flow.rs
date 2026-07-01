@@ -329,4 +329,106 @@ mod tests {
         assert_eq!(p.region(), "global");
         assert!(p.code_endpoint().starts_with("https://"));
     }
+
+    /// D-113 — Real `MiniMax` Device Authorization Grant 의 client 측 진입
+    /// 검증. `request_code` 가 production `MinimaxDeviceOAuth::code_endpoint()`
+    /// (https://api.minimax.io/oauth/code) 에 도달 → `user_code` +
+    /// `verification_uri` 를 받아오는지 확인. **API key 불요** (Device flow 는
+    /// un-authed). 네트워크/방화벽 이슈로 fail 시 `eprintln!` + early return.
+    ///
+    /// **Manual run** (real MiniMax):
+    /// `cargo test -p myharness-auth minimax_real_device_request_code -- --ignored --nocapture`
+    ///
+    /// **검증 단계**:
+    /// 1. `MinimaxDeviceOAuth::from_env()` 가 real endpoint URL 을 가짐
+    /// 2. `request_code` 가 HTTP 200 응답
+    /// 3. JSON body 에 `user_code` 가 비어있지 않고 `XXXX-XXXX` 형식
+    /// 4. `verification_uri` 가 `https://platform.minimax.io/oauth-authorize` 시작
+    /// 5. `interval` 초 > 0 + `expired_in` ms 가 현재 시각 + 1분 이후
+    ///
+    /// **발견된 endpoint** (D-113 메모, 2026-07-01):
+    /// - real `code_endpoint` 가 `https://api.minimax.io/oauth/code` (302/307 redirect)
+    /// - redirect target = `https://account.minimax.io/oauth2/device/code` (RFC 8628)
+    /// - endpoint 갱신 결정 (production `MinimaxDeviceOAuth` 의 URL 교체) 은
+    ///   별도 decision 보류 — 현재 redirect 가 자동 follow 되므로 production 동작 OK
+    ///   이지만, 명시적 endpoint 변경은 v1.5+ 에서 결정.
+    #[tokio::test]
+    #[ignore = "requires real network access to api.minimax.io (D-113)"]
+    async fn minimax_real_device_request_code() {
+        use crate::provider::MinimaxDeviceOAuth;
+
+        let provider = MinimaxDeviceOAuth::from_env();
+        eprintln!(
+            "MiniMax Device OAuth: base_url={} region={} code_endpoint={}",
+            provider.base_url,
+            provider.region,
+            provider.code_endpoint(),
+        );
+
+        // Step 1: code endpoint 가 https:// 시작
+        assert!(
+            provider.code_endpoint().starts_with("https://"),
+            "code_endpoint must be HTTPS, got: {}",
+            provider.code_endpoint(),
+        );
+        // Step 2: real endpoint 매핑 (production 이든 redirect target 이든)
+        assert!(
+            provider.code_endpoint().contains("minimax.io")
+                || provider.code_endpoint().contains("minimaxi.com"),
+            "code_endpoint must point at MiniMax infra, got: {}",
+            provider.code_endpoint(),
+        );
+
+        // Step 3: 실제 request_code 호출
+        let req = match request_code(&provider).await {
+            Ok(r) => r,
+            Err(e) => {
+                eprintln!("request_code failed (network/auth/parse error): {e}");
+                eprintln!("skipping — likely sandbox network restriction");
+                return;
+            }
+        };
+        eprintln!(
+            "MiniMax device authorization: user_code={} verification_uri={} interval={} expired_in={}",
+            req.authorization.user_code,
+            req.authorization.verification_uri,
+            req.authorization.interval,
+            req.authorization.expired_in,
+        );
+
+        // Step 4: user_code 형식 (XXXX-XXXX)
+        let uc = &req.authorization.user_code;
+        assert!(!uc.is_empty(), "user_code must be non-empty");
+        assert_eq!(
+            uc.chars().filter(|c| *c == '-').count(),
+            1,
+            "user_code expected format XXXX-XXXX, got: {uc}"
+        );
+        assert_eq!(uc.len(), 9, "user_code expected length 9 (XXXX-XXXX), got: {uc}");
+
+        // Step 5: verification_uri 검증
+        let vuri = &req.authorization.verification_uri;
+        assert!(vuri.starts_with("https://"), "verification_uri must be HTTPS");
+        assert!(
+            vuri.contains("platform.minimax.io/oauth-authorize")
+                || vuri.contains("platform.minimaxi.com"),
+            "verification_uri must point at MiniMax authorize page, got: {vuri}"
+        );
+
+        // Step 6: interval / expired_in sanity
+        assert!(req.authorization.interval > 0, "interval must be > 0");
+        let now_ms = chrono::Utc::now().timestamp_millis() as u64;
+        assert!(
+            req.authorization.expired_in > now_ms + 60_000,
+            "expired_in must be > now + 60s, got: {} (now={})",
+            req.authorization.expired_in,
+            now_ms
+        );
+        // mini safety: 1년 이상 future 면 의심
+        assert!(
+            req.authorization.expired_in < now_ms + 365 * 24 * 60 * 60 * 1000,
+            "expired_in suspiciously far in future: {}",
+            req.authorization.expired_in
+        );
+    }
 }

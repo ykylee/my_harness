@@ -421,3 +421,30 @@
   - (h) 추가 안정화 (cargo hygiene)
   - (i) D-109+ Lark multi-section parser
   - (j) D-109+ block-aware insert/replace
+
+## 세션 종료 (2026-07-01 9th)
+
+- **상태**: **D-113 Real MiniMax OAuth Device flow client-side E2E PASS** — 옵션 f 진행. `minimax_real_device_request_code` ignored test 가 real MiniMax API 에 도달 → 6단계 assertion 모두 통과.
+- **main**: D-113 commit (코드 + 메모리 단일 push 2 commit, hash push 후 확정).
+- **누적 결정**: **61** (D-22~D-38 + D-42~D-84 + D-96~D-113).
+- **build/test 상태**: `cargo build --workspace` = clean / `cargo clippy --workspace --all-targets -- -D warnings` = **0 warning** / `cargo test --workspace --lib` = **494 pass + 0 fail + 4 ignored** (D-110 + D-113 = 2 신규 ignored, D-113 real network PASS) / auth 7 test 회복 (sandbox 외부 환경에서).
+- **발견 (D-113 핵심)**:
+  - `https://api.minimax.io/oauth/code` → **307 redirect** → `https://account.minimax.io/oauth2/device/code` (RFC 8628 Device Authorization Grant 표준 endpoint)
+  - PKCE `code_challenge` (S256) 필수 — 미제출 시 400 `invalid_request: code_challenge is required`
+  - 응답: `user_code` (XXXX-XXXX 9자), `verification_uri=https://platform.minimax.io/oauth-authorize?user_code=...&client=OpenClaw`, `interval=3000ms`, `expired_in=<future epoch ms>`
+  - Token endpoint: `https://account.minimax.io/oauth2/token` 도달 확인 (fake device_code → `invalid_grant` 정상)
+- **구현 요약** (옵션 f, D-113):
+  - `myharness/crates/auth/src/device_flow.rs::tests::minimax_real_device_request_code` — `#[ignore = "requires real network access to api.minimax.io (D-113)"]` 1 test 추가. `request_code(&MinimaxDeviceOAuth::from_env())` 호출 → user_code/verification_uri/interval/expired_in 검증. **API key 불요** (Device flow un-authed). 네트워크/방화벽 fail 시 `eprintln!` + early return → CI 안전.
+  - 1 file / +115 lines (test only) / production code 0 변경.
+- **Endpoint 갱신 결정 보류** (v1.5+):
+  - production `MinimaxDeviceOAuth::code_endpoint()` / `token_endpoint()` 가 여전히 `https://api.minimax.io/oauth/{code,token}` 인데, 307 redirect 자동 follow 로 production 동작은 OK.
+  - 명시적 endpoint 변경 (`account.minimax.io/oauth2/{device/code,token}` 직접 hit) 은 v1.5+ 에서 결정. **이유**: (a) `client=OpenClaw` 식별자가 응답에 박혀있어 client_id 가 OpenClaw 와 공유되는지 정책 검증 필요, (b) PKCE `code_challenge_method=S256` 사용은 spec RFC 8628 standard — `device_flow.rs` 가 이미 PKCE 적용 중 (확인 필요), (c) base_url override 가 동작하는지 e2e 검증 필요.
+  - **즉시 후속 결정 (D-114 후보)**: production `MinimaxDeviceOAuth` 의 `code_endpoint` / `token_endpoint` 를 `account.minimax.io/oauth2/device/code` / `account.minimax.io/oauth2/token` 으로 명시 변경 + `device_flow.rs` 의 `request_code` 가 `code_challenge` + `code_challenge_method=S256` 정확히 emit 하는지 검증 + mock server test 갱신.
+- **다음 세션 시작 시 yklee 결정 옵션**:
+  - (f-1) **D-114 production endpoint 갱신** (위 결정 보류 사항 즉시 해소, 1 commit)
+  - (B) Anthropic wire format
+  - (e) TASK-002 도메인 명령
+  - (g) TUI shell 검증
+  - (h) 추가 안정화
+  - (i) Lark multi-section parser
+  - (j) block-aware insert/replace

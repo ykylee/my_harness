@@ -1,6 +1,6 @@
 {
   "schema_version": "1",
-  "generated_at": "2026-07-01T05:30:00Z",
+  "generated_at": "2026-07-01T05:55:00Z",
   "source_of_truth": {
     "project_profile_path": "docs/PROJECT_PROFILE.md",
     "session_handoff_path": "ai-workflow/memory/session_handoff.md",
@@ -104,9 +104,9 @@
       "Gitea PAT (D-44) — ~/.git-credentials (chmod 600). 회전 권고",
       "GitHub auth via gh CLI (ykylee)"
     ],
-    "last_decision_id": "D-112",
+    "last_decision_id": "D-113",
     "last_session_date": "2026-07-01",
-    "decision_count": 60
+    "decision_count": 61
   },
   "decisions": {
     "decided": [
@@ -487,6 +487,20 @@
         "build_status": "clean",
         "clippy_status": "0 warning",
         "decision_count": 60
+      },
+      {
+        "id": "D-113",
+        "title": "Real MiniMax OAuth Device Authorization Grant client-side E2E (옵션 f, 2026-07-01)",
+        "summary": "yklee 옵션 f, MiniMax OAuth real flow 검증. **발견**: `MinimaxDeviceOAuth::code_endpoint()` (https://api.minimax.io/oauth/code) 가 307 redirect → `https://account.minimax.io/oauth2/device/code` (RFC 8628 표준 endpoint, PKCE `code_challenge` 필수). 1 file (`myharness/crates/auth/src/device_flow.rs`) / +1 `#[ignore]` test (`minimax_real_device_request_code`, ~115 lines) / 6단계 검증. **PASS verified**: `cargo test -p myharness-auth minimax_real_device_request_code -- --ignored --nocapture` → `user_code=U66F-2Y23 verification_uri=https://platform.minimax.io/oauth-authorize?user_code=U66F-2Y23&client=OpenClaw interval=3000 expired_in=1782879693270` 5단계 assertion 모두 통과 (1) HTTPS endpoint, (2) MiniMax infra host, (3) request_code HTTP 200 + JSON body, (4) user_code XXXX-XXXX 형식, (5) verification_uri 가 platform.minimax.io 시작, (6) interval > 0 + expired_in sane. **API key 불요** (Device flow un-authed). **Endpoint 갱신 결정 보류**: production `MinimaxDeviceOAuth` 의 URL 은 그대로 (307 redirect 자동 follow → production 동작 OK), 명시적 endpoint 변경은 v1.5+ 에서 결정 (MiniMax 측 OpenClaw client 식별자 정책 + 호환성 검증 필요). 1 file / +0 lines production / +115 lines test.",
+        "type": "verification",
+        "scope": "myharness-auth (D-113 ignored test, memory + spec only, production code 0 변경)",
+        "main_hash": "D-113 commit (push 후 확정)",
+        "test_count": 494,
+        "test_delta": 0,
+        "files_changed": 1,
+        "build_status": "clean",
+        "clippy_status": "0 warning",
+        "decision_count": 61
       }
     ],
     "deferred": [
