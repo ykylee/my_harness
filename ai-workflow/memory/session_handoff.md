@@ -551,3 +551,28 @@
   - (h) 추가 안정화
   - (i) Lark multi-section parser
   - (j) block-aware insert/replace
+
+## 세션 종료 (2026-07-01 14th)
+
+- **상태**: **D-118 TUI shell render snapshot-style test 4종 추가 완료** — 옵션 g, D-114~117 cycle 종료 후 다음 사이클. TUI `app.rs::tests` 에 회귀 가드 강화.
+- **main**: D-118 commit (코드 + 메모리 단일 push, hash push 후 확정).
+- **누적 결정**: **65 + D-118 = 66** (decision_count handoff SSOT 갱신).
+- **build/test 상태**: `cargo build -p myharness-tui` = clean / `cargo clippy --workspace --all-targets -- -D warnings` = **0 warning** / `cargo test --workspace --lib` = **507 pass + 0 fail + 4 ignored** (D-117 503 → +4, 회귀 0) / tui crate 75 → 79.
+- **구현 요약** (옵션 g, D-118):
+  - `myharness/crates/tui/src/app.rs::tests` 에 4개 신규 test:
+    1. `d118_render_renders_all_role_prefixes` — 5 role (`[sys]`/`[you]`/`[bot]`/`[tool]`/`[err]`) 의 prefix + 본문이 모두 80x24 buffer 에 렌더되는지 검증
+    2. `d118_render_header_includes_title_and_mode` — 상단 헤더 line 의 `title` + `[mode]` 태그 text 존재 확인
+    3. `d118_render_status_reflects_message_count` — status line `N msg` 카운트 정확성 (welcome 1 + push 4 = 5)
+    4. `d118_draw_and_render_to_buffer_agree_on_text` — `Terminal::draw` 경로와 `render_to_buffer` 직접 경로의 text 출력 동등성 (한쪽만 깨지는 회귀 감지)
+  - helper: `fn buffer_text(buf: &Buffer) -> String` — cell symbol 평문화.
+  - 회귀 0 — 기존 9개 test (입력/렌더/keymap/엔터/CtrlC 등) 모두 영향 없음.
+- **scope 명확화**:
+  - D-118 = TUI render test 만. `app.rs` 의 production code (draw, render_to_buffer, AppKey, App state) 는 손대지 않음.
+  - Option B (SubAgent dispatch 통합 test), Option C (AppKey 엣지케이스) 는 미수행.
+- **다음 세션 시작 시 yklee 결정 옵션**:
+  - (B) Anthropic wire format
+  - (e) TASK-002 도메인 명령
+  - (h) 추가 안정화
+  - (i) Lark multi-section parser
+  - (j) block-aware insert/replace
+  - (g-추가) TUI 검증 보강 — SubAgent dispatch 통합 test 또는 AppKey 엣지케이스
