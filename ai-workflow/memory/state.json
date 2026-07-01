@@ -1,6 +1,6 @@
 {
   "schema_version": "1",
-  "generated_at": "2026-07-01T05:55:00Z",
+  "generated_at": "2026-07-01T06:10:00Z",
   "source_of_truth": {
     "project_profile_path": "docs/PROJECT_PROFILE.md",
     "session_handoff_path": "ai-workflow/memory/session_handoff.md",
@@ -104,9 +104,9 @@
       "Gitea PAT (D-44) — ~/.git-credentials (chmod 600). 회전 권고",
       "GitHub auth via gh CLI (ykylee)"
     ],
-    "last_decision_id": "D-113",
+    "last_decision_id": "D-114",
     "last_session_date": "2026-07-01",
-    "decision_count": 61
+    "decision_count": 62
   },
   "decisions": {
     "decided": [
@@ -501,6 +501,20 @@
         "build_status": "clean",
         "clippy_status": "0 warning",
         "decision_count": 61
+      },
+      {
+        "id": "D-114",
+        "title": "MinimaxDeviceOAuth endpoint URL 갱신 (D-113 follow-up, 2026-07-01)",
+        "summary": "D-113 의 real-network test 가 발견한 `https://api.minimax.io/oauth/code` 307 redirect → `https://account.minimax.io/oauth2/device/code` (RFC 8628 표준) endpoint 를 production 코드에 명시 적용. **scope = (1) endpoint URL only**, 부속 fix (D-115/116 후보) 는 deferred. 1 file (`myharness/crates/auth/src/provider.rs`) / 0 신규 test / production code 변경 (endpoint 4개 string + doc 1 paragraph). `MinimaxDeviceOAuth::from_env()` default base_url = `https://api.minimax.io` → `https://account.minimax.io` / CN = `https://account.minimaxi.com`. `code_endpoint()` / `token_endpoint()` = `account.minimax.io/oauth2/{device/code,token}` / CN 동일 패턴. D-113 test 재실행 → **PASS, 1-hop 직접 hit** (이전 307 redirect → 0-hop). mock server test (W14 7개) 회귀 0. module doc + D-113 doc 갱신. **검증**: cargo build --workspace clean / cargo clippy --workspace --all-targets -- -D warnings 0 warning / cargo test --workspace --lib **494 pass + 0 fail + 4 ignored** (회귀 0) / D-113 real network PASS (`code_endpoint=https://account.minimax.io/oauth2/device/code user_code=NV6S-SR2T interval=3000 expired_in=1782880012212`).",
+        "type": "refactor",
+        "scope": "myharness-auth (MinimaxDeviceOAuth endpoint URL 갱신, +0 신규 test, production code 변경)",
+        "main_hash": "D-114 commit (push 후 확정)",
+        "test_count": 494,
+        "test_delta": 0,
+        "files_changed": 1,
+        "build_status": "clean",
+        "clippy_status": "0 warning",
+        "decision_count": 62
       }
     ],
     "deferred": [

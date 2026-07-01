@@ -1,12 +1,12 @@
-//! `MiniMax` Device Authorization Grant OAuth flow (W14).
+//! `MiniMax` Device Authorization Grant OAuth flow (W14, D-114 endpoint 갱신).
 //!
 //! `MiniMax` OAuth 는 표준 Authorization Code + redirect 가 아니라 **Device Authorization
 //! Grant 변형** (OAuth 2.0 RFC 8628 의 `MiniMax` 구현). 흐름:
 //!
-//! 1) `request_code(provider)` → POST `{base_url}/oauth/code` (form body) →
+//! 1) `request_code(provider)` → POST `{base_url}/oauth2/device/code` (form body) →
 //!    `DeviceAuthorization { user_code, verification_uri, interval, expired_in, state }`
 //! 2) cli 가 `verification_uri` 를 browser 로 open, user 가 `user_code` (6자리 + dash + 4자리) 입력
-//! 3) `poll_token(provider, user_code, verifier)` → POST `{base_url}/oauth/token` (form body,
+//! 3) `poll_token(provider, user_code, verifier)` → POST `{base_url}/oauth2/token` (form body,
 //!    `grant_type=urn:ietf:params:oauth:grant-type:user_code`) →
 //!    `TokenPoll { status, access_token?, refresh_token?, expired_in? }`
 //! 4) `status=success` 시 `OAuthToken` 으로 변환 → `TokenStore::save`
@@ -18,7 +18,10 @@
 //! - `client_id`: `78257093-7e40-4613-99e0-527b14b39113` (`MiniMax` 공통, 모든 client 가 동일 값 사용)
 //! - scope: `group_id profile model.completion` (`MiniMax` Portal OAuth 권한)
 //! - `grant_type`: `urn:ietf:params:oauth:grant-type:user_code` (`MiniMax` custom grant)
-//! - endpoint: `https://api.minimax.io/oauth/{code,token}` (글로벌; 한국 default)
+//! - endpoint: `https://account.minimax.io/oauth2/{device/code,token}` (글로벌; 한국 default, **D-114 갱신**)
+//!   - 이전 (D-113 검증): `https://api.minimax.io/oauth/code` 307 redirect → 위 endpoint
+//!   - D-114 갱신으로 production `MinimaxDeviceOAuth` 가 직접 새 endpoint hit
+//!   - CN: `https://account.minimaxi.com/oauth2/{device/code,token}`
 
 #![allow(clippy::cast_possible_truncation, clippy::cast_precision_loss, clippy::cast_sign_loss, clippy::cast_possible_wrap)]
 use async_trait::async_trait;
@@ -332,9 +335,10 @@ mod tests {
 
     /// D-113 — Real `MiniMax` Device Authorization Grant 의 client 측 진입
     /// 검증. `request_code` 가 production `MinimaxDeviceOAuth::code_endpoint()`
-    /// (https://api.minimax.io/oauth/code) 에 도달 → `user_code` +
-    /// `verification_uri` 를 받아오는지 확인. **API key 불요** (Device flow 는
-    /// un-authed). 네트워크/방화벽 이슈로 fail 시 `eprintln!` + early return.
+    /// (https://account.minimax.io/oauth2/device/code, **D-114 갱신 후**) 에 도달
+    /// → `user_code` + `verification_uri` 를 받아오는지 확인. **API key 불요**
+    /// (Device flow 는 un-authed). 네트워크/방화벽 이슈로 fail 시 `eprintln!` +
+    /// early return.
     ///
     /// **Manual run** (real MiniMax):
     /// `cargo test -p myharness-auth minimax_real_device_request_code -- --ignored --nocapture`
@@ -346,12 +350,10 @@ mod tests {
     /// 4. `verification_uri` 가 `https://platform.minimax.io/oauth-authorize` 시작
     /// 5. `interval` 초 > 0 + `expired_in` ms 가 현재 시각 + 1분 이후
     ///
-    /// **발견된 endpoint** (D-113 메모, 2026-07-01):
-    /// - real `code_endpoint` 가 `https://api.minimax.io/oauth/code` (302/307 redirect)
-    /// - redirect target = `https://account.minimax.io/oauth2/device/code` (RFC 8628)
-    /// - endpoint 갱신 결정 (production `MinimaxDeviceOAuth` 의 URL 교체) 은
-    ///   별도 decision 보류 — 현재 redirect 가 자동 follow 되므로 production 동작 OK
-    ///   이지만, 명시적 endpoint 변경은 v1.5+ 에서 결정.
+    /// **Endpoint 히스토리** (D-113 → D-114):
+    /// - D-113 (2026-07-01 8th): `https://api.minimax.io/oauth/code` 307 redirect
+    /// - D-114 (2026-07-01 9th): production `MinimaxDeviceOAuth` URL 갱신
+    ///   → `https://account.minimax.io/oauth2/device/code` (direct hit, RFC 8628)
     #[tokio::test]
     #[ignore = "requires real network access to api.minimax.io (D-113)"]
     async fn minimax_real_device_request_code() {

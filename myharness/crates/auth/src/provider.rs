@@ -148,26 +148,41 @@ impl OAuthProvider for GoogleOAuth {
     }
 }
 
-/// `MiniMax` Device Authorization Grant provider (W14).
+/// `MiniMax` Device Authorization Grant provider (W14, D-114 endpoint 갱신).
 ///
 /// 표준 OAuth 2.0 Authorization Code + PKCE redirect flow 가 `MiniMax` 에서 404 반환
 /// (D-52 follow-up 확인). 따라서 **Device Authorization Grant 변형** 사용:
-/// POST `/oauth/code` → `user_code` + `verification_uri` → user 가 browser 에서
-/// `user_code` 입력 → polling `/oauth/token` → `access_token`.
+/// POST `/oauth2/device/code` → `user_code` + `verification_uri` → user 가 browser 에서
+/// `user_code` 입력 → polling `/oauth2/token` → `access_token`.
+///
+/// **D-114 endpoint 갱신** (2026-07-01, real MiniMax API 검증):
+/// - 이전: `https://api.minimax.io/oauth/{code,token}` (W14 초안, **307 redirect**)
+/// - 현재: `https://account.minimax.io/oauth2/{device/code,token}` (RFC 8628 표준, direct hit)
+/// - `api.minimax.io/oauth/code` → 307 → `account.minimax.io/oauth2/device/code`
+/// - PKCE `code_challenge` (S256) 필수. 미제출 시 HTTP 400 `invalid_request: code_challenge is required`.
+/// - 응답에 `state` echo back + `client=OpenClaw` 식별자 (verification_uri 에 포함) →
+///   `MiniMax` 가 client_id 공유 정책 사용 (`78257093-...` 공용 client_id 와 일치).
+/// - 보류 (D-115/116 후보): (a) `base_resp.status_code==0` 처리 (현재 `status: "success"` 만
+///   accept — real 응답은 `status` 필드 없음), (b) `expired_in`/`interval` 의 ms/초 통일
+///   (real API 는 epoch ms, 우리 코드는 초 가정), (c) `response_type=code` 파라미터 제거
+///   (real spec 에 없음, mock test 호환성 유지).
 ///
 /// 표준 `client_id` (OpenClaw/Hermes 와 동일): `78257093-7e40-4613-99e0-527b14b39113`.
 /// scope: `group_id profile model.completion` (Portal OAuth 권한).
-/// region: global (한국 default) = `https://api.minimax.io`. CN 은 `MYHARNESS_MINIMAX_CN=1`
+/// region: global (한국 default) = `https://account.minimax.io`. CN 은 `MYHARNESS_MINIMAX_CN=1`
 /// 또는 `MINIMAX_OAUTH_BASE_URL` env override.
 pub struct MinimaxDeviceOAuth {
-    /// POST /oauth/code + /oauth/token 의 base URL. CN 면 `https://api.minimaxi.com`.
+    /// Account host (POST /oauth2/device/code + /oauth2/token 의 host). CN 면
+    /// `https://account.minimaxi.com`, global = `https://account.minimax.io`.
+    /// D-114 이전엔 `https://api.minimax.io` 였으나, real endpoint 가 account.* host
+    /// 라는 것을 D-113 의 real-network test 가 확인.
     pub base_url: String,
     /// region 표시 (global/cn).
     pub region: String,
 }
 
 impl MinimaxDeviceOAuth {
-    /// env 재읽기. 한국 환경 default = global (`https://api.minimax.io`).
+    /// env 재읽기. 한국 환경 default = global (`https://account.minimax.io`).
     /// CN 으로 전환: `MYHARNESS_MINIMAX_CN=1` 또는 `MINIMAX_OAUTH_BASE_URL` 직접 설정.
     #[must_use] 
     pub fn from_env() -> Self {
@@ -176,9 +191,9 @@ impl MinimaxDeviceOAuth {
             .is_some_and(|v| v == "1" || v.eq_ignore_ascii_case("true"));
         let base_url = std::env::var("MINIMAX_OAUTH_BASE_URL").unwrap_or_else(|_| {
             if cn {
-                "https://api.minimaxi.com".into()
+                "https://account.minimaxi.com".into()
             } else {
-                "https://api.minimax.io".into()
+                "https://account.minimax.io".into()
             }
         });
         let region = if base_url.contains("minimaxi.com") {
@@ -201,24 +216,25 @@ impl DeviceCodeProvider for MinimaxDeviceOAuth {
     fn id(&self) -> &'static str { "minimax" }
     fn display_name(&self) -> &'static str { "MiniMax" }
     fn code_endpoint(&self) -> &str {
-        // &str 반환이지만 self.base_url 와 lifetime 동일 → Box::leak 회피:
-        // base_url 이 "https://api.minimax.io" 또는 "https://api.minimaxi.com" 이면 정적 literal.
-        if self.base_url == "https://api.minimax.io" {
-            "https://api.minimax.io/oauth/code"
-        } else if self.base_url == "https://api.minimaxi.com" {
-            "https://api.minimaxi.com/oauth/code"
+        // D-114 갱신: real MiniMax device code endpoint. base_url 이
+        // "https://account.minimax.io" 또는 "https://account.minimaxi.com" 이면
+        // 정적 literal 반환 (lifetime 안전). 그 외 override (e.g. local mock)는
+        // global endpoint 로 fallback — mock server 가 다른 host 일 때.
+        if self.base_url == "https://account.minimax.io" {
+            "https://account.minimax.io/oauth2/device/code"
+        } else if self.base_url == "https://account.minimaxi.com" {
+            "https://account.minimaxi.com/oauth2/device/code"
         } else {
-            // arbitrary override (e.g. local mock) → W14 단순화: 정적 fallback. 정확히 필요하면 v1.5+ 에서 self.base_url Box::leak.
-            "https://api.minimax.io/oauth/code"
+            "https://account.minimax.io/oauth2/device/code"
         }
     }
     fn token_endpoint(&self) -> &str {
-        if self.base_url == "https://api.minimax.io" {
-            "https://api.minimax.io/oauth/token"
-        } else if self.base_url == "https://api.minimaxi.com" {
-            "https://api.minimaxi.com/oauth/token"
+        if self.base_url == "https://account.minimax.io" {
+            "https://account.minimax.io/oauth2/token"
+        } else if self.base_url == "https://account.minimaxi.com" {
+            "https://account.minimaxi.com/oauth2/token"
         } else {
-            "https://api.minimax.io/oauth/token"
+            "https://account.minimax.io/oauth2/token"
         }
     }
     fn client_id(&self) -> &'static str {

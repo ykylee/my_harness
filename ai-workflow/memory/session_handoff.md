@@ -448,3 +448,28 @@
   - (h) 추가 안정화
   - (i) Lark multi-section parser
   - (j) block-aware insert/replace
+
+## 세션 종료 (2026-07-01 10th)
+
+- **상태**: **D-114 MinimaxDeviceOAuth endpoint URL 갱신 완료** — 옵션 f-1. production `MinimaxDeviceOAuth` 가 `https://account.minimax.io/oauth2/{device/code,token}` 직접 hit.
+- **main**: D-114 commit (코드 + 메모리 단일 push 2 commit, hash push 후 확정).
+- **누적 결정**: **62** (D-22~D-38 + D-42~D-84 + D-96~D-114).
+- **build/test 상태**: `cargo build --workspace` = clean / `cargo clippy --workspace --all-targets -- -D warnings` = **0 warning** / `cargo test --workspace --lib` = **494 pass + 0 fail + 4 ignored** (회귀 0) / D-113 real network 재실행 **PASS** (1-hop, redirect 없음).
+- **구현 요약** (옵션 f-1, D-114):
+  - `myharness/crates/auth/src/provider.rs` — `MinimaxDeviceOAuth::from_env()` 의 default base_url 변경 (`https://api.minimax.io` → `https://account.minimax.io`, CN 도 `https://api.minimaxi.com` → `https://account.minimaxi.com`). `code_endpoint()` / `token_endpoint()` 가 새 path (`/oauth2/device/code` / `/oauth2/token`) emit.
+  - `myharness/crates/auth/src/device_flow.rs` — module doc + D-113 test doc 갱신 (endpoint URL + D-114 follow-up 메모).
+  - 0 신규 test, 0 mock test 갱신 (mock server 는 endpoint 를 직접 주입받으니 영향 없음).
+- **Deferred (D-115/116 후보, 다음 세션 결정)**:
+  - **D-115**: `base_resp.status_code==0` 처리. real `MiniMax` API 의 성공 응답은 `status: "success"` 필드 없이 `base_resp.status_code=0` 만 포함. 현재 우리 코드는 `status: "success"` 만 accept → `poll_token` 의 real 사용 시 `TokenPoll::Error("unknown status:")` 로 떨어질 위험. real flow 완전 동작 위해 필요.
+  - **D-116**: `expired_in` / `interval` 의 ms/초 통일. real API 는 epoch ms (`expired_in=1782880012212`), 우리 `DeviceAuthorization::expired_in: u64` / `interval: u64` 는 초 가정. real flow 의 `OAuthToken::is_expired` 가 1000배 어긋남. manager.rs 도 같이 갱신 필요.
+  - **D-117 (optional)**: `response_type=code` 파라미터 제거. real spec 에 없음 (무시되긴 함). mock test 호환성 위해 유지.
+- **D-113 doc 갱신**: endpoint 히스토리 추가 (D-113 → D-114 path). `verification_uri` 의 `client=OpenClaw` 식별자 메모 보존.
+- **다음 세션 시작 시 yklee 결정 옵션**:
+  - (f-2) **D-115 base_resp 처리** (real poll_token 동작 위해)
+  - (f-3) **D-116 ms/초 통일** (real token expire check 위해)
+  - (B) Anthropic wire format
+  - (e) TASK-002 도메인 명령
+  - (g) TUI shell 검증
+  - (h) 추가 안정화
+  - (i) Lark multi-section parser
+  - (j) block-aware insert/replace
