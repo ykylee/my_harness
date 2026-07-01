@@ -24,8 +24,8 @@
     "v1_mvp_build": "TASK-005-1 v1 MVP 8/8 waves 완료 (D-49~D-52) + Device Authorization Grant (D-53) + --no-browser 3 모드 (D-54) + polling output/expired_in 단위 (D-55) + token 단위 변환 (D-56) + OAuth 자동 resolve (D-57) + OAuth 자동 refresh (D-58, W15.b) + W16 auth add-local subcommand (D-59) + W16 follow-up LocalLlm 라우팅 분기. **v1 MVP 종료 선언 (2026-06-09 22:48)**. 40+ commit dual push. 388+ tests pass, 0 fail, 2 ignored. + D-104 oh-my-pi Hashline Read v2 (2026-07-01) + D-105 Edit v2 line_anchored mode (2026-07-01). main = 5e39f5e."
   },
   "session": {
-    "current_baseline": "**D-110 (2026-07-01) Real MiniMax native E2E test 추가 (옵션 D, MINIMAX_API_KEY 필요) — D-108 follow-up + D-109 가 실제 LLM 까지 도달하는지 검증하는 ignored test** — main = D-110 commit (코드 + 메모리 단일 push 2 commit, hash 다음 push 후 확정). D-109: 9 file / +약 280 / -약 0; D-110: 1 file / +1 ignored test 추가. `myharness/crates/tools/src/tool.rs` (+`description()` + `input_schema()` default method), 6 tool impl (`read`/`write`/`edit`/`bash`/`glob_`/`grep`) override, `myharness/crates/tools/src/lib.rs` (+7 test), `myharness/crates/tui/src/orchestrator.rs` (`tool_specs_for` 가 `reg.get(name)` 으로 live `Tool::description()` + `Tool::input_schema()` 호출하도록 개선, +1 test) — +api_key field + dispatch (`!req.tools.is_empty()` 이면 `complete_wire_format()` 분기, else rig-core path) + `complete_wire_format` inherent method + `build_chat_payload` (OpenAI request shape) + `parse_chat_response` (OpenAI response shape) + 6 private struct. **8 test 추가** (build 3 + parse 5). **3-way verify**: cargo build clean / cargo clippy --workspace --all-targets -- -D warnings 0 warning (단 `#[allow(dead_code)]` 3건 forward-compat) / cargo test --workspace **490 pass + 0 fail + 3 ignored** (D-109 baseline 489 → +1 ignored, 회귀 0). 누적 결정 57 → **58** (D-110 추가).",
-    "current_axis": "**D-110 Real MiniMax native E2E test ready (2026-07-01)** — D-108 follow-up + D-109 의 wire format 완전체 + D-110 ignored test 로 real MiniMax E2E smoke (MINIMAX_API_KEY 주입 시 즉시 실행 가능) (real network E2E 는 MINIMAX_API_KEY 주입 시). 다음 1순위 (yklee 결정): (B) D-108 follow-up: Anthropic wire format (content block tool_use parse, Anthropic API 직접 호출) / (d) D-100 한계 follow-up (큰 file chunked Read) / (e) TASK-002 도메인 명령 / (f) MiniMax OAuth real flow / (g) TUI shell 검증 / (h) 추가 안정화 (cargo hygiene) / (i) D-109+ Lark multi-section parser / (j) D-109+ block-aware insert/replace.",
+    "current_baseline": "**D-111 (2026-07-01) D-110 ignored test 실제 실행 검증 완료 — yklee 가 MINIMAX_API_KEY 주입 → 5단계 assertion 모두 PASS, D-108 follow-up + D-109 의 wire format 이 real MiniMax API 와 end-to-end 로 동작 확인** — main = D-111 commit (메모리 only, hash 다음 push 후 확정). D-109: 9 file / +약 280 / -약 0; D-110: 1 file / +1 ignored test 추가. D-111: memory-only, code 변경 0. `myharness/crates/tools/src/tool.rs` (+`description()` + `input_schema()` default method), 6 tool impl (`read`/`write`/`edit`/`bash`/`glob_`/`grep`) override, `myharness/crates/tools/src/lib.rs` (+7 test), `myharness/crates/tui/src/orchestrator.rs` (`tool_specs_for` 가 `reg.get(name)` 으로 live `Tool::description()` + `Tool::input_schema()` 호출하도록 개선, +1 test) — +api_key field + dispatch (`!req.tools.is_empty()` 이면 `complete_wire_format()` 분기, else rig-core path) + `complete_wire_format` inherent method + `build_chat_payload` (OpenAI request shape) + `parse_chat_response` (OpenAI response shape) + 6 private struct. **8 test 추가** (build 3 + parse 5). **3-way verify**: cargo build clean / cargo clippy --workspace --all-targets -- -D warnings 0 warning (단 `#[allow(dead_code)]` 3건 forward-compat) / cargo test --workspace **490 pass + 0 fail + 3 ignored** (회귀 0, D-110 ignored 1개 real network PASS). 누적 결정 58 → **59** (D-111 추가).",
+    "current_axis": "**D-111 D-110 E2E test real network PASS (2026-07-01)** — D-108 follow-up + D-109 의 wire format 이 real MiniMax API 와 end-to-end 로 verified. D-110 ignored test + D-111 verification cycle 로 native tool calling 실증 완료 (real network E2E 는 MINIMAX_API_KEY 주입 시). 다음 1순위 (yklee 결정): (B) D-108 follow-up: Anthropic wire format (content block tool_use parse, Anthropic API 직접 호출) / (d) D-100 한계 follow-up (큰 file chunked Read) / (e) TASK-002 도메인 명령 / (f) MiniMax OAuth real flow / (g) TUI shell 검증 / (h) 추가 안정화 (cargo hygiene) / (i) D-109+ Lark multi-section parser / (j) D-109+ block-aware insert/replace.",
     "current_focus": "**세션 종료 (2026-07-01, yklee 결정)** — D-105 Edit v2 line_anchored mode 완료 + commit + dual-push 완료. main = `d52ef78`. oh-my-pi Hashline 점진 차용 2차 cycle 종료. 누적 결정 **53** (D-105 추가). 446/446 pass + 2 ignored / clippy 0 warning / binary N/A (release profile 미빌드). **다음 세션 시작 시 yklee 결정**: (a) D-106+ tree-sitter 도입 (v1.5+, `replace block N`, dep weight ↑ trade-off) / (b) D-106+ pure insert/delete (`insert before/after N`, multi-section atomic) / (c) A-proper native tool calling (OpenAI/Anthropic wire format, v1.5+, 2-3 commit) / (d) D-100 한계 follow-up (큰 file 1000+ lines chunked Read + prompt 보강) / (e) TASK-002 도메인 명령 (서버/환경 3-도메인, yklee 인프라 정보 의존) / (f) MiniMax OAuth real flow 검증 (console device grant 활성화 대기) / (g) TUI shell + interactive mode 검증 (binary `myharness` 만 실행, LoopRunner 통합) / (h) 추가 안정화 (cargo tree -d hygiene / 41GB target dir cleanup) / (i) TASK-005-2 v2.0 Plugin 4-계층 후속 (Sub-task 2/3/4).",
     "in_progress_items": [
       "TASK-005-1 v1 MVP 종료 선언 (D-59 follow-up, 2026-06-09 22:48) — W3~W16 완료 + dual-push + 브랜치 정리 + main 머지. 388+ tests pass. v1 빌드 phase 완전 종료.",
@@ -451,7 +451,25 @@
         "files_changed": 1,
         "build_status": "clean",
         "clippy_status": "0 warning",
-        "decision_count": 58
+        "decision_count": 58,
+        "verified": true,
+        "verified_at": "2026-07-01",
+        "verification_cycle": "D-111",
+        "note": "real MiniMax API 호출 → tool_calls 1개 (name=Read, args.file_path=/tmp/ping.txt) emit. 5단계 assertion 모두 PASS. D-108 follow-up + D-109 wire format end-to-end verified."
+      },
+      {
+        "id": "D-111",
+        "title": "D-110 E2E test real network verification cycle (옵션 D 실행, 2026-07-01)",
+        "summary": "yklee 가 `MINIMAX_API_KEY` 주입 → `cargo test -p myharness-llm minimax_real_native_tool_call -- --ignored --nocapture` 실행. **PASS**. 결과: `MiniMax native response: model=MiniMax-M3 content=\"<think>...</think>\" tool_calls=1 call[0]: id=call_019f1b96d53f7f21b04dca15 name=Read args={\"file_path\":\"/tmp/ping.txt\"}`. 5단계 assertion 모두 통과: (1) complete_wire_format 분기 발동, (2) payload 가 D-109 description + input_schema 전달, (3) tool_calls 1개 emit, (4) name==\"Read\", (5) args.file_path 존재. **D-108 follow-up + D-109 의 wire format 이 real MiniMax API 와 end-to-end 로 verified**. **memory-only 변경**, code 변경 0.",
+        "type": "verification",
+        "scope": "myharness-llm (D-110 ignored test 의 actual run, memory only)",
+        "main_hash": "D-111 commit (push 후 확정)",
+        "test_count": 490,
+        "test_delta": 0,
+        "files_changed": 0,
+        "build_status": "N/A (no code change)",
+        "clippy_status": "N/A (no code change)",
+        "decision_count": 59
       }
     ],
     "deferred": [

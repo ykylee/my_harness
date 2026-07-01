@@ -364,3 +364,33 @@
   - **(D 실행)**: `export MINIMAX_API_KEY=...` → 위 명령 실행 → 결과 dump → 옵션 (B) / 다음 backlog 로 진행
   - 또는 (B) Anthropic wire format (test-only 가능, API key 불요 — mock server)
   - 또는 (d)~(j) 잔여 backlog
+
+## 세션 종료 (2026-07-01 7th)
+
+- **상태**: **D-110 ignored test real network PASS** — yklee 가 `MINIMAX_API_KEY` 주입 후 1-shot 실행 → 5단계 assertion 모두 통과. D-108 follow-up + D-109 의 wire format 이 end-to-end 로 verified.
+- **main**: D-111 commit (메모리 only, hash push 후 확정).
+- **누적 결정**: **59** (D-22~D-38 + D-42~D-84 + D-96~D-111).
+- **실행 결과**:
+  ```
+  $ MINIMAX_API_KEY=... cargo test -p myharness-llm minimax_real_native_tool_call -- --ignored --nocapture
+  MiniMax native response: model=MiniMax-M3 content="<think>...</think>" tool_calls=1
+    call[0]: id=call_019f1b96d53f7f21b04dca15 name=Read args={"file_path":"/tmp/ping.txt"}
+  test client_openai_compat::tests::minimax_real_native_tool_call ... ok
+  test result: ok. 1 passed; 0 failed; 0 ignored
+  ```
+- **검증 단계 5가지 모두 PASS**:
+  1. `complete_wire_format` 분기 발동 (real HTTP POST `https://api.minimax.io/v1/chat/completions` 도달)
+  2. payload 가 D-109 description + input_schema 정확히 전달 (LLM 이 spec 이해)
+  3. `tool_calls` 1개 emit (non-empty)
+  4. `tool_calls[0].name == "Read"` (LLM 이 올바른 tool 선택)
+  5. `arguments.file_path == "/tmp/ping.txt"` (LLM 이 prompt 의 path 정확히 추출)
+- **의미**: D-108 follow-up (OpenAI-compat wire format native tool calling) + D-109 (Tool description + input_schema) 의 full chain 이 실증됨. MiniMax / DeepSeek / Ollama / llama.cpp 등 모든 OpenAI-compat provider 에 대해 native tool calling 이 동작.
+- **다음 세션 시작 시 yklee 결정**:
+  - (B) Anthropic wire format (test-only 가능, mock server)
+  - (d) D-100 한계 follow-up
+  - (e) TASK-002 도메인 명령
+  - (f) MiniMax OAuth real flow
+  - (g) TUI shell 검증
+  - (h) 추가 안정화
+  - (i) D-109+ Lark multi-section parser
+  - (j) D-109+ block-aware insert/replace
