@@ -216,3 +216,14 @@
 - **다음 세션 시작 진입점**: 본 파일 + state.json + work_backlog.md + backlog/2026-07-01.md (4 file 모두 2026-07-01 동기화 완료). D-106+ 진입 결정 대기.
 
 (End of file - total 102 lines)
+
+---
+
+## D-106 진입 시도 + sandbox blocker (2026-07-01 추가)
+
+- **시도**: D-106+ tree-sitter 도입 (oh-my-pi `replace block N`). Rust only v1.5, `block_anchored` 모드 (start_line + expected_hash + replacement), tree-sitter-rust 0.23 으로 line N 의 가장 큰 node resolve → end_line 까지 swap. spec 설계 완료.
+- **blocker**: sandbox `workspace-write` 모드에서 `index.crates.io` DNS 차단 → `cargo fetch` 실패. tree-sitter 0.26 / tree-sitter-rust 0.23 둘 다 Cargo.lock 미존재.
+- **다음 결정 (yklee, 다음 세션)**: (A) 에스컬레이션 — cargo build sandbox 밖 실행 (1-2 commit, D-106 완) / (B) 외부 cargo fetch 1회로 Cargo.lock 만 확정 / (C) D-106 skip → (b) pure insert/delete 또는 (c) A-proper native tool calling pivot (dep 0) / (D) nexus mirror 설정.
+- **현재 main**: `a9b5a63` (변동 없음, working tree clean).
+- **누적 결정**: 53 (D-106 미완, 변동 0).
+- **상세**: `backlog/2026-07-01.md` §10.

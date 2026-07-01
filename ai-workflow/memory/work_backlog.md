@@ -221,3 +221,5 @@
 - [docs/references/headroom.md](../../docs/references/headroom.md) — context compression (D-15)
 - [docs/references/PROVIDERS.md](../../docs/references/PROVIDERS.md) — LLM provider 비교
 - [docs/skills/provider-auto-config/SKILL.md](../../docs/skills/provider-auto-config/SKILL.md) — TASK-008 reference design
+
+- [2026-07-01 (2nd entry)](./backlog/2026-07-01.md#10-세션-d-d-106-진입-시도--sandbox-blocker) — **D-106+ tree-sitter 도입 진입 시도 + sandbox blocker** — oh-my-pi `replace block N` 의미론 차용 (function/if/loop/class body 전체 rewrite, tree-sitter 가 closing line resolve). 설계: Rust only v1.5, `block_anchored` 모드 (start_line + expected_hash + replacement), tree-sitter-rust 0.23 으로 line N 의 가장 큰 node resolve → end_line 까지 swap. spec 설계 완료. **blocker**: sandbox `workspace-write` 모드에서 `index.crates.io` DNS 차단 → `cargo fetch` 실패 (tree-sitter 0.26 / tree-sitter-rust 0.23 Cargo.lock 미존재). 모든 변경 `git checkout ... && sed -d` 로 working tree 복원. main = `a9b5a63` (변동 없음, working tree clean). 누적 결정 53 유지 (D-106 미완). **다음 세션 yklee 결정**: (A) 에스컬레이션 cargo build / (B) 외부 cargo fetch 1회 / (C) D-106 skip → (b) or (c) pivot / (D) nexus mirror 설정.
