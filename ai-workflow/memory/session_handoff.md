@@ -325,3 +325,26 @@
   - (h) 추가 안정화
   - (i) D-109+ Lark multi-section parser
   - (j) D-109+ block-aware insert/replace
+
+## 세션 종료 (2026-07-01 5th)
+
+- **상태**: D-109 Tool trait description + input_schema 완료 + commit + dual-push 완료.
+- **main**: D-109 commit (코드 + 메모리 단일 push 2 commit, hash push 후 확정).
+- **누적 결정**: **57** (D-22~D-38 + D-42~D-84 + D-96~D-109).
+- **build/test 상태**: `cargo test --workspace --lib` = **489 pass + 0 fail + 2 ignored** / `cargo clippy --workspace --all-targets -- -D warnings` = **0 warning** / `cargo build --workspace` = clean.
+- **구현 요약** (옵션 C, D-109):
+  - `myharness/crates/tools/src/tool.rs` — `Tool` trait 에 `description()` + `input_schema()` default method 추가 (description == "" / input_schema == empty object — 기존 6 tool / 외부 impl 깨지지 않음).
+  - 6 tool impl override: `read.rs` / `write.rs` / `edit.rs` / `bash.rs` / `glob_.rs` / `grep.rs` — 각 tool 의 human-readable description + JSON Schema (required + properties) 추가. Edit tool 의 schema 는 3 modes (line_anchored D-105 / block_anchored D-106 / pure_edit D-107) + classic old_string/new_string 모두 surface.
+  - `myharness/crates/tools/src/lib.rs` — 7 신규 test (`d109_all_default_tools_declare_description_and_schema` / `d109_read_tool_schema_is_well_formed` / `d109_write_tool_schema_requires_content` / `d109_edit_tool_schema_includes_modes` / `d109_bash_tool_schema_requires_command` / `d109_glob_tool_schema_requires_pattern` / `d109_grep_tool_schema_requires_pattern_and_supports_include`).
+  - `myharness/crates/tui/src/orchestrator.rs` — `tool_specs_for` 개선: `reg.get(name)` 으로 `Arc<dyn Tool>` 받아 `description()` + `input_schema()` 호출. 기존 name-only fallback 도 안전망으로 유지. +1 test (`d109_tool_specs_carry_description_and_schema`).
+- **wire format effect** (D-108 follow-up 과의 시너지): OpenAI-compat wire format 의 `function.description` + `function.parameters` 가 이제 빈 string/empty object 가 아니라 진짜 tool 메타데이터로 emit. LLM 이 tool 선택 시 더 정확하게 분기 가능.
+- **다음 세션 시작 시 yklee 결정 옵션**:
+  - (B) D-108 follow-up Anthropic wire format (content tool_use block)
+  - (D) Real MiniMax native E2E (MINIMAX_API_KEY 주입)
+  - (d) D-100 한계 follow-up
+  - (e) TASK-002 도메인 명령
+  - (f) MiniMax OAuth real flow
+  - (g) TUI shell 검증
+  - (h) 추가 안정화
+  - (i) D-109+ Lark multi-section parser
+  - (j) D-109+ block-aware insert/replace
