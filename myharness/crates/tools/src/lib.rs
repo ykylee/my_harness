@@ -18,7 +18,7 @@ pub mod tool;
 pub mod write;
 
 pub use adapter::execute_by_name;
-pub use content_hash::{compute_content_hash, format_line_anchored, HASH_TAG_LENGTH};
+pub use content_hash::{HASH_TAG_LENGTH, compute_content_hash, format_line_anchored};
 pub use error::ToolError;
 pub use permission::{PermissionDecision, PermissionGuard};
 pub use registry::ToolRegistry;
@@ -26,7 +26,7 @@ pub use sanitizer::{BashSanitizer, SanitizerMode, SanitizerViolation};
 pub use schema::{ProviderCompat, ToolSchema, ToolSchemaRegistry};
 pub use tool::{PermissionMode, Tool, ToolContext, ToolResult};
 
-#[must_use] 
+#[must_use]
 pub fn version() -> &'static str {
     env!("CARGO_PKG_VERSION")
 }
@@ -100,7 +100,10 @@ mod tests {
         let tool = reg.get("Read").unwrap();
         let schema = tool.input_schema();
         let required = schema["required"].as_array().unwrap();
-        assert_eq!(required, &vec![serde_json::Value::String("file_path".to_string())]);
+        assert_eq!(
+            required,
+            &vec![serde_json::Value::String("file_path".to_string())]
+        );
         let props = schema["properties"].as_object().unwrap();
         assert!(props.contains_key("file_path"));
         assert!(props.contains_key("offset"));

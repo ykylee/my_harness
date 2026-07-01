@@ -15,14 +15,16 @@ pub mod events;
 pub mod loop_mode;
 pub mod orchestrator;
 
-pub use agent::{SubAgent, SubAgentDef, SubAgentDomain, SubAgentError, SubAgentKind, SubAgentRegistry};
-pub use app::{draw, render_to_buffer, App, AppMessage, MessageRole};
+pub use agent::{
+    SubAgent, SubAgentDef, SubAgentDomain, SubAgentError, SubAgentKind, SubAgentRegistry,
+};
+pub use app::{App, AppMessage, MessageRole, draw, render_to_buffer};
 pub use events::{AppKey, TtyGuard};
 pub use loop_mode::{LoopConfig, LoopIteration, LoopReport, LoopRunner, LoopStop};
 pub use orchestrator::{DispatchDecision, DispatchKind, Orchestrator};
 
 /// Crate 버전.
-#[must_use] 
+#[must_use]
 pub fn version() -> &'static str {
     env!("CARGO_PKG_VERSION")
 }

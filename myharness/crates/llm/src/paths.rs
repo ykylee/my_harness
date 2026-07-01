@@ -2,7 +2,7 @@
 
 use std::path::{Path, PathBuf};
 
-#[must_use] 
+#[must_use]
 pub fn home_dir() -> PathBuf {
     if let Ok(p) = std::env::var("MYHARNESS_HOME") {
         return PathBuf::from(p);
@@ -10,27 +10,27 @@ pub fn home_dir() -> PathBuf {
     dirs::home_dir().map_or_else(|| PathBuf::from(".myharness"), |h| h.join(".myharness"))
 }
 
-#[must_use] 
+#[must_use]
 pub fn config_toml() -> PathBuf {
     home_dir().join("config.toml")
 }
 
-#[must_use] 
+#[must_use]
 pub fn providers_toml() -> PathBuf {
     home_dir().join("providers.toml")
 }
 
-#[must_use] 
+#[must_use]
 pub fn state_dir() -> PathBuf {
     home_dir().join("state")
 }
 
-#[must_use] 
+#[must_use]
 pub fn state_active_providers_toml() -> PathBuf {
     state_dir().join("active-providers.toml")
 }
 
-#[must_use] 
+#[must_use]
 pub fn state_auth_toml(provider: &str) -> PathBuf {
     state_dir().join("auth").join(format!("{provider}.toml"))
 }
@@ -53,52 +53,52 @@ pub fn ensure_auth_dir() -> std::io::Result<PathBuf> {
     Ok(dir)
 }
 
-#[must_use] 
+#[must_use]
 pub fn auth_dir() -> PathBuf {
     home_dir().join("auth")
 }
 
-#[must_use] 
+#[must_use]
 pub fn auth_toml(provider: &str) -> PathBuf {
     auth_dir().join(format!("{provider}.toml"))
 }
 
-#[must_use] 
+#[must_use]
 pub fn config_dir() -> PathBuf {
     home_dir().join("config")
 }
 
-#[must_use] 
+#[must_use]
 pub fn memory_dir() -> PathBuf {
     home_dir().join("memory")
 }
 
-#[must_use] 
+#[must_use]
 pub fn handoff_dir() -> PathBuf {
     home_dir().join("handoff")
 }
 
-#[must_use] 
+#[must_use]
 pub fn compression_dir() -> PathBuf {
     home_dir().join("compression")
 }
 
-#[must_use] 
+#[must_use]
 pub fn sub_agents_dir() -> PathBuf {
     home_dir().join("sub-agents")
 }
 
-#[must_use] 
+#[must_use]
 pub fn plugins_dir() -> PathBuf {
     home_dir().join("plugins")
 }
 
-#[must_use] 
+#[must_use]
 pub fn runtime_dir() -> PathBuf {
     home_dir().join("runtime")
 }
 
-#[must_use] 
+#[must_use]
 pub fn cache_dir() -> PathBuf {
     home_dir().join("cache")
 }
@@ -205,7 +205,7 @@ pub fn init_home_dir() -> std::io::Result<PathBuf> {
     Ok(home_dir())
 }
 
-#[must_use] 
+#[must_use]
 pub fn home_exists(p: &Path) -> bool {
     p.exists()
 }
@@ -234,7 +234,10 @@ mod tests {
         let a = state_active_providers_toml();
         let b = state_auth_toml("claude");
         // state_dir 은 home 하위, active-providers.toml 은 state_dir 하위
-        assert!(s.starts_with(&home), "state_dir {s:?} should be under home {home:?}");
+        assert!(
+            s.starts_with(&home),
+            "state_dir {s:?} should be under home {home:?}"
+        );
         assert!(a.starts_with(&s));
         assert!(b.starts_with(s.join("auth")));
     }

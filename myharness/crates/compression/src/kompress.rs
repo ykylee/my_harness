@@ -8,7 +8,12 @@
 //!
 //! 정확 복원 안 함 — LLM 이 이해 가능한 수준. v1.5+ 에서 ONNX ML 모델 도입 (Kompress-base 실제).
 
-#![allow(clippy::cast_possible_truncation, clippy::cast_precision_loss, clippy::cast_sign_loss, clippy::cast_possible_wrap)]
+#![allow(
+    clippy::cast_possible_truncation,
+    clippy::cast_precision_loss,
+    clippy::cast_sign_loss,
+    clippy::cast_possible_wrap
+)]
 #[derive(Debug, Clone)]
 pub struct KompressConfig {
     pub collapse_whitespace: bool,
@@ -31,23 +36,20 @@ impl Default for KompressConfig {
 }
 
 const STOPWORDS: &[&str] = &[
-    "the", "a", "an", "is", "are", "was", "were", "be", "been", "being", "am",
-    "have", "has", "had", "having", "do", "does", "did", "doing", "would", "should",
-    "could", "will", "shall", "may", "might", "must", "can",
-    "i", "you", "he", "she", "it", "we", "they", "me", "him", "her", "us", "them",
-    "my", "your", "his", "its", "our", "their",
-    "this", "that", "these", "those",
-    "and", "or", "but", "if", "then", "else", "so", "as", "of", "in", "on", "at",
-    "to", "for", "from", "by", "with", "without", "about", "into", "through",
-    "during", "before", "after", "above", "below", "up", "down", "out", "off",
-    "over", "under", "again", "further", "once", "here", "there", "when", "where",
-    "why", "how", "all", "any", "both", "each", "few", "more", "most", "other",
-    "some", "such", "no", "nor", "not", "only", "own", "same", "than", "too",
+    "the", "a", "an", "is", "are", "was", "were", "be", "been", "being", "am", "have", "has",
+    "had", "having", "do", "does", "did", "doing", "would", "should", "could", "will", "shall",
+    "may", "might", "must", "can", "i", "you", "he", "she", "it", "we", "they", "me", "him", "her",
+    "us", "them", "my", "your", "his", "its", "our", "their", "this", "that", "these", "those",
+    "and", "or", "but", "if", "then", "else", "so", "as", "of", "in", "on", "at", "to", "for",
+    "from", "by", "with", "without", "about", "into", "through", "during", "before", "after",
+    "above", "below", "up", "down", "out", "off", "over", "under", "again", "further", "once",
+    "here", "there", "when", "where", "why", "how", "all", "any", "both", "each", "few", "more",
+    "most", "other", "some", "such", "no", "nor", "not", "only", "own", "same", "than", "too",
     "very", "just", "now",
 ];
 
 /// v1 simple 압축. LLM 이 이해 가능한 수준으로 줄임.
-#[must_use] 
+#[must_use]
 pub fn kompress_v1(text: &str, cfg: &KompressConfig) -> String {
     let mut out = text.to_string();
     if cfg.collapse_whitespace {
@@ -118,7 +120,10 @@ fn remove_stopwords(s: &str) -> String {
 fn split_word_trailing(token: &str) -> (&str, &str) {
     let bytes = token.as_bytes();
     let mut i = 0;
-    while i < bytes.len() && !(bytes[i] as char).is_whitespace() && !(bytes[i] as char).is_ascii_punctuation() {
+    while i < bytes.len()
+        && !(bytes[i] as char).is_whitespace()
+        && !(bytes[i] as char).is_ascii_punctuation()
+    {
         i += 1;
     }
     (&token[..i], &token[i..])
@@ -148,7 +153,7 @@ pub struct KompressStats {
 }
 
 impl KompressStats {
-    #[must_use] 
+    #[must_use]
     pub fn from(original: &str, compressed: &str) -> Self {
         Self {
             original_chars: original.chars().count(),
@@ -156,7 +161,7 @@ impl KompressStats {
         }
     }
 
-    #[must_use] 
+    #[must_use]
     pub fn savings_ratio(&self) -> f32 {
         if self.original_chars == 0 {
             return 0.0;
@@ -231,7 +236,12 @@ mod tests {
         let s = "the quick brown fox is jumping over the lazy dog and the cat is running very fast";
         let out = kompress_v1(s, &KompressConfig::default());
         let stats = KompressStats::from(s, &out);
-        assert!(stats.savings_ratio() > 0.2, "savings={} ({})", stats.savings_ratio(), out);
+        assert!(
+            stats.savings_ratio() > 0.2,
+            "savings={} ({})",
+            stats.savings_ratio(),
+            out
+        );
     }
 
     #[test]

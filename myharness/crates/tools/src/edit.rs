@@ -191,10 +191,7 @@ fn apply_insert_after(src: &str, line_1: usize, content: &str) -> String {
 /// - the file has fewer lines than `start_line_1`,
 /// - no construct on `start_line_1` owns at least one additional line
 ///   (the line is blank, a comment, a closing brace, etc.).
-fn resolve_block_span(
-    content: &str,
-    start_line_1: usize,
-) -> Result<(usize, String), String> {
+fn resolve_block_span(content: &str, start_line_1: usize) -> Result<(usize, String), String> {
     if start_line_1 == 0 {
         return Err("start_line must be >= 1 (1-indexed)".to_string());
     }
@@ -360,8 +357,7 @@ fn apply_line_replacement(
         replacement.split('\n').collect()
     };
 
-    let mut combined: Vec<&str> =
-        Vec::with_capacity(pre.len() + repl_lines.len() + post.len());
+    let mut combined: Vec<&str> = Vec::with_capacity(pre.len() + repl_lines.len() + post.len());
     combined.extend_from_slice(pre);
     combined.extend(repl_lines);
     combined.extend_from_slice(post);
@@ -594,13 +590,9 @@ impl EditTool {
 
         // Range + apply (spec §5.2 steps 4-5). `apply_line_replacement`
         // returns user-actionable error strings; surface them as InvalidInput.
-        let new_content = apply_line_replacement(
-            &content,
-            la.start_line,
-            la.end_line,
-            &la.replacement,
-        )
-        .map_err(ToolError::InvalidInput)?;
+        let new_content =
+            apply_line_replacement(&content, la.start_line, la.end_line, &la.replacement)
+                .map_err(ToolError::InvalidInput)?;
 
         fs::write(&path, &new_content)
             .await
@@ -673,10 +665,7 @@ impl EditTool {
         // extensions are an explicit error so callers learn to use
         // `line_anchored` for non-Rust files instead of silently getting
         // a wrong span.
-        let extension = path
-            .extension()
-            .and_then(|e| e.to_str())
-            .unwrap_or("");
+        let extension = path.extension().and_then(|e| e.to_str()).unwrap_or("");
         if extension != "rs" {
             return Err(ToolError::InvalidInput(format!(
                 "block_anchored: tree-sitter grammar for extension .{extension} not yet supported; use line_anchored for non-Rust files"
@@ -697,13 +686,9 @@ impl EditTool {
             )));
         }
 
-        let new_content = apply_line_replacement(
-            &content,
-            ba.start_line,
-            resolved_end_line,
-            &ba.replacement,
-        )
-        .map_err(ToolError::InvalidInput)?;
+        let new_content =
+            apply_line_replacement(&content, ba.start_line, resolved_end_line, &ba.replacement)
+                .map_err(ToolError::InvalidInput)?;
 
         fs::write(&path, &new_content)
             .await
@@ -804,10 +789,7 @@ impl EditTool {
         // We resolve each op to a concrete insertion point now so the
         // line-descending sort below can mix insert/deletion ops
         // uniformly.
-        let extension = path
-            .extension()
-            .and_then(|e| e.to_str())
-            .unwrap_or("");
+        let extension = path.extension().and_then(|e| e.to_str()).unwrap_or("");
         let block_after_ops: Vec<(usize, &PureInsertion)> = pe
             .insertions
             .iter()
@@ -891,7 +873,10 @@ impl EditTool {
             // resolve it below.
             ops.push(PendingOp {
                 anchor: d.start_line,
-                kind: OpKind::Delete { start: d.start_line, end: d.end_line },
+                kind: OpKind::Delete {
+                    start: d.start_line,
+                    end: d.end_line,
+                },
             });
         }
 
@@ -901,7 +886,9 @@ impl EditTool {
         // insert_after on the same line should still apply AFTER),
         // then InsertAfter, then InsertBefore, then Head/Tail.
         ops.sort_by(|a, b| {
-            b.anchor.cmp(&a.anchor).then_with(|| a.kind.priority().cmp(&b.kind.priority()))
+            b.anchor
+                .cmp(&a.anchor)
+                .then_with(|| a.kind.priority().cmp(&b.kind.priority()))
         });
 
         // Apply.
@@ -922,12 +909,14 @@ impl EditTool {
                 OpKind::Head(s) => {
                     let line_count = s.lines().count();
                     new_content = format!("{s}{new_content}");
-                    applied.push(serde_json::json!({"op": "insert_head", "lines_added": line_count}));
+                    applied
+                        .push(serde_json::json!({"op": "insert_head", "lines_added": line_count}));
                 }
                 OpKind::Tail(s) => {
                     let line_count = s.lines().count();
                     new_content.push_str(s);
-                    applied.push(serde_json::json!({"op": "insert_tail", "lines_added": line_count}));
+                    applied
+                        .push(serde_json::json!({"op": "insert_tail", "lines_added": line_count}));
                 }
                 OpKind::Delete { start, end } => {
                     let removed = end - start + 1;
@@ -1371,7 +1360,8 @@ mod tests {
     #[test]
     fn test_resolve_block_span_fn() {
         // A small Rust file with two `fn`s; line 1 opens `alpha`, line 7 opens `beta`.
-        let content = "fn alpha(x: u32) -> u32 {\n    x + 1\n}\n\nfn beta(y: u32) -> u32 {\n    y * 2\n}\n";
+        let content =
+            "fn alpha(x: u32) -> u32 {\n    x + 1\n}\n\nfn beta(y: u32) -> u32 {\n    y * 2\n}\n";
         let (end, kind) = resolve_block_span(content, 1).expect("alpha should resolve");
         assert_eq!(kind, "function_item");
         assert_eq!(end, 3, "alpha body is lines 1..=3");
@@ -1403,10 +1393,7 @@ mod tests {
         // Line 2 is blank — no construct opens on it.
         let content = "fn alpha() {}\n\nfn beta() {}\n";
         let err = resolve_block_span(content, 2).unwrap_err();
-        assert!(
-            err.contains("no syntactic block opens"),
-            "err was: {err}"
-        );
+        assert!(err.contains("no syntactic block opens"), "err was: {err}");
     }
 
     #[test]
@@ -1426,7 +1413,8 @@ mod tests {
     async fn test_edit_block_anchored_happy_path_fn() {
         let dir = tempdir().unwrap();
         let file_path = dir.path().join("lib.rs");
-        let original = "fn alpha(x: u32) -> u32 {\n    x + 1\n}\n\nfn beta(y: u32) -> u32 {\n    y * 2\n}\n";
+        let original =
+            "fn alpha(x: u32) -> u32 {\n    x + 1\n}\n\nfn beta(y: u32) -> u32 {\n    y * 2\n}\n";
         fs::write(&file_path, original).await.unwrap();
 
         let content = fs::read_to_string(&file_path).await.unwrap();
@@ -1499,9 +1487,12 @@ mod tests {
         let expected_hash = compute_content_hash(original);
 
         // External write changes the file between Read and Edit.
-        fs::write(&file_path, "fn alpha() -> i32 { 1 }\n// someone added a comment\nfn beta() -> i32 { 2 }\n")
-            .await
-            .unwrap();
+        fs::write(
+            &file_path,
+            "fn alpha() -> i32 { 1 }\n// someone added a comment\nfn beta() -> i32 { 2 }\n",
+        )
+        .await
+        .unwrap();
 
         let tool = make_tool();
         let ctx = make_block_ctx();
@@ -1746,7 +1737,9 @@ mod tests {
         let expected_hash = compute_content_hash(original);
 
         // External write changes the file before Edit.
-        fs::write(&file_path, "a\n// comment\nb\nc\n").await.unwrap();
+        fs::write(&file_path, "a\n// comment\nb\nc\n")
+            .await
+            .unwrap();
 
         let tool = make_tool();
         let ctx = make_pure_ctx();

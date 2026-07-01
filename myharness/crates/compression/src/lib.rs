@@ -16,13 +16,15 @@ pub mod registry;
 pub mod summarizer;
 
 pub use ccr::{CcrStats, CcrStore};
-pub use kompress::{kompress_v1, KompressConfig, KompressStats};
+pub use kompress::{KompressConfig, KompressStats, kompress_v1};
 pub use onnx_model::{ModelInfo, ModelManager};
-pub use registry::{flags_to_map, BuiltinAlgorithm, BuiltinFlags, BuiltinRegistry};
-pub use summarizer::{LlmSummarizer, MockSummarizer, Summarizer, SummarizerError, TrivialSummarizer};
+pub use registry::{BuiltinAlgorithm, BuiltinFlags, BuiltinRegistry, flags_to_map};
+pub use summarizer::{
+    LlmSummarizer, MockSummarizer, Summarizer, SummarizerError, TrivialSummarizer,
+};
 
 /// Crate 버전.
-#[must_use] 
+#[must_use]
 pub fn version() -> &'static str {
     env!("CARGO_PKG_VERSION")
 }

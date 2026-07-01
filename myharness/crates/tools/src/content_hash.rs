@@ -114,7 +114,8 @@ mod tests {
     fn hash_is_uppercase_hex() {
         let h = compute_content_hash("anything");
         assert!(
-            h.chars().all(|c| c.is_ascii_hexdigit() && !c.is_ascii_lowercase()),
+            h.chars()
+                .all(|c| c.is_ascii_hexdigit() && !c.is_ascii_lowercase()),
             "hash must be uppercase hex, got: {h}"
         );
     }

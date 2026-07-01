@@ -22,13 +22,11 @@ use std::sync::{Arc, Mutex};
 
 use async_trait::async_trait;
 use chrono::{DateTime, TimeZone, Utc};
-use rusqlite::{params, Connection};
+use rusqlite::{Connection, params};
 
 use crate::auto_memory::query::bm25_normalize;
 use crate::auto_memory::store::MemoryStore;
-use crate::auto_memory::types::{
-    MemoryError, MemoryHit, MemoryKind, MemoryQuery, MemoryRecord,
-};
+use crate::auto_memory::types::{MemoryError, MemoryHit, MemoryKind, MemoryQuery, MemoryRecord};
 
 const SCHEMA_SQL: &str = r"
 CREATE TABLE IF NOT EXISTS memory (
@@ -112,10 +110,7 @@ fn decode_row(row: &rusqlite::Row<'_>) -> Result<MemoryRecord, MemoryError> {
         Some(s) => serde_json::from_str(&s).unwrap_or_default(),
         None => Vec::new(),
     };
-    let timestamp: DateTime<Utc> = Utc
-        .timestamp_opt(ts, 0)
-        .single()
-        .unwrap_or_else(Utc::now);
+    let timestamp: DateTime<Utc> = Utc.timestamp_opt(ts, 0).single().unwrap_or_else(Utc::now);
     Ok(MemoryRecord {
         timestamp,
         kind,
@@ -125,8 +120,11 @@ fn decode_row(row: &rusqlite::Row<'_>) -> Result<MemoryRecord, MemoryError> {
     })
 }
 
-fn lock_conn(conn: &Arc<Mutex<Connection>>) -> Result<std::sync::MutexGuard<'_, Connection>, MemoryError> {
-    conn.lock().map_err(|e| MemoryError::BackendInit(format!("poisoned: {e}")))
+fn lock_conn(
+    conn: &Arc<Mutex<Connection>>,
+) -> Result<std::sync::MutexGuard<'_, Connection>, MemoryError> {
+    conn.lock()
+        .map_err(|e| MemoryError::BackendInit(format!("poisoned: {e}")))
 }
 
 #[async_trait]
@@ -175,7 +173,8 @@ impl MemoryStore for SqliteMemoryStore {
             }
             if let Some(ref kinds) = q.kinds {
                 if !kinds.is_empty() {
-                    let placeholders: Vec<String> = (0..kinds.len()).map(|_| "?".to_string()).collect();
+                    let placeholders: Vec<String> =
+                        (0..kinds.len()).map(|_| "?".to_string()).collect();
                     where_clauses.push(format!("m.kind IN ({})", placeholders.join(",")));
                     for k in kinds {
                         bind_values.push(Box::new(k.label().to_string()));

@@ -11,7 +11,6 @@ use rig_core::client::CompletionClient;
 use rig_core::completion::CompletionModel;
 use rig_core::message::{AssistantContent, Message as RigMessage, UserContent};
 
-
 use crate::client::{CompletionRequest, CompletionResponse, LLMClient};
 use crate::error::LlmError;
 use crate::provider::ProviderId;
@@ -38,7 +37,11 @@ impl OpenAiCompatProvider {
         default_model: &str,
         id: ProviderId,
     ) -> Result<Self, LlmError> {
-        let effective_key = if api_key.is_empty() { "not-needed" } else { api_key };
+        let effective_key = if api_key.is_empty() {
+            "not-needed"
+        } else {
+            api_key
+        };
         let client = rig_core::providers::openai::CompletionsClient::builder()
             .api_key(effective_key)
             .base_url(base_url)
@@ -53,7 +56,7 @@ impl OpenAiCompatProvider {
         })
     }
 
-    #[must_use] 
+    #[must_use]
     pub fn base_url(&self) -> &str {
         &self.base_url
     }
@@ -179,10 +182,7 @@ fn extract_text(choice: &OneOrMany<AssistantContent>) -> String {
 /// Build the OpenAI /v1/chat/completions JSON body. We use
 /// `serde_json::Value` directly so unknown server-side fields are
 /// preserved in `raw` for debugging.
-fn build_chat_payload(
-    model: &str,
-    req: &CompletionRequest,
-) -> Result<serde_json::Value, LlmError> {
+fn build_chat_payload(model: &str, req: &CompletionRequest) -> Result<serde_json::Value, LlmError> {
     let mut messages: Vec<serde_json::Value> = Vec::new();
     if let Some(sys) = &req.system
         && !sys.is_empty()
@@ -307,7 +307,11 @@ fn parse_chat_response(body: &str, model: &str) -> Result<CompletionResponse, Ll
             "openai-compat wire: invalid JSON body: {e}; body={body}"
         ))
     })?;
-    let parsed_model = if !parsed.model.is_empty() { parsed.model } else { model.to_string() };
+    let parsed_model = if !parsed.model.is_empty() {
+        parsed.model
+    } else {
+        model.to_string()
+    };
     let choice = parsed.choices.into_iter().next().ok_or_else(|| {
         LlmError::ProviderCall("openai-compat wire: response has no choices".to_string())
     })?;
@@ -417,13 +421,8 @@ mod tests {
         };
         let base_url = std::env::var("MINIMAX_API_HOST")
             .unwrap_or_else(|_| "https://api.minimax.io/v1".into());
-        let p = OpenAiCompatProvider::new(
-            &base_url,
-            &api_key,
-            "MiniMax-M3",
-            ProviderId::Minimax,
-        )
-        .unwrap();
+        let p = OpenAiCompatProvider::new(&base_url, &api_key, "MiniMax-M3", ProviderId::Minimax)
+            .unwrap();
         let req = CompletionRequest {
             model: "MiniMax-M3".into(),
             system: Some("You are a concise assistant. Reply in 1 sentence.".into()),
@@ -436,7 +435,10 @@ mod tests {
             tools: Vec::new(),
         };
         let resp = p.complete(req).await.expect("MiniMax API call failed");
-        eprintln!("MiniMax response: model={} content={:?}", resp.model, resp.content);
+        eprintln!(
+            "MiniMax response: model={} content={:?}",
+            resp.model, resp.content
+        );
         assert!(!resp.content.is_empty(), "empty response from MiniMax");
     }
 
@@ -467,13 +469,8 @@ mod tests {
         };
         let base_url = std::env::var("MINIMAX_API_HOST")
             .unwrap_or_else(|_| "https://api.minimax.io/v1".into());
-        let p = OpenAiCompatProvider::new(
-            &base_url,
-            &api_key,
-            "MiniMax-M3",
-            ProviderId::Minimax,
-        )
-        .expect("OpenAiCompatProvider::new failed");
+        let p = OpenAiCompatProvider::new(&base_url, &api_key, "MiniMax-M3", ProviderId::Minimax)
+            .expect("OpenAiCompatProvider::new failed");
 
         // D-109 surface: real description + JSON Schema (line_text format).
         let tools = vec![ToolSpec {
@@ -523,7 +520,10 @@ mod tests {
             resp.tool_calls.len()
         );
         for (i, tc) in resp.tool_calls.iter().enumerate() {
-            eprintln!("  call[{i}]: id={} name={} args={}", tc.id, tc.name, tc.arguments);
+            eprintln!(
+                "  call[{i}]: id={} name={} args={}",
+                tc.id, tc.name, tc.arguments
+            );
         }
 
         // The whole point of Option D: D-108 follow-up + D-109 reach
@@ -545,15 +545,12 @@ mod tests {
 
     // --- D-108 follow-up: OpenAI wire format payload + response parse --------
 
-
     #[test]
     fn build_chat_payload_includes_tools_and_messages() {
         let req = CompletionRequest {
             model: "MiniMax-M3".into(),
             system: Some("you are a tool user".into()),
-            messages: vec![
-                Message::user(String::from("list files")),
-            ],
+            messages: vec![Message::user(String::from("list files"))],
             max_tokens: Some(64),
             temperature: Some(0.0),
             stop: vec![],
@@ -683,7 +680,10 @@ mod tests {
         }"#;
         let err = parse_chat_response(body, "m").unwrap_err();
         let msg = format!("{err}");
-        assert!(msg.contains("tool_call") && msg.contains("invalid arguments"), "msg was: {msg}");
+        assert!(
+            msg.contains("tool_call") && msg.contains("invalid arguments"),
+            "msg was: {msg}"
+        );
     }
 
     #[test]

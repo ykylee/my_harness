@@ -19,13 +19,17 @@ pub use auto_memory::{
     AutoMemory, AutoMemoryConfig, MemoryBackend, MemoryError, MemoryHit, MemoryKind, MemoryQuery,
     MemoryRecord, MemoryStore,
 };
-pub use budget::{BudgetConfig, BudgetReport, CompactStrategy, ContextManager, Role, Message as ContextMessage};
+pub use budget::{
+    BudgetConfig, BudgetReport, CompactStrategy, ContextManager, Message as ContextMessage, Role,
+};
 pub use claude_md::{ContextLoader, ContextSource, DiscoveredContext};
-pub use compression::{detect_content_type, smart_crush, code_compress, BuiltinConfig, BuiltinPipeline, ContentType};
+pub use compression::{
+    BuiltinConfig, BuiltinPipeline, ContentType, code_compress, detect_content_type, smart_crush,
+};
 pub use config::{BuiltinLayerConfig, ConfigError, ContextConfig, ContextOrchestrator};
 
 /// Crate 버전.
-#[must_use] 
+#[must_use]
 pub fn version() -> &'static str {
     env!("CARGO_PKG_VERSION")
 }

@@ -51,7 +51,7 @@ impl TokenStore {
         Ok(Self { base_dir })
     }
 
-    #[must_use] 
+    #[must_use]
     pub fn with_base(base_dir: PathBuf) -> Self {
         Self { base_dir }
     }

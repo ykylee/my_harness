@@ -16,7 +16,9 @@ use wiremock::{Mock, MockServer, ResponseTemplate};
 #[serial_test::serial(env)]
 async fn tc_w18_i01_register_creates_backup_before_overwrite() {
     let tmp = tempfile::tempdir().unwrap();
-    unsafe { std::env::set_var("MYHARNESS_HOME", tmp.path()); }
+    unsafe {
+        std::env::set_var("MYHARNESS_HOME", tmp.path());
+    }
 
     let server = MockServer::start().await;
     let body = serde_json::json!({
@@ -34,8 +36,14 @@ async fn tc_w18_i01_register_creates_backup_before_overwrite() {
     let r1 = register_local_provider(
         base_url.clone(),
         None,
-        ModelInfo { id: "first-model".into(), owned_by: None },
-        vec![ModelInfo { id: "first-model".into(), owned_by: None }],
+        ModelInfo {
+            id: "first-model".into(),
+            owned_by: None,
+        },
+        vec![ModelInfo {
+            id: "first-model".into(),
+            owned_by: None,
+        }],
     )
     .await
     .unwrap();
@@ -60,8 +68,14 @@ async fn tc_w18_i01_register_creates_backup_before_overwrite() {
     let _r2 = register_local_provider(
         base_url2,
         None,
-        ModelInfo { id: "second-model".into(), owned_by: None },
-        vec![ModelInfo { id: "second-model".into(), owned_by: None }],
+        ModelInfo {
+            id: "second-model".into(),
+            owned_by: None,
+        },
+        vec![ModelInfo {
+            id: "second-model".into(),
+            owned_by: None,
+        }],
     )
     .await
     .unwrap();
@@ -74,9 +88,14 @@ async fn tc_w18_i01_register_creates_backup_before_overwrite() {
         .collect();
     assert_eq!(backups.len(), 1, "두 번째 register 후 backup 1개");
     let backup_content = std::fs::read_to_string(backups[0].path()).unwrap();
-    assert!(backup_content.contains("first-model"), "backup = first register");
+    assert!(
+        backup_content.contains("first-model"),
+        "backup = first register"
+    );
 
-    unsafe { std::env::remove_var("MYHARNESS_HOME"); }
+    unsafe {
+        std::env::remove_var("MYHARNESS_HOME");
+    }
 }
 
 /// TC-W18-I02 — backup helper 직접 호출 (`max_retention` 검증)
@@ -129,7 +148,11 @@ async fn tc_w16_i01_probe_extracts_three_models() {
     assert!(ids.contains(&"llama3.1:8b"));
     assert!(ids.contains(&"qwen2.5:14b"));
     assert!(ids.contains(&"mistral:7b"));
-    assert!(models.iter().all(|m| m.owned_by.as_deref() == Some("ollama")));
+    assert!(
+        models
+            .iter()
+            .all(|m| m.owned_by.as_deref() == Some("ollama"))
+    );
 }
 
 #[tokio::test]
@@ -143,7 +166,9 @@ async fn tc_w16_i02_probe_returns_http_error_on_401() {
         .await;
 
     let base_url = format!("{}/v1", server.uri());
-    let err = probe_local_models(&base_url, Some("bad-token")).await.unwrap_err();
+    let err = probe_local_models(&base_url, Some("bad-token"))
+        .await
+        .unwrap_err();
 
     match err {
         myharness_llm::add_local::RegisterError::HttpError { status, body, .. } => {
@@ -173,13 +198,21 @@ async fn tc_w16_i03_register_writes_providers_toml_end_to_end() {
     // isolate via tempdir
     let tmp = tempfile::tempdir().unwrap();
     // SAFETY: serial_test::serial(env) 로 다른 env-mutating test 와 직렬화됨
-    unsafe { std::env::set_var("MYHARNESS_HOME", tmp.path()); }
+    unsafe {
+        std::env::set_var("MYHARNESS_HOME", tmp.path());
+    }
 
     let base_url = format!("{}/v1", server.uri());
     let models = probe_local_models(&base_url, None).await.unwrap();
-    let selected = models.iter().find(|m| m.id == "qwen2.5:14b").unwrap().clone();
+    let selected = models
+        .iter()
+        .find(|m| m.id == "qwen2.5:14b")
+        .unwrap()
+        .clone();
 
-    let report = register_local_provider(base_url.clone(), None, selected, models).await.unwrap();
+    let report = register_local_provider(base_url.clone(), None, selected, models)
+        .await
+        .unwrap();
 
     assert_eq!(report.model_id, "qwen2.5:14b");
     assert_eq!(
@@ -203,7 +236,9 @@ async fn tc_w16_i03_register_writes_providers_toml_end_to_end() {
     assert_eq!(local.available_models.len(), 2);
 
     // SAFETY: serial_test::serial(env) cleanup
-    unsafe { std::env::remove_var("MYHARNESS_HOME"); }
+    unsafe {
+        std::env::remove_var("MYHARNESS_HOME");
+    }
 }
 
 // ── W17 (v1.5 OI-1) L2 Integration ─────────────────────────────────────────
@@ -219,19 +254,17 @@ async fn tc_w16_i03_register_writes_providers_toml_end_to_end() {
 #[serial_test::serial(env)]
 async fn tc_w17_i01_non_interactive_skips_probe_and_writes_toml() {
     let tmp = tempfile::tempdir().unwrap();
-    unsafe { std::env::set_var("MYHARNESS_HOME", tmp.path()); }
+    unsafe {
+        std::env::set_var("MYHARNESS_HOME", tmp.path());
+    }
 
     // wiremock 띄우되 어떤 route 도 mount 안 함 → 어떤 HTTP 요청이 와도 404
     let server = MockServer::start().await;
 
     let base_url = format!("{}/v1", server.uri());
-    let report = register_local_provider_non_interactive(
-        base_url.clone(),
-        None,
-        "ci-model".into(),
-    )
-    .await
-    .unwrap();
+    let report = register_local_provider_non_interactive(base_url.clone(), None, "ci-model".into())
+        .await
+        .unwrap();
 
     // available_models = [ci-model] 1개 (probe 안 했음의 증거)
     assert_eq!(report.available_models, vec!["ci-model".to_string()]);
@@ -250,7 +283,9 @@ async fn tc_w17_i01_non_interactive_skips_probe_and_writes_toml() {
     assert_eq!(local.default_model, "ci-model");
     assert_eq!(local.available_models, vec!["ci-model".to_string()]);
 
-    unsafe { std::env::remove_var("MYHARNESS_HOME"); }
+    unsafe {
+        std::env::remove_var("MYHARNESS_HOME");
+    }
 }
 
 /// TC-W17-I02 — 비대화형 모드에서 token + `base_url` + `model_id` 모두 set → keyring set + register.
@@ -260,7 +295,9 @@ async fn tc_w17_i01_non_interactive_skips_probe_and_writes_toml() {
 #[serial_test::serial(env)]
 async fn tc_w17_i02_non_interactive_with_token_end_to_end() {
     let tmp = tempfile::tempdir().unwrap();
-    unsafe { std::env::set_var("MYHARNESS_HOME", tmp.path()); }
+    unsafe {
+        std::env::set_var("MYHARNESS_HOME", tmp.path());
+    }
 
     let server = MockServer::start().await;
     let base_url = format!("{}/v1", server.uri());
@@ -280,7 +317,9 @@ async fn tc_w17_i02_non_interactive_with_token_end_to_end() {
     let toml_path = tmp.path().join("providers.toml");
     assert!(toml_path.exists());
 
-    unsafe { std::env::remove_var("MYHARNESS_HOME"); }
+    unsafe {
+        std::env::remove_var("MYHARNESS_HOME");
+    }
 }
 
 // ── W20 (v1.5 D-63 F-3) Ollama native /api/tags cascade ─────────────────────

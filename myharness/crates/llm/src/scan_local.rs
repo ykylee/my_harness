@@ -59,21 +59,31 @@ pub async fn scan_local_servers() -> Vec<LocalHit> {
 }
 
 async fn parse_models(server: &str, resp: reqwest::Response) -> Vec<String> {
-    let Ok(body) = resp.text().await else { return vec![] };
+    let Ok(body) = resp.text().await else {
+        return vec![];
+    };
     if server == "ollama" {
         #[derive(Deserialize)]
-        struct O { models: Vec<OM> }
+        struct O {
+            models: Vec<OM>,
+        }
         #[derive(Deserialize)]
-        struct OM { name: String }
+        struct OM {
+            name: String,
+        }
         serde_json::from_str::<O>(&body)
             .map(|o| o.models.into_iter().map(|m| m.name).collect())
             .unwrap_or_default()
     } else {
         // OpenAI 호환: { "data": [ { "id": "model-name" } ] }
         #[derive(Deserialize)]
-        struct R { data: Vec<D> }
+        struct R {
+            data: Vec<D>,
+        }
         #[derive(Deserialize)]
-        struct D { id: String }
+        struct D {
+            id: String,
+        }
         serde_json::from_str::<R>(&body)
             .map(|r| r.data.into_iter().map(|d| d.id).collect())
             .unwrap_or_default()

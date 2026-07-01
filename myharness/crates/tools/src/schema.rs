@@ -97,7 +97,7 @@ impl Default for ToolSchemaRegistry {
 }
 
 impl ToolSchemaRegistry {
-    #[must_use] 
+    #[must_use]
     pub fn new() -> Self {
         Self {
             schemas: HashMap::new(),
@@ -111,7 +111,7 @@ impl ToolSchemaRegistry {
     /// # Panics
     ///
     /// This function returns an error if the underlying operation fails.
-    #[must_use] 
+    #[must_use]
     pub fn default_schemas() -> Self {
         let mut reg = Self::new();
         reg.register(ToolSchema {
@@ -148,19 +148,19 @@ impl ToolSchemaRegistry {
         reg
     }
 
-    #[must_use] 
+    #[must_use]
     pub fn get(&self, name: &str) -> Option<&ToolSchema> {
         self.schemas.get(name)
     }
 
-    #[must_use] 
+    #[must_use]
     pub fn names(&self) -> Vec<String> {
         let mut n: Vec<_> = self.schemas.keys().cloned().collect();
         n.sort();
         n
     }
 
-    #[must_use] 
+    #[must_use]
     pub fn to_anthropic_tools(&self) -> Vec<serde_json::Value> {
         self.schemas
             .values()
@@ -174,7 +174,7 @@ impl ToolSchemaRegistry {
             .collect()
     }
 
-    #[must_use] 
+    #[must_use]
     pub fn to_openai_tools(&self) -> Vec<serde_json::Value> {
         self.schemas
             .values()
@@ -193,7 +193,7 @@ impl ToolSchemaRegistry {
 
     /// `OpenAI` strict mode: `strict=true`, `additionalProperties=false`,
     /// `$schema` stripped (`OpenAI` 거부 가능), `required` array from schemars.
-    #[must_use] 
+    #[must_use]
     pub fn to_openai_tools_strict(&self) -> Vec<serde_json::Value> {
         self.schemas
             .values()
@@ -222,7 +222,7 @@ impl ToolSchemaRegistry {
     /// `DeepSeek`: OpenAI-compatible wire format.
     /// Strict mode 는 Beta URL (`https://api.deepseek.com/beta`) 에서 지원.
     /// Non-Beta URL 에서는 `to_openai_tools()` 사용.
-    #[must_use] 
+    #[must_use]
     pub fn to_deepseek_tools(&self) -> Vec<serde_json::Value> {
         self.schemas
             .values()
@@ -240,7 +240,7 @@ impl ToolSchemaRegistry {
     }
 
     /// Ollama 0.5.x: OpenAI-compatible minus `$schema` and `additionalProperties`.
-    #[must_use] 
+    #[must_use]
     pub fn to_ollama_tools(&self) -> Vec<serde_json::Value> {
         self.schemas
             .values()
@@ -264,7 +264,7 @@ impl ToolSchemaRegistry {
 
     /// `LiteLlm`: 1:1 alias → [`ToolSchemaRegistry::to_openai_tools_strict`].
     /// `$schema` strip 포함 (pass-through 시 거부 회피).
-    #[must_use] 
+    #[must_use]
     pub fn to_litellm_tools(&self) -> Vec<serde_json::Value> {
         self.to_openai_tools_strict()
     }
@@ -306,7 +306,7 @@ pub enum ProviderCompat {
 
 impl ProviderCompat {
     /// Dispatch to the correct wire-format method for this provider.
-    #[must_use] 
+    #[must_use]
     pub fn wire_format_tools(&self, reg: &ToolSchemaRegistry) -> Vec<serde_json::Value> {
         match self {
             Self::Anthropic => reg.to_anthropic_tools(),
@@ -318,7 +318,7 @@ impl ProviderCompat {
     }
 
     /// Canonical provider name string.
-    #[must_use] 
+    #[must_use]
     pub fn name(&self) -> &'static str {
         match self {
             Self::Anthropic => "anthropic",
@@ -331,7 +331,7 @@ impl ProviderCompat {
     }
 
     /// Response format 의 주요 차이점 1-2줄. W7+ 에서 response 처리 시 활용.
-    #[must_use] 
+    #[must_use]
     pub fn response_notes(&self) -> &'static str {
         match self {
             Self::Anthropic => {

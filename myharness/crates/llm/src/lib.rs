@@ -52,7 +52,7 @@ pub use client_anthropic::AnthropicProvider;
 pub use client_gemini::GeminiProvider;
 pub use client_mock::{MockClient, MockResponse};
 pub use client_openai_compat::OpenAiCompatProvider;
-pub use discover::{discover, DiscoverOpts, DiscoverReport, EnvVarHit};
+pub use discover::{DiscoverOpts, DiscoverReport, EnvVarHit, discover};
 pub use error::LlmError;
 pub use metadata::{ProviderCapabilities, ProviderMetadata};
 pub use paths::init_home_dir;
@@ -61,7 +61,7 @@ pub use registry::{ProviderRegistry, RegistryError};
 pub use router::{FallbackRouter, ProviderStatus, RouterResponse};
 
 /// Crate 버전.
-#[must_use] 
+#[must_use]
 pub fn version() -> &'static str {
     env!("CARGO_PKG_VERSION")
 }
@@ -77,7 +77,7 @@ pub mod prelude {
     pub use crate::client_gemini::GeminiProvider;
     pub use crate::client_mock::{MockClient, MockResponse};
     pub use crate::client_openai_compat::OpenAiCompatProvider;
-    pub use crate::discover::{discover, DiscoverOpts, DiscoverReport, EnvVarHit};
+    pub use crate::discover::{DiscoverOpts, DiscoverReport, EnvVarHit, discover};
     pub use crate::error::LlmError;
     pub use crate::metadata::{ProviderCapabilities, ProviderMetadata};
     pub use crate::provider::{ProviderId, ProviderKind};
@@ -99,4 +99,3 @@ mod tests {
         let _: Option<ProviderId> = Some(ProviderId::Claude);
     }
 }
-

@@ -7,7 +7,7 @@
 ///
 /// `empty` 입력은 `e3b0c442` (SHA-256("") 의 hex prefix). 다른 content 와
 /// 절대 충돌하지 않음.
-#[must_use] 
+#[must_use]
 pub fn content_hash_8(content: &[u8]) -> String {
     use sha2::{Digest, Sha256};
     Sha256::digest(content)

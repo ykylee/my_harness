@@ -23,12 +23,17 @@
 //!   - D-114 갱신으로 production `MinimaxDeviceOAuth` 가 직접 새 endpoint hit
 //!   - CN: `https://account.minimaxi.com/oauth2/{device/code,token}`
 
-#![allow(clippy::cast_possible_truncation, clippy::cast_precision_loss, clippy::cast_sign_loss, clippy::cast_possible_wrap)]
+#![allow(
+    clippy::cast_possible_truncation,
+    clippy::cast_precision_loss,
+    clippy::cast_sign_loss,
+    clippy::cast_possible_wrap
+)]
 use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
-use crate::pkce::{generate_pkce, generate_state, PkcePair};
+use crate::pkce::{PkcePair, generate_pkce, generate_state};
 
 #[derive(Debug, Error)]
 pub enum DeviceError {
@@ -151,9 +156,7 @@ pub struct DeviceRequest {
 ///
 /// `state` 와 `code_challenge` 모두 generate 후 form body 에 포함. 응답의 state 가
 /// 일치하지 않으면 [`DeviceError::StateMismatch`].
-pub async fn request_code(
-    provider: &dyn DeviceCodeProvider,
-) -> Result<DeviceRequest, DeviceError> {
+pub async fn request_code(provider: &dyn DeviceCodeProvider) -> Result<DeviceRequest, DeviceError> {
     let pkce = generate_pkce();
     let state = generate_state();
     // D-117: real `MiniMax` Device Authorization Grant spec 은 `response_type=code`
@@ -181,10 +184,7 @@ pub async fn request_code(
     let value: serde_json::Value = serde_json::from_str(&text)
         .map_err(|e| DeviceError::Provider(format!("json decode failed: {e} body={text}")))?;
     if !status.is_success() {
-        let msg = value
-            .get("error")
-            .and_then(|v| v.as_str())
-            .unwrap_or(&text);
+        let msg = value.get("error").and_then(|v| v.as_str()).unwrap_or(&text);
         return Err(DeviceError::Provider(format!("oauth/code {status}: {msg}")));
     }
     // D-115: real `MiniMax` API 는 HTTP 200 + `base_resp.status_code != 0` 으로
@@ -206,7 +206,10 @@ pub async fn request_code(
     if auth.state != state {
         return Err(DeviceError::StateMismatch);
     }
-    Ok(DeviceRequest { authorization: auth, pkce })
+    Ok(DeviceRequest {
+        authorization: auth,
+        pkce,
+    })
 }
 
 ///
@@ -222,7 +225,10 @@ pub async fn poll_token(
     verifier: &str,
 ) -> Result<TokenPoll, DeviceError> {
     let body = serde_urlencoded::to_string(&[
-        ("grant_type", "urn:ietf:params:oauth:grant-type:user_code".to_string()),
+        (
+            "grant_type",
+            "urn:ietf:params:oauth:grant-type:user_code".to_string(),
+        ),
         ("client_id", provider.client_id().to_string()),
         ("user_code", user_code.to_string()),
         ("code_verifier", verifier.to_string()),
@@ -377,13 +383,27 @@ mod tests {
     struct FakeDeviceProvider;
     #[async_trait]
     impl DeviceCodeProvider for FakeDeviceProvider {
-        fn id(&self) -> &'static str { "fake" }
-        fn display_name(&self) -> &'static str { "Fake Device" }
-        fn code_endpoint(&self) -> &'static str { "https://fake/oauth/code" }
-        fn token_endpoint(&self) -> &'static str { "https://fake/oauth/token" }
-        fn client_id(&self) -> &'static str { "fake-client" }
-        fn scope(&self) -> &'static str { "group_id profile model.completion" }
-        fn region(&self) -> &'static str { "global" }
+        fn id(&self) -> &'static str {
+            "fake"
+        }
+        fn display_name(&self) -> &'static str {
+            "Fake Device"
+        }
+        fn code_endpoint(&self) -> &'static str {
+            "https://fake/oauth/code"
+        }
+        fn token_endpoint(&self) -> &'static str {
+            "https://fake/oauth/token"
+        }
+        fn client_id(&self) -> &'static str {
+            "fake-client"
+        }
+        fn scope(&self) -> &'static str {
+            "group_id profile model.completion"
+        }
+        fn region(&self) -> &'static str {
+            "global"
+        }
     }
 
     #[test]
@@ -467,11 +487,18 @@ mod tests {
             1,
             "user_code expected format XXXX-XXXX, got: {uc}"
         );
-        assert_eq!(uc.len(), 9, "user_code expected length 9 (XXXX-XXXX), got: {uc}");
+        assert_eq!(
+            uc.len(),
+            9,
+            "user_code expected length 9 (XXXX-XXXX), got: {uc}"
+        );
 
         // Step 5: verification_uri 검증
         let vuri = &req.authorization.verification_uri;
-        assert!(vuri.starts_with("https://"), "verification_uri must be HTTPS");
+        assert!(
+            vuri.starts_with("https://"),
+            "verification_uri must be HTTPS"
+        );
         assert!(
             vuri.contains("platform.minimax.io/oauth-authorize")
                 || vuri.contains("platform.minimaxi.com"),
@@ -531,13 +558,27 @@ mod tests {
         }
         #[async_trait]
         impl DeviceCodeProvider for MockProvider {
-            fn id(&self) -> &'static str { "d115-zero" }
-            fn display_name(&self) -> &str { "D115 base_resp=0" }
-            fn code_endpoint(&self) -> &str { &self.code_ep }
-            fn token_endpoint(&self) -> &str { "https://mock/oauth2/token" }
-            fn client_id(&self) -> &'static str { "mock-client" }
-            fn scope(&self) -> &'static str { "group_id profile model.completion" }
-            fn region(&self) -> &'static str { "global" }
+            fn id(&self) -> &'static str {
+                "d115-zero"
+            }
+            fn display_name(&self) -> &str {
+                "D115 base_resp=0"
+            }
+            fn code_endpoint(&self) -> &str {
+                &self.code_ep
+            }
+            fn token_endpoint(&self) -> &str {
+                "https://mock/oauth2/token"
+            }
+            fn client_id(&self) -> &'static str {
+                "mock-client"
+            }
+            fn scope(&self) -> &'static str {
+                "group_id profile model.completion"
+            }
+            fn region(&self) -> &'static str {
+                "global"
+            }
         }
         let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
         let addr = listener.local_addr().unwrap();
@@ -555,7 +596,8 @@ mod tests {
                 let now = chrono::Utc::now().timestamp_millis() as u64;
                 let body = format!(
                     r#"{{"base_resp":{{"status_code":0,"status_msg":"success"}},"user_code":"D115-X1","verification_uri":"https://platform.test/oauth-authorize?user_code=D115-X1","interval":1,"expired_in":{},"state":"{}"}}"#,
-                    now + 60, state_param
+                    now + 60,
+                    state_param
                 );
                 let resp = format!(
                     "HTTP/1.1 200 OK
@@ -564,7 +606,8 @@ Content-Length: {}
 Connection: close
 
 {}",
-                    body.len(), body
+                    body.len(),
+                    body
                 );
                 sock.write_all(resp.as_bytes()).await.unwrap();
                 sock.shutdown().await.ok();
@@ -585,13 +628,27 @@ Connection: close
         }
         #[async_trait]
         impl DeviceCodeProvider for MockProvider {
-            fn id(&self) -> &'static str { "d115-nonzero" }
-            fn display_name(&self) -> &str { "D115 base_resp!=0" }
-            fn code_endpoint(&self) -> &str { &self.code_ep }
-            fn token_endpoint(&self) -> &str { "https://mock/oauth2/token" }
-            fn client_id(&self) -> &'static str { "mock-client" }
-            fn scope(&self) -> &'static str { "group_id profile model.completion" }
-            fn region(&self) -> &'static str { "global" }
+            fn id(&self) -> &'static str {
+                "d115-nonzero"
+            }
+            fn display_name(&self) -> &str {
+                "D115 base_resp!=0"
+            }
+            fn code_endpoint(&self) -> &str {
+                &self.code_ep
+            }
+            fn token_endpoint(&self) -> &str {
+                "https://mock/oauth2/token"
+            }
+            fn client_id(&self) -> &'static str {
+                "mock-client"
+            }
+            fn scope(&self) -> &'static str {
+                "group_id profile model.completion"
+            }
+            fn region(&self) -> &'static str {
+                "global"
+            }
         }
         let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
         let addr = listener.local_addr().unwrap();
@@ -608,17 +665,26 @@ Content-Length: {}
 Connection: close
 
 {}",
-                    body.len(), body
+                    body.len(),
+                    body
                 );
                 sock.write_all(resp.as_bytes()).await.unwrap();
                 sock.shutdown().await.ok();
             }
         });
         let p = MockProvider { code_ep: url };
-        let err = request_code(&p).await.expect_err("request_code should fail on base_resp!=0");
+        let err = request_code(&p)
+            .await
+            .expect_err("request_code should fail on base_resp!=0");
         let msg = format!("{err}");
-        assert!(msg.contains("base_resp"), "error should mention base_resp, got: {msg}");
-        assert!(msg.contains("40001"), "error should contain status_code, got: {msg}");
+        assert!(
+            msg.contains("base_resp"),
+            "error should mention base_resp, got: {msg}"
+        );
+        assert!(
+            msg.contains("40001"),
+            "error should contain status_code, got: {msg}"
+        );
         drop(server);
     }
 
@@ -631,13 +697,27 @@ Connection: close
         }
         #[async_trait]
         impl DeviceCodeProvider for MockProvider {
-            fn id(&self) -> &'static str { "d115-poll-err" }
-            fn display_name(&self) -> &str { "D115 poll err" }
-            fn code_endpoint(&self) -> &str { "https://mock/oauth2/device/code" }
-            fn token_endpoint(&self) -> &str { &self.token_ep }
-            fn client_id(&self) -> &'static str { "mock-client" }
-            fn scope(&self) -> &'static str { "group_id profile model.completion" }
-            fn region(&self) -> &'static str { "global" }
+            fn id(&self) -> &'static str {
+                "d115-poll-err"
+            }
+            fn display_name(&self) -> &str {
+                "D115 poll err"
+            }
+            fn code_endpoint(&self) -> &str {
+                "https://mock/oauth2/device/code"
+            }
+            fn token_endpoint(&self) -> &str {
+                &self.token_ep
+            }
+            fn client_id(&self) -> &'static str {
+                "mock-client"
+            }
+            fn scope(&self) -> &'static str {
+                "group_id profile model.completion"
+            }
+            fn region(&self) -> &'static str {
+                "global"
+            }
         }
         let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
         let addr = listener.local_addr().unwrap();
@@ -654,7 +734,8 @@ Content-Length: {}
 Connection: close
 
 {}",
-                    body.len(), body
+                    body.len(),
+                    body
                 );
                 sock.write_all(resp.as_bytes()).await.unwrap();
                 sock.shutdown().await.ok();
@@ -666,8 +747,14 @@ Connection: close
             .expect("poll_token network ok");
         match poll {
             TokenPoll::Error(msg) => {
-                assert!(msg.contains("base_resp"), "error should mention base_resp, got: {msg}");
-                assert!(msg.contains("40004"), "error should contain status_code, got: {msg}");
+                assert!(
+                    msg.contains("base_resp"),
+                    "error should mention base_resp, got: {msg}"
+                );
+                assert!(
+                    msg.contains("40004"),
+                    "error should contain status_code, got: {msg}"
+                );
             }
             other => panic!("expected TokenPoll::Error, got: {other:?}"),
         }
@@ -736,13 +823,27 @@ Connection: close
         }
         #[async_trait]
         impl DeviceCodeProvider for CapturingProvider {
-            fn id(&self) -> &'static str { "d117-capture" }
-            fn display_name(&self) -> &str { "D117 capture" }
-            fn code_endpoint(&self) -> &str { &self.code_ep }
-            fn token_endpoint(&self) -> &str { "https://mock/oauth2/token" }
-            fn client_id(&self) -> &'static str { "mock-client" }
-            fn scope(&self) -> &'static str { "group_id profile model.completion" }
-            fn region(&self) -> &'static str { "global" }
+            fn id(&self) -> &'static str {
+                "d117-capture"
+            }
+            fn display_name(&self) -> &str {
+                "D117 capture"
+            }
+            fn code_endpoint(&self) -> &str {
+                &self.code_ep
+            }
+            fn token_endpoint(&self) -> &str {
+                "https://mock/oauth2/token"
+            }
+            fn client_id(&self) -> &'static str {
+                "mock-client"
+            }
+            fn scope(&self) -> &'static str {
+                "group_id profile model.completion"
+            }
+            fn region(&self) -> &'static str {
+                "global"
+            }
         }
         let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
         let addr = listener.local_addr().unwrap();
@@ -789,11 +890,26 @@ Connection: close
             "form body must NOT contain response_type, got: {body}"
         );
         // sanity: PKCE + state + client_id + scope 는 그대로 포함 (회귀 방지).
-        assert!(body.contains("code_challenge="), "PKCE code_challenge must be present, got: {body}");
-        assert!(body.contains("code_challenge_method=S256"), "code_challenge_method=S256 required, got: {body}");
-        assert!(body.contains("state="), "state parameter required, got: {body}");
-        assert!(body.contains("client_id=mock-client"), "client_id required, got: {body}");
-        assert!(body.contains("scope=group_id"), "scope required, got: {body}");
+        assert!(
+            body.contains("code_challenge="),
+            "PKCE code_challenge must be present, got: {body}"
+        );
+        assert!(
+            body.contains("code_challenge_method=S256"),
+            "code_challenge_method=S256 required, got: {body}"
+        );
+        assert!(
+            body.contains("state="),
+            "state parameter required, got: {body}"
+        );
+        assert!(
+            body.contains("client_id=mock-client"),
+            "client_id required, got: {body}"
+        );
+        assert!(
+            body.contains("scope=group_id"),
+            "scope required, got: {body}"
+        );
         drop(server);
     }
 }

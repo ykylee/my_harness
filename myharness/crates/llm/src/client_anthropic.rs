@@ -3,10 +3,10 @@
 use std::sync::Arc;
 
 use async_trait::async_trait;
+use rig_core::OneOrMany;
 use rig_core::client::CompletionClient;
 use rig_core::completion::CompletionModel;
 use rig_core::message::{Message as RigMessage, UserContent};
-use rig_core::OneOrMany;
 
 use crate::client::{CompletionRequest, CompletionResponse, LLMClient, Message, Role};
 use crate::error::LlmError;
@@ -41,7 +41,10 @@ impl AnthropicProvider {
     /// This function returns an error if the underlying operation fails.
     pub fn from_metadata(meta: &ProviderMetadata, api_key: &str) -> Result<Self, LlmError> {
         let p = Self::new(api_key)?;
-        Ok(Self { default_model: meta.default_model.clone(), ..p })
+        Ok(Self {
+            default_model: meta.default_model.clone(),
+            ..p
+        })
     }
 }
 

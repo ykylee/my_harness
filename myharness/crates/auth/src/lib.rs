@@ -18,26 +18,26 @@ pub mod pkce;
 pub mod provider;
 pub mod store;
 
-pub use browser::{open as open_browser, BrowserError};
+pub use browser::{BrowserError, open as open_browser};
 pub use callback::CallbackServer;
 pub use device_flow::{
-    poll_token, poll_until_success, request_code, DeviceAuthorization, DeviceCodeProvider, DeviceError,
-    DeviceRequest, DeviceToken, TokenPoll,
+    DeviceAuthorization, DeviceCodeProvider, DeviceError, DeviceRequest, DeviceToken, TokenPoll,
+    poll_token, poll_until_success, request_code,
 };
 pub use flow::{
-    build_authorize_url, exchange_code, refresh_token, AuthorizeRequest, CallbackParams, OAuthError,
-    OAuthProvider, OAuthToken,
+    AuthorizeRequest, CallbackParams, OAuthError, OAuthProvider, OAuthToken, build_authorize_url,
+    exchange_code, refresh_token,
 };
 pub use manager::{AuthManager, AuthStatus, LoginOutcome};
+pub use pkce::{PkceMethod, PkcePair, generate_pkce, generate_state};
 pub use provider::{
-    find_device_provider, find_provider, GoogleOAuth, MinimaxDeviceOAuth, MinimaxOAuth, OpenAiOAuth,
-    OAUTH_PROVIDERS,
+    GoogleOAuth, MinimaxDeviceOAuth, MinimaxOAuth, OAUTH_PROVIDERS, OpenAiOAuth,
+    find_device_provider, find_provider,
 };
-pub use pkce::{generate_pkce, generate_state, PkceMethod, PkcePair};
 pub use store::{StoreError, StoredToken, TokenStore};
 
 /// Crate 버전.
-#[must_use] 
+#[must_use]
 pub fn version() -> &'static str {
     env!("CARGO_PKG_VERSION")
 }

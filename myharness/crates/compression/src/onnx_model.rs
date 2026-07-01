@@ -23,11 +23,16 @@
 //! - binary size: ~22-33 MB 추가 (Pure Rust compiled, D-67 trade-off)
 //! - Linux/macOS/Windows matrix 모두 동작 (tract 가 cross-platform)
 
-#![allow(clippy::cast_possible_truncation, clippy::cast_precision_loss, clippy::cast_sign_loss, clippy::cast_possible_wrap)]
+#![allow(
+    clippy::cast_possible_truncation,
+    clippy::cast_precision_loss,
+    clippy::cast_sign_loss,
+    clippy::cast_possible_wrap
+)]
 use std::path::PathBuf;
 use std::sync::{Arc, OnceLock};
 
-use anyhow::{anyhow, Context, Result};
+use anyhow::{Context, Result, anyhow};
 use sha2::{Digest, Sha256};
 use tracing::{debug, info, warn};
 
@@ -117,7 +122,7 @@ impl ModelManager {
     }
 
     /// Local cache 경로: `~/.cache/myharness/models/all-MiniLM-L6-v2.onnx`
-    #[must_use] 
+    #[must_use]
     pub fn cache_path() -> PathBuf {
         dirs::cache_dir()
             .unwrap_or_else(|| PathBuf::from("."))
@@ -196,7 +201,10 @@ impl ModelManager {
             downloaded += chunk.len() as u64;
         }
         file.flush().await.context("flush")?;
-        info!("download complete: {:.1} MB", downloaded as f64 / 1_048_576.0);
+        info!(
+            "download complete: {:.1} MB",
+            downloaded as f64 / 1_048_576.0
+        );
         Ok(())
     }
 
@@ -246,7 +254,9 @@ impl ModelManager {
 
 #[allow(clippy::format_collect)] // sha2 0.11 Array<u8, U32> 가 LowerHex 미구현 → byte 단위 hex (의도적, D-75 batch)
 async fn sha256_file(path: &PathBuf) -> Result<String> {
-    let data = tokio::fs::read(path).await.context("read file for sha256")?;
+    let data = tokio::fs::read(path)
+        .await
+        .context("read file for sha256")?;
     let hash = Sha256::digest(&data);
     // sha2 0.11: Output (= Array<u8, U32>) 가 LowerHex 미구현 → byte 단위 hex encoding
     Ok(hash.as_slice().iter().map(|b| format!("{b:02x}")).collect())

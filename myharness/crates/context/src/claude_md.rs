@@ -217,7 +217,14 @@ mod tests {
         // local/parent 없으면 global 만 (있으면 더 많이)
         // global 파일이 없으면 empty
         let has_global = c.iter().any(|x| x.source == ContextSource::Global);
-        if !std::path::Path::new(&dirs::home_dir().unwrap().join(".myharness").join("CLAUDE.md")).exists() {
+        if !std::path::Path::new(
+            &dirs::home_dir()
+                .unwrap()
+                .join(".myharness")
+                .join("CLAUDE.md"),
+        )
+        .exists()
+        {
             assert!(!has_global);
         }
     }
@@ -255,7 +262,11 @@ mod tests {
 
     #[test]
     fn source_priority_ordering() {
-        let mut v = vec![ContextSource::Global, ContextSource::ProjectLocal, ContextSource::ProjectParent];
+        let mut v = vec![
+            ContextSource::Global,
+            ContextSource::ProjectLocal,
+            ContextSource::ProjectParent,
+        ];
         v.sort_by_key(super::ContextSource::priority);
         assert_eq!(
             v,

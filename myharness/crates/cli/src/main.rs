@@ -6,9 +6,7 @@
 use std::sync::Arc;
 
 use clap::{Parser, Subcommand};
-use myharness_auth::{
-    find_provider, AuthManager, AuthStatus, LoginOutcome, OAUTH_PROVIDERS,
-};
+use myharness_auth::{AuthManager, AuthStatus, LoginOutcome, OAUTH_PROVIDERS, find_provider};
 use myharness_core::{
     EventLog, HandoffDoc, PermissionMode, PermissionPolicy, RiskKind, TaskEndReport,
     TaskStartReport, TaskStatus,
@@ -51,11 +49,25 @@ struct Args {
 
 #[derive(Subcommand, Debug)]
 enum Cmd {
-    Code { #[command(subcommand)] action: CodeAction },
-    Env { #[command(subcommand)] action: EnvAction },
-    Git { #[command(subcommand)] action: GitAction },
-    Ask { question: String },
-    Task { #[command(subcommand)] action: TaskAction },
+    Code {
+        #[command(subcommand)]
+        action: CodeAction,
+    },
+    Env {
+        #[command(subcommand)]
+        action: EnvAction,
+    },
+    Git {
+        #[command(subcommand)]
+        action: GitAction,
+    },
+    Ask {
+        question: String,
+    },
+    Task {
+        #[command(subcommand)]
+        action: TaskAction,
+    },
     Handoff {
         #[arg(long)]
         from: String,
@@ -63,7 +75,10 @@ enum Cmd {
         to: String,
     },
     /// OAuth 인증 (W13) — `MiniMax` / `OpenAI` / Google
-    Auth { #[command(subcommand)] action: AuthAction },
+    Auth {
+        #[command(subcommand)]
+        action: AuthAction,
+    },
 }
 
 #[derive(Subcommand, Debug)]
@@ -126,13 +141,9 @@ enum AuthAction {
         non_interactive: bool,
     },
     /// OAuth 토큰 삭제
-    Logout {
-        provider: String,
-    },
+    Logout { provider: String },
     /// 현재 OAuth 토큰 상태 확인
-    Status {
-        provider: String,
-    },
+    Status { provider: String },
     /// 등록된 OAuth provider 목록
     List,
     /// 로컬 LLM 서버 등록 (D-59 W16 + D-60 W17 + D-61 W18) — Ollama / vLLM / LM Studio / llama.cpp
@@ -191,8 +202,8 @@ fn main() -> anyhow::Result<()> {
     let args = Args::parse();
     let mode = args.mode.as_str();
     let _safe_mode = args.safe_mode.as_str();
-    let policy = PermissionPolicy::new(parse_permission_mode(&args.mode))
-        .with_auto_approve(args.yes);
+    let policy =
+        PermissionPolicy::new(parse_permission_mode(&args.mode)).with_auto_approve(args.yes);
 
     tracing::info!(mode = %mode, policy = ?policy.mode, "myharness v0.1.0 (W13)");
 
@@ -200,14 +211,19 @@ fn main() -> anyhow::Result<()> {
     let _guard = rt.enter();
 
     match args.cmd {
-        Some(Cmd::Task { action }) => { run_task(action); return Ok(()); }
-        Some(Cmd::Handoff { from, to }) => { run_handoff(from, to); return Ok(()); }
+        Some(Cmd::Task { action }) => {
+            run_task(action);
+            return Ok(());
+        }
+        Some(Cmd::Handoff { from, to }) => {
+            run_handoff(from, to);
+            return Ok(());
+        }
         Some(Cmd::Auth { action }) => return rt.block_on(run_auth(action)),
         _ => {}
     }
 
-    let orch = Orchestrator::new()
-        .with_tools(Arc::new(ToolRegistry::default_tools()));
+    let orch = Orchestrator::new().with_tools(Arc::new(ToolRegistry::default_tools()));
     let llm: Arc<dyn LLMClient> = resolve_llm_client();
     let orch = orch.with_llm(llm);
 
@@ -255,7 +271,10 @@ fn main() -> anyhow::Result<()> {
                 };
                 let runner = LoopRunner::new(cfg);
                 let report = rt.block_on(runner.run(&orch));
-                println!("loop finished: stop={:?} iterations={}", report.stop, report.total_iterations);
+                println!(
+                    "loop finished: stop={:?} iterations={}",
+                    report.stop, report.total_iterations
+                );
             }
             "cli" => {
                 let tty = TtyGuard::enter()?;
@@ -311,7 +330,13 @@ fn run_task(action: TaskAction) {
             let log = EventLog::new();
             run_task_start(&id, &title, &intent, log);
         }
-        TaskAction::End { id, title, summary, risks, follow_up } => {
+        TaskAction::End {
+            id,
+            title,
+            summary,
+            risks,
+            follow_up,
+        } => {
             let log = EventLog::new();
             run_task_end(&id, &title, &summary, &risks, &follow_up, log);
         }
@@ -322,7 +347,6 @@ fn run_task_start(id: &str, title: &str, intent: &str, mut log: EventLog) {
     log.info(format!("task start: {id}"));
     let report = TaskStartReport::new(id, title, intent);
     println!("{}", report.to_korean());
-
 }
 
 fn run_task_end(
@@ -351,23 +375,29 @@ fn run_task_end(
     for f in follow_up {
         let (id, title, desc) = if f.contains('|') {
             let parts: Vec<&str> = f.splitn(3, '|').collect();
-            (parts[0].to_string(), parts[1].to_string(), parts.get(2).unwrap_or(&"").to_string())
+            (
+                parts[0].to_string(),
+                parts[1].to_string(),
+                parts.get(2).unwrap_or(&"").to_string(),
+            )
         } else if f.matches(':').count() >= 2 {
             let parts: Vec<&str> = f.splitn(3, ':').collect();
-            (parts[0].to_string(), parts[1].to_string(), parts[2].to_string())
+            (
+                parts[0].to_string(),
+                parts[1].to_string(),
+                parts[2].to_string(),
+            )
         } else {
             ("FOLLOWUP".to_string(), "follow-up".to_string(), f.clone())
         };
         report.add_follow_up(id, title, desc);
     }
     println!("{}", report.to_korean());
-
 }
 
 fn run_handoff(from: String, to: String) {
     let h = HandoffDoc::new(from, to);
     println!("{}", h.to_korean());
-
 }
 
 async fn run_auth(action: AuthAction) -> anyhow::Result<()> {
@@ -375,26 +405,40 @@ async fn run_auth(action: AuthAction) -> anyhow::Result<()> {
         AuthAction::List => {
             println!("registered OAuth providers:");
             for p in OAUTH_PROVIDERS.iter() {
-                println!("  - {} ({}) — authorize={}, token={}", p.id(), p.display_name(), p.authorize_endpoint(), p.token_endpoint());
+                println!(
+                    "  - {} ({}) — authorize={}, token={}",
+                    p.id(),
+                    p.display_name(),
+                    p.authorize_endpoint(),
+                    p.token_endpoint()
+                );
             }
         }
-        AuthAction::Login { provider, port, no_browser, non_interactive } => {
+        AuthAction::Login {
+            provider,
+            port,
+            no_browser,
+            non_interactive,
+        } => {
             // MiniMax 는 W14 부터 Device Authorization Grant (D-52 follow-up) 사용.
             // 다른 provider (OpenAI, Google) 는 표준 Authorization Code + PKCE redirect flow.
             if provider == "minimax" {
                 let mgr = AuthManager::new().map_err(|e| anyhow::anyhow!("{e}"))?;
-                let outcome = mgr.login_minimax_device(!no_browser, non_interactive)
+                let outcome = mgr
+                    .login_minimax_device(!no_browser, non_interactive)
                     .await
                     .map_err(|e| anyhow::anyhow!("{e}"))?;
                 print_login_outcome(&outcome);
             } else {
                 // OpenAI/Google: redirect flow. non_interactive 는 동일 (URL 만 return).
-                let p = find_provider(&provider)
-                    .ok_or_else(|| anyhow::anyhow!("provider '{provider}' not found (try `myharness auth list`)"))?;
+                let p = find_provider(&provider).ok_or_else(|| {
+                    anyhow::anyhow!("provider '{provider}' not found (try `myharness auth list`)")
+                })?;
                 let mgr = AuthManager::new().map_err(|e| anyhow::anyhow!("{e}"))?;
                 let effective_port = if port == 0 { 0 } else { port };
                 let interactive = !no_browser && !non_interactive;
-                let outcome = mgr.login(p.clone(), interactive, effective_port)
+                let outcome = mgr
+                    .login(p.clone(), interactive, effective_port)
                     .await
                     .map_err(|e| anyhow::anyhow!("{e}"))?;
                 print_login_outcome(&outcome);
@@ -410,7 +454,13 @@ async fn run_auth(action: AuthAction) -> anyhow::Result<()> {
             let s = mgr.status(&provider).map_err(|e| anyhow::anyhow!("{e}"))?;
             print_auth_status(&s);
         }
-        AuthAction::AddLocal { url, token, model, probe_skip, yes } => {
+        AuthAction::AddLocal {
+            url,
+            token,
+            model,
+            probe_skip,
+            yes,
+        } => {
             handle_auth_add_local(url, token, model, probe_skip, yes).await?;
         }
     }
@@ -421,12 +471,21 @@ fn print_login_outcome(o: &LoginOutcome) {
     println!("provider: {}", o.provider);
     if o.token.access_token.is_empty() {
         // non-interactive — URL 만 return
-        println!("\nTo complete login, open this URL in your browser:\n  {}\n", o.auth_url);
+        println!(
+            "\nTo complete login, open this URL in your browser:\n  {}\n",
+            o.auth_url
+        );
     } else {
         println!("login success");
-        println!("  access_token: {}...", &o.token.access_token.chars().take(8).collect::<String>());
+        println!(
+            "  access_token: {}...",
+            &o.token.access_token.chars().take(8).collect::<String>()
+        );
         if let Some(rt) = &o.token.refresh_token {
-            println!("  refresh_token: {}...", &rt.chars().take(8).collect::<String>());
+            println!(
+                "  refresh_token: {}...",
+                &rt.chars().take(8).collect::<String>()
+            );
         }
         if let Some(exp) = o.token.expires_at {
             println!("  expires_at: {}", exp.format("%Y-%m-%dT%H:%M:%SZ"));
@@ -451,7 +510,10 @@ fn print_auth_status(s: &AuthStatus) {
         }
     } else {
         println!("  has_token: false");
-        println!("  run `myharness auth {} login` to authenticate", s.provider);
+        println!(
+            "  run `myharness auth {} login` to authenticate",
+            s.provider
+        );
     }
 }
 
@@ -475,44 +537,45 @@ fn resolve_llm_client() -> Arc<dyn LLMClient> {
     if let Ok(store) = TokenStore::new() {
         if let Ok(stored) = store.load("minimax") {
             if !stored.token.is_expired() {
-            let base_url = std::env::var("MINIMAX_API_HOST")
-                .unwrap_or_else(|_| "https://api.minimax.io/v1".into());
-            let model = std::env::var("MINIMAX_MODEL").unwrap_or_else(|_| "MiniMax-M3".into());
-            tracing::info!(
-                "using MiniMax OAuth token (base_url={}, model={}, expires_at={})",
-                base_url,
-                model,
-                stored
-                    .token
-                    .expires_at.map_or_else(|| "unknown".into(), |e| e.format("%Y-%m-%dT%H:%M:%SZ").to_string())
-            );
-            let inner: Arc<dyn LLMClient> = Arc::new(
-                myharness_llm::OpenAiCompatProvider::new(
-                    &base_url,
-                    &stored.token.access_token,
-                    &model,
-                    ProviderId::Minimax,
-                )
-                .expect("failed to init MiniMax OpenAI-compat client"),
-            );
+                let base_url = std::env::var("MINIMAX_API_HOST")
+                    .unwrap_or_else(|_| "https://api.minimax.io/v1".into());
+                let model = std::env::var("MINIMAX_MODEL").unwrap_or_else(|_| "MiniMax-M3".into());
+                tracing::info!(
+                    "using MiniMax OAuth token (base_url={}, model={}, expires_at={})",
+                    base_url,
+                    model,
+                    stored.token.expires_at.map_or_else(
+                        || "unknown".into(),
+                        |e| e.format("%Y-%m-%dT%H:%M:%SZ").to_string()
+                    )
+                );
+                let inner: Arc<dyn LLMClient> = Arc::new(
+                    myharness_llm::OpenAiCompatProvider::new(
+                        &base_url,
+                        &stored.token.access_token,
+                        &model,
+                        ProviderId::Minimax,
+                    )
+                    .expect("failed to init MiniMax OpenAI-compat client"),
+                );
 
-            // W15.b: 401 자동 refresh + 1회 retry 를 위해 RefreshingLlmClient 로 wrap.
-            if let Ok(auth) = AuthManager::new()
-                && let Some(provider) = find_provider("minimax")
-            {
-                return Arc::new(RefreshingLlmClient::new(
-                    inner,
-                    "minimax",
-                    &base_url,
-                    &model,
-                    Arc::new(auth),
-                    provider,
-                ));
+                // W15.b: 401 자동 refresh + 1회 retry 를 위해 RefreshingLlmClient 로 wrap.
+                if let Ok(auth) = AuthManager::new()
+                    && let Some(provider) = find_provider("minimax")
+                {
+                    return Arc::new(RefreshingLlmClient::new(
+                        inner,
+                        "minimax",
+                        &base_url,
+                        &model,
+                        Arc::new(auth),
+                        provider,
+                    ));
+                }
+                // wrap 실패 → inner 그대로 반환
+                return inner;
             }
-            // wrap 실패 → inner 그대로 반환
-            return inner;
-        }
-        tracing::warn!(
+            tracing::warn!(
                 "OAuth token for minimax is expired; falling back to env var. \
                  run `myharness auth minimax login` to refresh."
             );
@@ -524,7 +587,11 @@ fn resolve_llm_client() -> Arc<dyn LLMClient> {
         let base_url = std::env::var("MINIMAX_API_HOST")
             .unwrap_or_else(|_| "https://api.minimax.io/v1".into());
         let model = std::env::var("MINIMAX_MODEL").unwrap_or_else(|_| "MiniMax-M3".into());
-        tracing::info!("using MiniMax env var (base_url={}, model={})", base_url, model);
+        tracing::info!(
+            "using MiniMax env var (base_url={}, model={})",
+            base_url,
+            model
+        );
         return Arc::new(
             myharness_llm::OpenAiCompatProvider::new(
                 &base_url,
@@ -547,17 +614,26 @@ fn resolve_llm_client() -> Arc<dyn LLMClient> {
                 let id = myharness_llm::provider::ProviderId::LocalLlm;
                 r.get(id).cloned()
             })
-            .unwrap_or_else(|| myharness_llm::metadata::ProviderMetadata::builtin(myharness_llm::provider::ProviderId::LocalLlm));
+            .unwrap_or_else(|| {
+                myharness_llm::metadata::ProviderMetadata::builtin(
+                    myharness_llm::provider::ProviderId::LocalLlm,
+                )
+            });
 
-        let base_url = std::env::var("LOCAL_LLM_BASE_URL")
-            .unwrap_or_else(|_| local.base_url.clone());
-        let model = std::env::var("LOCAL_LLM_MODEL")
-            .unwrap_or_else(|_| local.default_model.clone());
+        let base_url =
+            std::env::var("LOCAL_LLM_BASE_URL").unwrap_or_else(|_| local.base_url.clone());
+        let model =
+            std::env::var("LOCAL_LLM_MODEL").unwrap_or_else(|_| local.default_model.clone());
         let api_key = std::env::var("MYHARNESS_LOCAL_LLM_KEY")
             .or_else(|_| std::env::var("LOCAL_LLM_API_KEY"))
             .ok();
 
-        tracing::info!("using Local LLM (base_url={}, model={}, has_key={})", base_url, model, api_key.is_some());
+        tracing::info!(
+            "using Local LLM (base_url={}, model={}, has_key={})",
+            base_url,
+            model,
+            api_key.is_some()
+        );
         return Arc::new(
             myharness_llm::OpenAiCompatProvider::new(
                 &base_url,

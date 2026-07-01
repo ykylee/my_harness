@@ -86,7 +86,9 @@ impl AuthStore for KeyringAuthStore {
             return Ok(Some(v));
         }
         match self.backend {
-            KeyringBackend::None => Err(AuthStoreError::BackendUnavailable(Self::env_hint(provider))),
+            KeyringBackend::None => {
+                Err(AuthStoreError::BackendUnavailable(Self::env_hint(provider)))
+            }
             _ => Ok(None),
         }
     }

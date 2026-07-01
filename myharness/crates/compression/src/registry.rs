@@ -10,7 +10,7 @@ use std::collections::HashMap;
 use serde::{Deserialize, Serialize};
 
 use crate::ccr::CcrStore;
-use crate::kompress::{kompress_v1, KompressConfig};
+use crate::kompress::{KompressConfig, kompress_v1};
 
 /// W9.5 — 단일 알고리즘 식별자. CONCEPT §5.6 의 6 알고리즘.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
@@ -34,7 +34,7 @@ impl BuiltinAlgorithm {
         BuiltinAlgorithm::KompressBase,
     ];
 
-    #[must_use] 
+    #[must_use]
     pub fn as_str(&self) -> &'static str {
         match self {
             BuiltinAlgorithm::CacheAligner => "cache-aligner",
@@ -47,7 +47,7 @@ impl BuiltinAlgorithm {
     }
 
     #[allow(clippy::should_implement_trait)]
-    #[must_use] 
+    #[must_use]
     pub fn from_str(s: &str) -> Option<Self> {
         match s {
             "cache-aligner" => Some(BuiltinAlgorithm::CacheAligner),
@@ -72,7 +72,7 @@ pub struct BuiltinFlags {
 }
 
 impl BuiltinFlags {
-    #[must_use] 
+    #[must_use]
     pub fn from_slice(enabled: &[BuiltinAlgorithm]) -> Self {
         let mut f = Self::default();
         for a in enabled {
@@ -88,7 +88,7 @@ impl BuiltinFlags {
         f
     }
 
-    #[must_use] 
+    #[must_use]
     pub fn enabled_list(&self) -> Vec<BuiltinAlgorithm> {
         let mut v = Vec::new();
         if self.cache_aligner {
@@ -132,7 +132,7 @@ impl Default for BuiltinRegistry {
 }
 
 impl BuiltinRegistry {
-    #[must_use] 
+    #[must_use]
     pub fn new(flags: BuiltinFlags) -> Self {
         Self {
             flags,
@@ -141,7 +141,11 @@ impl BuiltinRegistry {
     }
 
     /// CCR 활성화 시 압축. in-place: ccr store 에 marker 등록.
-    pub fn compress_with_ccr(&mut self, text: &str, min_length: usize) -> (String, crate::CcrStats) {
+    pub fn compress_with_ccr(
+        &mut self,
+        text: &str,
+        min_length: usize,
+    ) -> (String, crate::CcrStats) {
         self.ccr.compress(text, min_length)
     }
 
@@ -168,7 +172,7 @@ impl BuiltinRegistry {
 }
 
 /// `flags` 를 `HashMap` 으로 표현 (TOML 호환).
-#[must_use] 
+#[must_use]
 pub fn flags_to_map(flags: &BuiltinFlags) -> HashMap<&'static str, bool> {
     let mut m = HashMap::new();
     m.insert("cache-aligner", flags.cache_aligner);

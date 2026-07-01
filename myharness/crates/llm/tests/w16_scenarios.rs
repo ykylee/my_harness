@@ -6,7 +6,9 @@
 //! 3. 비-tty: cli handler 레벨 검증 (별도 scenario_*.rs 로 binary 호출)
 //! 4. URL invalid: lib 레벨 검증
 
-use myharness_llm::add_local::{probe_local_models, register_local_provider, RegisterError, ModelInfo};
+use myharness_llm::add_local::{
+    ModelInfo, RegisterError, probe_local_models, register_local_provider,
+};
 
 #[tokio::test]
 #[serial_test::serial(env)]
@@ -19,7 +21,9 @@ async fn scenario_1_real_lm_studio_192_168_0_101() {
     }
 
     let base_url = "http://192.168.0.101:1234/v1";
-    let models = probe_local_models(base_url, None).await.expect("LM Studio probe");
+    let models = probe_local_models(base_url, None)
+        .await
+        .expect("LM Studio probe");
 
     eprintln!("✓ probe_local_models OK — {} models:", models.len());
     for m in &models {
@@ -33,7 +37,8 @@ async fn scenario_1_real_lm_studio_192_168_0_101() {
 
     // gemma 또는 nomic 둘 중 하나는 있어야 함 (사용자 환경)
     assert!(
-        ids.iter().any(|id| id.contains("gemma") || id.contains("nomic")),
+        ids.iter()
+            .any(|id| id.contains("gemma") || id.contains("nomic")),
         "expected gemma or nomic model, got {ids:?}"
     );
 }
@@ -82,13 +87,21 @@ async fn scenario_2b_register_provider_refused() {
     // probe 단계의 connection refused 는 cli handler (handle_auth_add_local) 에서 처리.
     // 본 TC 는 register_local_provider 가 invalid URL 에서 graceful error 반환 검증.
     let tmp = tempfile::tempdir().unwrap();
-    unsafe { std::env::set_var("MYHARNESS_HOME", tmp.path()); }
+    unsafe {
+        std::env::set_var("MYHARNESS_HOME", tmp.path());
+    }
 
     let result = register_local_provider(
         "http://localhost:9999/v1".into(),
         None,
-        ModelInfo { id: "fake".into(), owned_by: None },
-        vec![ModelInfo { id: "fake".into(), owned_by: None }],
+        ModelInfo {
+            id: "fake".into(),
+            owned_by: None,
+        },
+        vec![ModelInfo {
+            id: "fake".into(),
+            owned_by: None,
+        }],
     )
     .await;
 
@@ -101,5 +114,7 @@ async fn scenario_2b_register_provider_refused() {
         }
         Err(e) => eprintln!("⚠ Err: {e:?}"),
     }
-    unsafe { std::env::remove_var("MYHARNESS_HOME"); }
+    unsafe {
+        std::env::remove_var("MYHARNESS_HOME");
+    }
 }

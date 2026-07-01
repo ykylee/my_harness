@@ -7,9 +7,7 @@
 //! 4. `MYHARNESS_MEMORY_BACKEND=sqlite cargo test -p myharness-context --test auto_memory` → 6/6 pass
 //! 5. NDJSON default path unchanged → 7/7 still pass
 
-use myharness_context::{
-    AutoMemory, AutoMemoryConfig, MemoryBackend, MemoryKind, MemoryQuery,
-};
+use myharness_context::{AutoMemory, AutoMemoryConfig, MemoryBackend, MemoryKind, MemoryQuery};
 use std::path::Path;
 
 fn make_config(dir: &Path, backend: MemoryBackend) -> AutoMemoryConfig {
@@ -25,7 +23,8 @@ async fn back_compat_ndjson_default() {
     // unset MYHARNESS_MEMORY_BACKEND → backend field drives dispatch (not env).
     let cfg = make_config(dir.path(), MemoryBackend::Ndjson);
     let m = AutoMemory::open(cfg).await.unwrap();
-    m.append_tool("Read", serde_json::json!({"path": "/tmp/a"})).unwrap();
+    m.append_tool("Read", serde_json::json!({"path": "/tmp/a"}))
+        .unwrap();
     let log = dir.path().join("memory.ndjson");
     assert!(log.exists(), "NDJSON backend must produce memory.ndjson");
 }
@@ -82,7 +81,8 @@ async fn sqlite_bm25_ranking() {
     let dir = tempfile::tempdir().unwrap();
     let cfg = make_config(dir.path(), MemoryBackend::Sqlite);
     let m = AutoMemory::open(cfg).await.unwrap();
-    m.append_note("rust rust rust programming language").unwrap();
+    m.append_note("rust rust rust programming language")
+        .unwrap();
     m.append_note("rust async tokio").unwrap();
     m.append_note("unrelated python java").unwrap();
     let hits = m
@@ -103,7 +103,8 @@ async fn sqlite_kind_filter() {
     let dir = tempfile::tempdir().unwrap();
     let cfg = make_config(dir.path(), MemoryBackend::Sqlite);
     let m = AutoMemory::open(cfg).await.unwrap();
-    m.append_tool("Read", serde_json::json!({"path": "x.rs"})).unwrap();
+    m.append_tool("Read", serde_json::json!({"path": "x.rs"}))
+        .unwrap();
     m.append_note("readme text").unwrap();
     m.append_error("oops").unwrap();
     let hits = m

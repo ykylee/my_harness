@@ -28,10 +28,10 @@ mod store;
 mod types;
 
 // Sibling re-exports: `NdjsonMemoryStore` / `SqliteMemoryStore` 는 facade 내부 전용.
-pub use store::MemoryStore;
-pub use types::{MemoryError, MemoryHit, MemoryKind, MemoryQuery, MemoryRecord};
 use sqlite_store::SqliteMemoryStore;
+pub use store::MemoryStore;
 use store::NdjsonMemoryStore;
+pub use types::{MemoryError, MemoryHit, MemoryKind, MemoryQuery, MemoryRecord};
 
 /// Backend 선택. `MYHARNESS_MEMORY_BACKEND` env 로 override.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -117,8 +117,7 @@ impl AutoMemory {
             base_dir,
         };
         let inner: Arc<dyn MemoryStore> = Arc::new(
-            NdjsonMemoryStore::new(config.base_dir.clone())
-                .expect("ndjson init never fails"),
+            NdjsonMemoryStore::new(config.base_dir.clone()).expect("ndjson init never fails"),
         );
         Self { inner, config }
     }
@@ -265,9 +264,7 @@ where
         return std::thread::spawn(move || {
             let mut builder = tokio::runtime::Builder::new_current_thread();
             builder.enable_all();
-            let rt = builder
-                .build()
-                .expect("create escape runtime");
+            let rt = builder.build().expect("create escape runtime");
             rt.block_on(f)
         })
         .join()

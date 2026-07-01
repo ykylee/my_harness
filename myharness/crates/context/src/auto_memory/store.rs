@@ -17,9 +17,7 @@ use std::path::PathBuf;
 
 use async_trait::async_trait;
 
-use crate::auto_memory::types::{
-    MemoryError, MemoryHit, MemoryKind, MemoryQuery, MemoryRecord,
-};
+use crate::auto_memory::types::{MemoryError, MemoryHit, MemoryKind, MemoryQuery, MemoryRecord};
 
 /// Auto memory backend 추상화. NDJSON / Sqlite (Commit B) 모두 이 trait 구현.
 ///
@@ -228,10 +226,14 @@ mod tests {
         rt().block_on(async {
             s.append(tool("Read", serde_json::json!({}))).await.unwrap();
             s.append(note("a")).await.unwrap();
-            s.append(tool("Write", serde_json::json!({}))).await.unwrap();
+            s.append(tool("Write", serde_json::json!({})))
+                .await
+                .unwrap();
             s.append(note("b")).await.unwrap();
         });
-        let tools = rt().block_on(s.recent_by_kind(MemoryKind::Tool, 10)).unwrap();
+        let tools = rt()
+            .block_on(s.recent_by_kind(MemoryKind::Tool, 10))
+            .unwrap();
         assert_eq!(tools.len(), 2);
         assert!(tools.iter().all(|r| r.kind == MemoryKind::Tool));
     }

@@ -9,7 +9,7 @@ use crate::metadata::ProviderMetadata;
 use crate::paths;
 use crate::provider::ProviderId;
 use crate::registry::ProviderRegistry;
-use crate::scan_local::{scan_local_servers, LocalHit};
+use crate::scan_local::{LocalHit, scan_local_servers};
 
 #[derive(Debug, Clone, Default)]
 pub struct DiscoverOpts {
@@ -74,12 +74,13 @@ fn scan_env(registry: &ProviderRegistry) -> Vec<EnvVarHit> {
     let mut hits = Vec::new();
     for meta in registry.list() {
         if let Some(var) = &meta.env_var
-            && std::env::var(var).is_ok() {
-                hits.push(EnvVarHit {
-                    provider: meta.id,
-                    env_var: var.clone(),
-                });
-            }
+            && std::env::var(var).is_ok()
+        {
+            hits.push(EnvVarHit {
+                provider: meta.id,
+                env_var: var.clone(),
+            });
+        }
     }
     hits
 }
@@ -115,13 +116,14 @@ fn merge(
         }
         // local (local-llm 만)
         if m.id == ProviderId::LocalLlm
-            && let Some(_hit) = local.iter().find(|h| h.available) {
-                out.push(DiscoveredProvider {
-                    provider: m.id,
-                    auth_state: AuthState::LocalDetected,
-                    default_model: m.default_model.clone(),
-                });
-            }
+            && let Some(_hit) = local.iter().find(|h| h.available)
+        {
+            out.push(DiscoveredProvider {
+                provider: m.id,
+                auth_state: AuthState::LocalDetected,
+                default_model: m.default_model.clone(),
+            });
+        }
     }
     out
 }

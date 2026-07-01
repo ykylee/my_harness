@@ -10,9 +10,9 @@
 //!
 //! Zero coupling: Mavis 파일 없어도 동작. 옵션 Mavis 통합은 v1.5+.
 
-use std::fmt::Write;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
+use std::fmt::Write;
 
 /// task 상태. CONCEPT §5.9.3 (Mavis 호환).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -85,7 +85,11 @@ impl TaskStartReport {
         let mut out = String::new();
         let _ = writeln!(out, "# Task 시작: {}\n", self.title);
         let _ = writeln!(out, "- ID: {}", self.id);
-        let _ = writeln!(out, "- 시작: {}", self.started_at.format("%Y-%m-%dT%H:%M:%SZ"));
+        let _ = writeln!(
+            out,
+            "- 시작: {}",
+            self.started_at.format("%Y-%m-%dT%H:%M:%SZ")
+        );
         let _ = writeln!(out, "- 상태: {:?}", self.status);
         if !self.related.is_empty() {
             let _ = writeln!(out, "- 관련: {}", self.related.join(", "));
@@ -130,7 +134,11 @@ pub struct FollowUpEntry {
 }
 
 impl TaskEndReport {
-    pub fn new(id: impl Into<String>, title: impl Into<String>, summary: impl Into<String>) -> Self {
+    pub fn new(
+        id: impl Into<String>,
+        title: impl Into<String>,
+        summary: impl Into<String>,
+    ) -> Self {
         Self {
             id: id.into(),
             title: title.into(),
@@ -144,24 +152,36 @@ impl TaskEndReport {
         }
     }
 
-    #[must_use] 
+    #[must_use]
     pub fn started_at(mut self, t: DateTime<Utc>) -> Self {
         self.started_at = t;
         self
     }
 
-    #[must_use] 
+    #[must_use]
     pub fn with_status(mut self, s: TaskStatus) -> Self {
         self.status = s;
         self
     }
 
     pub fn add_risk(&mut self, kind: RiskKind, desc: impl Into<String>) {
-        self.risks.push(RiskEntry { kind, description_ko: desc.into() });
+        self.risks.push(RiskEntry {
+            kind,
+            description_ko: desc.into(),
+        });
     }
 
-    pub fn add_follow_up(&mut self, id: impl Into<String>, title: impl Into<String>, desc: impl Into<String>) {
-        self.follow_up.push(FollowUpEntry { id: id.into(), title: title.into(), description_ko: desc.into() });
+    pub fn add_follow_up(
+        &mut self,
+        id: impl Into<String>,
+        title: impl Into<String>,
+        desc: impl Into<String>,
+    ) {
+        self.follow_up.push(FollowUpEntry {
+            id: id.into(),
+            title: title.into(),
+            description_ko: desc.into(),
+        });
     }
 
     pub fn add_artifact(&mut self, a: impl Into<String>) {
@@ -174,8 +194,16 @@ impl TaskEndReport {
         let mut out = String::new();
         let _ = writeln!(out, "# Task 종료: {}\n", self.title);
         let _ = writeln!(out, "- ID: {}", self.id);
-        let _ = writeln!(out, "- 시작: {}", self.started_at.format("%Y-%m-%dT%H:%M:%SZ"));
-        let _ = writeln!(out, "- 종료: {}", self.ended_at.format("%Y-%m-%dT%H:%M:%SZ"));
+        let _ = writeln!(
+            out,
+            "- 시작: {}",
+            self.started_at.format("%Y-%m-%dT%H:%M:%SZ")
+        );
+        let _ = writeln!(
+            out,
+            "- 종료: {}",
+            self.ended_at.format("%Y-%m-%dT%H:%M:%SZ")
+        );
         let _ = writeln!(out, "- 상태: {:?}", self.status);
         if !self.summary_ko.is_empty() {
             let _ = writeln!(out, "\n## 요약\n{}", self.summary_ko);
@@ -226,7 +254,7 @@ pub struct EventLog {
 }
 
 impl EventLog {
-    #[must_use] 
+    #[must_use]
     pub fn new() -> Self {
         Self::default()
     }
@@ -252,18 +280,18 @@ impl EventLog {
         self.append(EventKind::Decision, msg);
     }
 
-    #[must_use] 
+    #[must_use]
     pub fn len(&self) -> usize {
         self.entries.len()
     }
 
-    #[must_use] 
+    #[must_use]
     pub fn is_empty(&self) -> bool {
         self.entries.is_empty()
     }
 
     /// NDJSON 직렬화 (append-friendly).
-    #[must_use] 
+    #[must_use]
     pub fn to_ndjson(&self) -> String {
         self.entries
             .iter()
@@ -327,7 +355,11 @@ impl HandoffDoc {
         out.push_str("# Handoff\n\n");
         let _ = writeln!(out, "- from: {}", self.from_session);
         let _ = writeln!(out, "- to: {}", self.to_session);
-        let _ = writeln!(out, "- created: {}", self.created_at.format("%Y-%m-%dT%H:%M:%SZ"));
+        let _ = writeln!(
+            out,
+            "- created: {}",
+            self.created_at.format("%Y-%m-%dT%H:%M:%SZ")
+        );
         if !self.key_facts.is_empty() {
             out.push_str("\n## 핵심 사실\n");
             for f in &self.key_facts {
@@ -394,8 +426,15 @@ mod tests {
 
     #[test]
     fn task_end_with_risks_and_followups() {
-        let mut r = TaskEndReport::new("TASK-005", "스택 결정", "Rust 1안으로 결정. cargo workspace + 8 crate skeleton.");
-        r.add_risk(RiskKind::Environment, "libsecret 부재 — keyring backend fallback 필요");
+        let mut r = TaskEndReport::new(
+            "TASK-005",
+            "스택 결정",
+            "Rust 1안으로 결정. cargo workspace + 8 crate skeleton.",
+        );
+        r.add_risk(
+            RiskKind::Environment,
+            "libsecret 부재 — keyring backend fallback 필요",
+        );
         r.add_follow_up("TASK-005-1", "v1 MVP 빌드", "8 crate 골격 위에 실제 구현");
         r.add_artifact("Cargo.toml");
         r.add_artifact("crates/");

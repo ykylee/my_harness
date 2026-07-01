@@ -40,7 +40,11 @@ impl CallbackServer {
             }
         });
         // 즉시 return — caller 가 await rx.
-        Ok(Self { local_addr, redirect_path: path, rx: Some(rx) })
+        Ok(Self {
+            local_addr,
+            redirect_path: path,
+            rx: Some(rx),
+        })
     }
 
     ///
@@ -48,10 +52,14 @@ impl CallbackServer {
     ///
     /// This function returns an error if the underlying operation fails.
     /// caller 가 next `code+state` 받을 때까지 wait (timeout).
-    pub async fn wait_for_callback(mut self, timeout: Duration) -> Result<CallbackParams, OAuthError> {
-        let rx = self.rx.take().ok_or_else(|| {
-            OAuthError::CallbackServer("rx already consumed".into())
-        })?;
+    pub async fn wait_for_callback(
+        mut self,
+        timeout: Duration,
+    ) -> Result<CallbackParams, OAuthError> {
+        let rx = self
+            .rx
+            .take()
+            .ok_or_else(|| OAuthError::CallbackServer("rx already consumed".into()))?;
         match tokio::time::timeout(timeout, rx).await {
             Ok(Ok(params)) => Ok(params),
             Ok(Err(_)) => Err(OAuthError::CallbackServer("channel closed".into())),
@@ -87,8 +95,12 @@ async fn handle_connection(
             if let Some((k, v)) = pair.split_once('=') {
                 let k_decoded = url_decode(k);
                 let v_decoded = url_decode(v);
-                if k_decoded == "code" { code = Some(v_decoded.clone()); }
-                if k_decoded == "state" { state = Some(v_decoded); }
+                if k_decoded == "code" {
+                    code = Some(v_decoded.clone());
+                }
+                if k_decoded == "state" {
+                    state = Some(v_decoded);
+                }
             }
         }
         match (code, state) {
@@ -103,7 +115,12 @@ async fn handle_connection(
     };
     let response = format!(
         "HTTP/1.1 {status} {reason}\r\nContent-Type: text/html; charset=utf-8\r\nContent-Length: {len}\r\nConnection: close\r\n\r\n{body}",
-        reason = match status { 200 => "OK", 400 => "Bad Request", 404 => "Not Found", _ => "Error" },
+        reason = match status {
+            200 => "OK",
+            400 => "Bad Request",
+            404 => "Not Found",
+            _ => "Error",
+        },
         len = body.len(),
     );
     sock.write_all(response.as_bytes()).await?;
@@ -162,7 +179,10 @@ mod tests {
         // 127.0.0.1:port 로 GET /callback?code=abc&state=xyz 요청
         tokio::spawn(async move {
             let () = tokio::time::sleep(Duration::from_millis(50)).await;
-            let _ = reqwest::get(format!("http://127.0.0.1:{port}/callback?code=abc&state=xyz")).await;
+            let _ = reqwest::get(format!(
+                "http://127.0.0.1:{port}/callback?code=abc&state=xyz"
+            ))
+            .await;
         });
         let params = s.wait_for_callback(Duration::from_secs(2)).await.unwrap();
         assert_eq!(params.code, "abc");

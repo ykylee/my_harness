@@ -4,7 +4,12 @@
 //! refresh 흐름: load stored → refresh if expired → save.
 //! logout: token store delete + keyring clear.
 
-#![allow(clippy::cast_possible_truncation, clippy::cast_precision_loss, clippy::cast_sign_loss, clippy::cast_possible_wrap)]
+#![allow(
+    clippy::cast_possible_truncation,
+    clippy::cast_precision_loss,
+    clippy::cast_sign_loss,
+    clippy::cast_possible_wrap
+)]
 use std::sync::Arc;
 
 use serde::{Deserialize, Serialize};
@@ -13,7 +18,9 @@ use thiserror::Error;
 use crate::browser;
 use crate::callback::CallbackServer;
 use crate::device_flow::{self, DeviceCodeProvider, DeviceError, DeviceToken};
-use crate::flow::{build_authorize_url, exchange_code, refresh_token, OAuthError, OAuthProvider, OAuthToken};
+use crate::flow::{
+    OAuthError, OAuthProvider, OAuthToken, build_authorize_url, exchange_code, refresh_token,
+};
 use crate::provider::MinimaxDeviceOAuth;
 use crate::store::{StoreError, TokenStore};
 
@@ -73,7 +80,7 @@ fn device_token_to_oauth(t: &DeviceToken) -> OAuthToken {
 }
 
 impl AuthError {
-    #[must_use] 
+    #[must_use]
     pub fn is_not_found(&self) -> bool {
         matches!(self, AuthError::Store(StoreError::NotFound))
     }
@@ -113,10 +120,12 @@ impl AuthManager {
     ///
     /// This function returns an error if the underlying operation fails.
     pub fn new() -> Result<Self, AuthError> {
-        Ok(Self { store: TokenStore::new()? })
+        Ok(Self {
+            store: TokenStore::new()?,
+        })
     }
 
-    #[must_use] 
+    #[must_use]
     pub fn with_store(store: TokenStore) -> Self {
         Self { store }
     }
@@ -163,13 +172,8 @@ impl AuthManager {
             .await?;
         // 4) state check (caller 가 수행 — 여기선 일단 단순화: 일치 안 하면 error)
         // 5) token exchange
-        let token = exchange_code(
-            &*provider,
-            &params.code,
-            &req.pkce.verifier,
-            &redirect_uri,
-        )
-        .await?;
+        let token =
+            exchange_code(&*provider, &params.code, &req.pkce.verifier, &redirect_uri).await?;
         // 6) token store save
         self.store.save(provider.id(), &token)?;
         Ok(LoginOutcome {
@@ -239,7 +243,9 @@ impl AuthManager {
                     scope: None,
                     token_type: "Bearer".into(),
                 },
-                auth_url: format!("{verification_url} (user_code={user_code}, interval={interval}s, expired_in={expired_in})"),
+                auth_url: format!(
+                    "{verification_url} (user_code={user_code}, interval={interval}s, expired_in={expired_in})"
+                ),
                 user_pasted_code: Some(user_code),
             });
         }
@@ -297,7 +303,9 @@ impl AuthManager {
         if !token.is_expired() {
             return Ok(Some(token));
         }
-        let Some(refresh) = token.refresh_token else { return Ok(Some(token)) }; // refresh 없으면 expired 그대로 반환
+        let Some(refresh) = token.refresh_token else {
+            return Ok(Some(token));
+        }; // refresh 없으면 expired 그대로 반환
         let new_token = refresh_token(&*provider, &refresh).await?;
         self.store.save(provider.id(), &new_token)?;
         Ok(Some(new_token))
@@ -515,13 +523,27 @@ mod tests {
         }
         #[async_trait]
         impl OAuthProvider for MockProvider {
-            fn id(&self) -> &'static str { self.id }
-            fn display_name(&self) -> &'static str { self.display }
-            fn authorize_endpoint(&self) -> &str { &self.auth_ep }
-            fn token_endpoint(&self) -> &str { &self.token_ep }
-            fn client_id(&self) -> &'static str { "mock-client" }
-            fn client_secret(&self) -> Option<&str> { None }
-            fn default_scopes(&self) -> &[&str] { &["read"] }
+            fn id(&self) -> &'static str {
+                self.id
+            }
+            fn display_name(&self) -> &'static str {
+                self.display
+            }
+            fn authorize_endpoint(&self) -> &str {
+                &self.auth_ep
+            }
+            fn token_endpoint(&self) -> &str {
+                &self.token_ep
+            }
+            fn client_id(&self) -> &'static str {
+                "mock-client"
+            }
+            fn client_secret(&self) -> Option<&str> {
+                None
+            }
+            fn default_scopes(&self) -> &[&str] {
+                &["read"]
+            }
         }
         let provider = Arc::new(MockProvider {
             id: "mock-mini",
@@ -614,11 +636,15 @@ mod tests {
                         // D-116: mock spec = real spec (ms). `interval=1000` (1초), `expired_in=now+60_000` (60초 후)
                         let body = format!(
                             r#"{{"base_resp":{{"status_code":0,"status_msg":"success"}},"user_code":"{}","verification_uri":"https://platform.test/oauth-authorize?user_code={}","interval":1000,"expired_in":{},"state":"{}"}}"#,
-                            uc, uc, now + 60_000, state_param
+                            uc,
+                            uc,
+                            now + 60_000,
+                            state_param
                         );
                         let resp = format!(
                             "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{}",
-                            body.len(), body
+                            body.len(),
+                            body
                         );
                         sock.write_all(resp.as_bytes()).await.unwrap();
                     } else if request_line.contains("POST /oauth/token") {
@@ -627,11 +653,14 @@ mod tests {
                         // D-116: expired_in=now+3_600_000 ms (1시간 후, real spec)
                         let body = format!(
                             r#"{{"base_resp":{{"status_code":0,"status_msg":"success"}},"status":"success","access_token":"{}","refresh_token":"{}","expired_in":{},"token_type":"Bearer"}}"#,
-                            at, rt, now + 3_600_000
+                            at,
+                            rt,
+                            now + 3_600_000
                         );
                         let resp = format!(
                             "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{}",
-                            body.len(), body
+                            body.len(),
+                            body
                         );
                         sock.write_all(resp.as_bytes()).await.unwrap();
                     } else {
@@ -648,13 +677,27 @@ mod tests {
         }
         #[async_trait]
         impl DeviceCodeProvider for MockDeviceProvider {
-            fn id(&self) -> &'static str { "minimax" }
-            fn display_name(&self) -> &'static str { "Mock MiniMax" }
-            fn code_endpoint(&self) -> &str { &self.code_ep }
-            fn token_endpoint(&self) -> &str { &self.token_ep }
-            fn client_id(&self) -> &'static str { "mock-client" }
-            fn scope(&self) -> &'static str { "group_id profile model.completion" }
-            fn region(&self) -> &'static str { "global" }
+            fn id(&self) -> &'static str {
+                "minimax"
+            }
+            fn display_name(&self) -> &'static str {
+                "Mock MiniMax"
+            }
+            fn code_endpoint(&self) -> &str {
+                &self.code_ep
+            }
+            fn token_endpoint(&self) -> &str {
+                &self.token_ep
+            }
+            fn client_id(&self) -> &'static str {
+                "mock-client"
+            }
+            fn scope(&self) -> &'static str {
+                "group_id profile model.completion"
+            }
+            fn region(&self) -> &'static str {
+                "global"
+            }
         }
         let provider = MockDeviceProvider {
             code_ep: format!("{mock_base}/oauth/code"),
@@ -663,7 +706,11 @@ mod tests {
 
         let req = request_code(&provider).await.expect("request_code failed");
         assert_eq!(req.authorization.user_code, user_code_returned);
-        assert!(req.authorization.verification_uri.contains("platform.test/oauth-authorize"));
+        assert!(
+            req.authorization
+                .verification_uri
+                .contains("platform.test/oauth-authorize")
+        );
         // D-116: mock spec = real spec (ms). `interval=1000` = 1초.
         assert_eq!(req.authorization.interval, 1_000);
 
@@ -671,7 +718,12 @@ mod tests {
             .await
             .expect("poll_token failed");
         match poll {
-            TokenPoll::Success { access_token, refresh_token, expired_in, .. } => {
+            TokenPoll::Success {
+                access_token,
+                refresh_token,
+                expired_in,
+                ..
+            } => {
                 assert_eq!(access_token, access_token_returned);
                 assert_eq!(refresh_token, refresh_token_returned);
                 let now = chrono::Utc::now().timestamp_millis() as u64;
@@ -682,16 +734,23 @@ mod tests {
 
         let dir = tempfile::tempdir().unwrap();
         let mgr = AuthManager::with_store(TokenStore::with_base(dir.path().to_path_buf()));
-        let token = match poll_token(&provider, &req.authorization.user_code, &req.pkce.verifier).await.unwrap() {
-            TokenPoll::Success { access_token, refresh_token, expired_in, token_type, .. } => {
-                DeviceToken {
-                    access_token,
-                    refresh_token,
-                    expired_in,
-                    token_type: token_type.unwrap_or_else(|| "Bearer".into()),
-                    resource_url: None,
-                }
-            }
+        let token = match poll_token(&provider, &req.authorization.user_code, &req.pkce.verifier)
+            .await
+            .unwrap()
+        {
+            TokenPoll::Success {
+                access_token,
+                refresh_token,
+                expired_in,
+                token_type,
+                ..
+            } => DeviceToken {
+                access_token,
+                refresh_token,
+                expired_in,
+                token_type: token_type.unwrap_or_else(|| "Bearer".into()),
+                resource_url: None,
+            },
             _ => panic!("expected Success on second poll"),
         };
         let oauth = device_token_to_oauth(&token);
@@ -703,14 +762,15 @@ mod tests {
         drop(mock_task);
     }
 
-
     /// W14.4 — `--no-browser` mode (`auto_open_browser=false`, `non_interactive=false`)
     /// 검증: browser open 안 함 + polling + save 진행. user 가 직접 URL 을
     /// browser 에 paste 한 시나리오.
     #[tokio::test]
     #[allow(clippy::too_many_lines)] // mock provider + body (D-14.4 e2e shape)
     async fn login_minimax_device_no_browser_polling_saves() {
-        use crate::device_flow::{DeviceCodeProvider, poll_token, request_code, DeviceToken, TokenPoll};
+        use crate::device_flow::{
+            DeviceCodeProvider, DeviceToken, TokenPoll, poll_token, request_code,
+        };
         use async_trait::async_trait;
 
         let mock_server = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
@@ -745,7 +805,10 @@ mod tests {
                         // D-116: mock spec = real spec (ms). `interval=1000` (1초), `expired_in=now+60_000` (60초 후)
                         let body = format!(
                             r#"{{"base_resp":{{"status_code":0,"status_msg":"success"}},"user_code":"{}","verification_uri":"https://platform.test/oauth-authorize?user_code={}","interval":1000,"expired_in":{},"state":"{}"}}"#,
-                            uc, uc, now + 60_000, state_param
+                            uc,
+                            uc,
+                            now + 60_000,
+                            state_param
                         );
                         let resp = format!(
                             "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{}",
@@ -760,7 +823,9 @@ mod tests {
                         // D-116: expired_in=now+3_600_000 ms (1시간 후, real spec)
                         let body = format!(
                             r#"{{"base_resp":{{"status_code":0,"status_msg":"success"}},"status":"success","access_token":"{}","refresh_token":"{}","expired_in":{},"token_type":"Bearer"}}"#,
-                            at, rt, now + 3_600_000
+                            at,
+                            rt,
+                            now + 3_600_000
                         );
                         let resp = format!(
                             "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{}",
@@ -784,13 +849,27 @@ mod tests {
         }
         #[async_trait]
         impl DeviceCodeProvider for MockDeviceProvider {
-            fn id(&self) -> &'static str { "minimax" }
-            fn display_name(&self) -> &'static str { "Mock MiniMax" }
-            fn code_endpoint(&self) -> &str { &self.code_ep }
-            fn token_endpoint(&self) -> &str { &self.token_ep }
-            fn client_id(&self) -> &'static str { "mock-client" }
-            fn scope(&self) -> &'static str { "group_id profile model.completion" }
-            fn region(&self) -> &'static str { "global" }
+            fn id(&self) -> &'static str {
+                "minimax"
+            }
+            fn display_name(&self) -> &'static str {
+                "Mock MiniMax"
+            }
+            fn code_endpoint(&self) -> &str {
+                &self.code_ep
+            }
+            fn token_endpoint(&self) -> &str {
+                &self.token_ep
+            }
+            fn client_id(&self) -> &'static str {
+                "mock-client"
+            }
+            fn scope(&self) -> &'static str {
+                "group_id profile model.completion"
+            }
+            fn region(&self) -> &'static str {
+                "global"
+            }
         }
         let provider = MockDeviceProvider {
             code_ep: format!("{mock_base}/oauth/code"),
@@ -800,7 +879,11 @@ mod tests {
         // 2) request_code 호출 — POST /oauth/code
         let req = request_code(&provider).await.expect("request_code failed");
         assert_eq!(req.authorization.user_code, user_code_returned);
-        assert!(req.authorization.verification_uri.contains("platform.test/oauth-authorize"));
+        assert!(
+            req.authorization
+                .verification_uri
+                .contains("platform.test/oauth-authorize")
+        );
         // D-116: mock spec = real spec (ms). `interval=1000` = 1초.
         assert_eq!(req.authorization.interval, 1_000);
 
@@ -809,7 +892,12 @@ mod tests {
             .await
             .expect("poll_token failed");
         match poll {
-            TokenPoll::Success { access_token, refresh_token, expired_in, .. } => {
+            TokenPoll::Success {
+                access_token,
+                refresh_token,
+                expired_in,
+                ..
+            } => {
                 assert_eq!(access_token, access_token_returned);
                 assert_eq!(refresh_token, refresh_token_returned);
                 let now = chrono::Utc::now().timestamp_millis() as u64;
@@ -821,16 +909,23 @@ mod tests {
         // 4) TokenStore save + load (간접 검증)
         let dir = tempfile::tempdir().unwrap();
         let mgr = AuthManager::with_store(TokenStore::with_base(dir.path().to_path_buf()));
-        let token = match poll_token(&provider, &req.authorization.user_code, &req.pkce.verifier).await.unwrap() {
-            TokenPoll::Success { access_token, refresh_token, expired_in, token_type, .. } => {
-                DeviceToken {
-                    access_token,
-                    refresh_token,
-                    expired_in,
-                    token_type: token_type.unwrap_or_else(|| "Bearer".into()),
-                    resource_url: None,
-                }
-            }
+        let token = match poll_token(&provider, &req.authorization.user_code, &req.pkce.verifier)
+            .await
+            .unwrap()
+        {
+            TokenPoll::Success {
+                access_token,
+                refresh_token,
+                expired_in,
+                token_type,
+                ..
+            } => DeviceToken {
+                access_token,
+                refresh_token,
+                expired_in,
+                token_type: token_type.unwrap_or_else(|| "Bearer".into()),
+                resource_url: None,
+            },
             _ => panic!("expected Success on second poll"),
         };
         let oauth = device_token_to_oauth(&token);

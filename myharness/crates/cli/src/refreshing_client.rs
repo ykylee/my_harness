@@ -27,8 +27,8 @@
 
 use std::sync::Arc;
 
-use myharness_auth::{manager::AuthError, AuthManager, OAuthProvider};
-use myharness_llm::{CompletionRequest, CompletionResponse, LlmError, LLMClient};
+use myharness_auth::{AuthManager, OAuthProvider, manager::AuthError};
+use myharness_llm::{CompletionRequest, CompletionResponse, LLMClient, LlmError};
 
 /// 401 Unauthorized heuristic — `LlmError::ProviderCall(msg)` 의 메시지에
 /// "401" / "unauthorized" / "auth" 가 포함되면 token 만료로 간주.
@@ -138,9 +138,11 @@ impl RefreshingLlmClient {
                 _ => myharness_llm::provider::ProviderId::Minimax, // default (minimax 포함)
             },
         )
-        .map_err(|e| LlmError::ProviderInit(format!(
-            "W15.b: failed to rebuild OpenAiCompatProvider after refresh: {e}"
-        )))?;
+        .map_err(|e| {
+            LlmError::ProviderInit(format!(
+                "W15.b: failed to rebuild OpenAiCompatProvider after refresh: {e}"
+            ))
+        })?;
 
         new_client.complete(req.clone()).await
     }
@@ -184,10 +186,7 @@ mod tests {
         fn provider_id(&self) -> ProviderId {
             ProviderId::Minimax
         }
-        async fn complete(
-            &self,
-            _req: CompletionRequest,
-        ) -> Result<CompletionResponse, LlmError> {
+        async fn complete(&self, _req: CompletionRequest) -> Result<CompletionResponse, LlmError> {
             self.count.fetch_add(1, Ordering::SeqCst);
             Err(LlmError::ProviderCall("401 unauthorized".into()))
         }
@@ -200,10 +199,7 @@ mod tests {
         fn provider_id(&self) -> ProviderId {
             ProviderId::Minimax
         }
-        async fn complete(
-            &self,
-            _req: CompletionRequest,
-        ) -> Result<CompletionResponse, LlmError> {
+        async fn complete(&self, _req: CompletionRequest) -> Result<CompletionResponse, LlmError> {
             Err(LlmError::ProviderCall("401 unauthorized".into()))
         }
     }
@@ -235,14 +231,20 @@ mod tests {
 
     #[test]
     fn is_unauthorized_ignores_other_errors() {
-        assert!(!is_unauthorized_error(&LlmError::ProviderCall("conn refused".into())));
+        assert!(!is_unauthorized_error(&LlmError::ProviderCall(
+            "conn refused".into()
+        )));
         assert!(!is_unauthorized_error(&LlmError::RateLimited("429".into())));
-        assert!(!is_unauthorized_error(&LlmError::ContextOverflow("too long".into())));
+        assert!(!is_unauthorized_error(&LlmError::ContextOverflow(
+            "too long".into()
+        )));
     }
 
     #[test]
     fn is_unauthorized_treats_auth_missing_as_unauthorized() {
-        assert!(is_unauthorized_error(&LlmError::AuthMissing(ProviderId::Minimax)));
+        assert!(is_unauthorized_error(&LlmError::AuthMissing(
+            ProviderId::Minimax
+        )));
     }
 
     /// W15.b.2 — `ensure_fresh` → refresh 후 새 client 로 retry 시뮬레이션
@@ -260,11 +262,11 @@ mod tests {
         let auth = AuthManager::with_store(store.clone());
 
         // ensure_fresh 가 Ok(None) 반환하는지 직접 확인
-        let result = auth
-            .ensure_fresh(Arc::new(StubProvider))
-            .await
-            .unwrap();
-        assert!(result.is_none(), "empty store should yield None from ensure_fresh");
+        let result = auth.ensure_fresh(Arc::new(StubProvider)).await.unwrap();
+        assert!(
+            result.is_none(),
+            "empty store should yield None from ensure_fresh"
+        );
     }
 
     /// `OAuthProvider` stub — `ensure_fresh` 분기 검증용
@@ -461,7 +463,9 @@ mod tests {
         // 이 케이스에선 ensure_fresh 가 expired token 그대로 반환, retry 가 새 client 로 호출, OpenAI-compat 빌드 자체는 성공 → LLM 호출이 mock URL 없어서 다른 에러
         // 단순 검증: 에러 surface 됨
         match err {
-            LlmError::ProviderCall(_) | LlmError::ProviderInit(_) | LlmError::ProviderUnavailable(_) => {}
+            LlmError::ProviderCall(_)
+            | LlmError::ProviderInit(_)
+            | LlmError::ProviderUnavailable(_) => {}
             other => panic!("unexpected error variant: {other:?}"),
         }
     }

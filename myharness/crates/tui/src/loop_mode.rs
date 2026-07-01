@@ -3,7 +3,12 @@
 //! 주어진 goal 을 달성할 때까지 orchestrator + sub-agent + LLM 호출을 반복.
 //! Stop condition: success-criteria 충족 OR max-iterations 도달 OR user interrupt.
 
-#![allow(clippy::cast_possible_truncation, clippy::cast_precision_loss, clippy::cast_sign_loss, clippy::cast_possible_wrap)]
+#![allow(
+    clippy::cast_possible_truncation,
+    clippy::cast_precision_loss,
+    clippy::cast_sign_loss,
+    clippy::cast_possible_wrap
+)]
 use serde::{Deserialize, Serialize};
 
 use crate::orchestrator::{DispatchDecision, DispatchKind, Orchestrator};
@@ -60,7 +65,7 @@ pub struct LoopRunner {
 }
 
 impl LoopRunner {
-    #[must_use] 
+    #[must_use]
     pub fn new(config: LoopConfig) -> Self {
         Self {
             config,
@@ -68,14 +73,14 @@ impl LoopRunner {
         }
     }
 
-    #[must_use] 
+    #[must_use]
     pub fn interrupt_handle(&self) -> std::sync::Arc<std::sync::atomic::AtomicBool> {
         self.interrupted.clone()
     }
 
     /// 휴리스틱 success 평가: response 가 "DONE" 또는 "SUCCESS" word 포함 시 성공.
     /// 또는 `success_criteria` 가 있고 response 가 그 string 포함 시.
-    #[must_use] 
+    #[must_use]
     pub fn is_success(response: &str, criteria: Option<&str>) -> bool {
         if let Some(c) = criteria
             && !c.is_empty()
@@ -85,7 +90,9 @@ impl LoopRunner {
         }
         // word boundary 검사: "DONE" 또는 "SUCCESS" 가 단어로 등장
         let upper = response.to_ascii_uppercase();
-        upper.split_whitespace().any(|w| w == "DONE" || w == "SUCCESS" || w.starts_with("DONE:") || w.starts_with("SUCCESS:"))
+        upper.split_whitespace().any(|w| {
+            w == "DONE" || w == "SUCCESS" || w.starts_with("DONE:") || w.starts_with("SUCCESS:")
+        })
     }
 
     /// main loop. interrupted flag set 시 즉시 중단.
@@ -106,7 +113,9 @@ impl LoopRunner {
             let response = match orch.run(&extracted).await {
                 Ok(r) => r,
                 Err(e) => {
-                    stop = LoopStop::Error { message: e.to_string() };
+                    stop = LoopStop::Error {
+                        message: e.to_string(),
+                    };
                     iterations.push(LoopIteration {
                         iteration: i,
                         input: extracted,
@@ -165,7 +174,10 @@ mod tests {
 
     #[test]
     fn is_success_criteria_match() {
-        assert!(LoopRunner::is_success("foo bar CI green baz", Some("CI green")));
+        assert!(LoopRunner::is_success(
+            "foo bar CI green baz",
+            Some("CI green")
+        ));
     }
 
     #[test]
@@ -176,7 +188,11 @@ mod tests {
     #[tokio::test]
     async fn run_completes_max_iterations_when_no_success() {
         let o = orch_with_mock(vec!["still going"; 5]);
-        let cfg = LoopConfig { goal: "fix all bugs".into(), success_criteria: None, max_iterations: 3 };
+        let cfg = LoopConfig {
+            goal: "fix all bugs".into(),
+            success_criteria: None,
+            max_iterations: 3,
+        };
         let runner = LoopRunner::new(cfg);
         let report = runner.run(&o).await;
         assert_eq!(report.total_iterations, 3);
@@ -190,7 +206,11 @@ mod tests {
         // 3개 응답으로 3 iter 채우고, 4번째 부터 LLM err → success 아님 → max_iterations 도달.
         // 첫 번째 LLM 응답이 success 여야 stop. LIFO reverse 로 DONE 이 3번째 pop.
         let o = orch_with_mock(vec!["DONE: all good"]);
-        let cfg = LoopConfig { goal: "implement feature".into(), success_criteria: None, max_iterations: 10 };
+        let cfg = LoopConfig {
+            goal: "implement feature".into(),
+            success_criteria: None,
+            max_iterations: 10,
+        };
         let runner = LoopRunner::new(cfg);
         let report = runner.run(&o).await;
         assert_eq!(report.total_iterations, 1);
@@ -214,7 +234,11 @@ mod tests {
     #[tokio::test]
     async fn run_stops_on_interrupt() {
         let o = orch_with_mock(vec!["..."; 5]);
-        let cfg = LoopConfig { goal: "x".into(), success_criteria: None, max_iterations: 10 };
+        let cfg = LoopConfig {
+            goal: "x".into(),
+            success_criteria: None,
+            max_iterations: 10,
+        };
         let runner = LoopRunner::new(cfg);
         let handle = runner.interrupt_handle();
         handle.store(true, std::sync::atomic::Ordering::Relaxed);
@@ -232,7 +256,11 @@ mod tests {
         let c = Arc::new(MockClient::new(ProviderId::Claude, "claude-sonnet-4-6"));
         c.push(MockResponse::Error("network down".into()));
         let o = Orchestrator::new().with_llm(c as Arc<dyn LLMClient>);
-        let cfg = LoopConfig { goal: "code review foo.rs".into(), success_criteria: None, max_iterations: 5 };
+        let cfg = LoopConfig {
+            goal: "code review foo.rs".into(),
+            success_criteria: None,
+            max_iterations: 5,
+        };
         let runner = LoopRunner::new(cfg);
         let report = runner.run(&o).await;
         assert_eq!(report.total_iterations, 5);

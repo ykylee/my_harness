@@ -76,7 +76,10 @@ impl ContextOrchestrator {
     /// # Errors
     ///
     /// This function returns an error if the underlying operation fails.
-    pub fn from_config(config: ContextConfig, cwd: &Path) -> Result<Self, crate::budget::BudgetError> {
+    pub fn from_config(
+        config: ContextConfig,
+        cwd: &Path,
+    ) -> Result<Self, crate::budget::BudgetError> {
         let manager = ContextManager::new(config.budget.clone())?;
         let builtin = BuiltinPipeline::new(config.builtin.algorithms.clone());
         let auto_memory = AutoMemory::new().ok();
@@ -86,12 +89,18 @@ impl ContextOrchestrator {
             loader = loader.without_global();
         }
         let claude_contexts = loader.discover(cwd);
-        Ok(Self { config, manager, builtin, auto_memory, claude_contexts })
+        Ok(Self {
+            config,
+            manager,
+            builtin,
+            auto_memory,
+            claude_contexts,
+        })
     }
 
     /// LLM 호출 직전 호출: 1) builtin 압축, 2) auto memory inject, 3) claude context inject.
     /// returns (`system_prompt`, messages).
-    #[must_use] 
+    #[must_use]
     pub fn prepare_request(
         &self,
         user_system: Option<String>,
@@ -119,7 +128,11 @@ impl ContextOrchestrator {
         {
             parts.push(s);
         }
-        let combined = if parts.is_empty() { None } else { Some(parts.join("\n\n")) };
+        let combined = if parts.is_empty() {
+            None
+        } else {
+            Some(parts.join("\n\n"))
+        };
 
         (combined, msgs)
     }
@@ -163,7 +176,9 @@ mod tests {
     fn load_with_context_section() {
         let dir = tempfile::tempdir().unwrap();
         let path = dir.path().join("config.toml");
-        std::fs::write(&path, r#"
+        std::fs::write(
+            &path,
+            r#"
 [context]
 [context.budget]
 max_tokens = 100000
@@ -179,7 +194,9 @@ cache_aligner = true
 content_router = true
 smart_crusher = false
 code_compressor = false
-"#).unwrap();
+"#,
+        )
+        .unwrap();
         let c = ContextConfig::load(&path).unwrap();
         assert!(c.builtin.enabled);
         assert_eq!(c.budget.max_tokens, 100_000);
@@ -202,7 +219,10 @@ code_compressor = false
     fn orchestrator_builtin_disabled_passes_through() {
         let dir = tempfile::tempdir().unwrap();
         let config = ContextConfig {
-            builtin: BuiltinLayerConfig { enabled: false, ..Default::default() },
+            builtin: BuiltinLayerConfig {
+                enabled: false,
+                ..Default::default()
+            },
             ..Default::default()
         };
         let orch = ContextOrchestrator::from_config(config, dir.path()).unwrap();
@@ -229,7 +249,8 @@ code_compressor = false
             ..Default::default()
         };
         let orch = ContextOrchestrator::from_config(config, dir.path()).unwrap();
-        let (sys, msgs) = orch.prepare_request(None, vec![crate::budget::Message::user(r#"{"b":2,"a":1}"#)]);
+        let (sys, msgs) =
+            orch.prepare_request(None, vec![crate::budget::Message::user(r#"{"b":2,"a":1}"#)]);
         // smart_crush 가 key 정렬
         assert!(msgs[0].content.find("\"a\"").unwrap() < msgs[0].content.find("\"b\"").unwrap());
         assert!(sys.is_none());

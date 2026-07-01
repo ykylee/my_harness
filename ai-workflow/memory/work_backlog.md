@@ -4,7 +4,7 @@
 - 범위: 전체 태스크 목록, 우선순위, 진행 상태, 날짜별 기록 연결
 - 대상 독자: 개발자, AI 에이전트, 프로젝트 매니저
 - 상태: stable
-- 최종 수정일: 2026-07-01 (**D-119 workspace-level lints baseline 추가 완료** — 옵션 h-1, cargo hygiene. `myharness/Cargo.toml` 에 `[workspace.lints.rust]` + `[workspace.lints.clippy]` baseline 추가 (Cargo 1.74+). 6개 lint 모두 `warn`: rust: `unsafe_code`, `missing_debug_implementations`, `rust_2018_idioms` / clippy: `module_name_repetitions`, `needless_pass_by_value`, `redundant_closure_for_method_calls`. 8 crate 자동 상속. 새 warning 0개. workspace **507/507 pass + 4 ignored** (D-118 507 → 동, 회귀 0). clippy 0 warning. 누적 결정 **67** (D-119 추가). main = D-119 commit. h-2 (cargo fmt 511 line 일괄) 는 별도 사이클 분리. 다음: (B) Anthropic / (e) TASK-002 / (h-2) cargo fmt / (i) Lark / (j) block-aware / (g-추가) TUI SubAgent dispatch. 이전: D-118 TUI snapshot test / D-117 response_type 제거 / D-116 단위 contract / D-115 base_resp / D-114 endpoint)
+- 최종 수정일: 2026-07-01 (**D-120 cargo fmt 일괄 적용 완료** — 옵션 h-2, h scope 종료. `cargo fmt` 일괄 적용 → **67 files / +1980 / -948** (rustfmt whitespace reformat only, production 의미 0 변경). `cargo fmt --check` 0 diff. workspace **507/507 pass + 4 ignored** (D-119 507 → 동, 회귀 0). clippy 0 warning. 누적 결정 **68** (D-120 추가). main = D-120 commit. h scope 종료: h-1 (D-119 lints baseline) + h-2 (D-120 fmt 일괄). 다음: (B) Anthropic / (e) TASK-002 / (i) Lark / (j) block-aware / (g-추가) TUI SubAgent dispatch. 이전: D-119 lints baseline / D-118 TUI snapshot / D-117 response_type / D-116 contract / D-115 base_resp / D-114 endpoint)
 - 관련 문서: [세션 인계](./session_handoff.md), [프로젝트 프로필](../../docs/PROJECT_PROFILE.md), [CONCEPT.md](../../docs/CONCEPT.md)
 
 ## 1. 운영 원칙

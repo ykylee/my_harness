@@ -1,6 +1,11 @@
 //! 테스트용 mock client. queue 에 적힌 응답을 순서대로 반환.
 
-#![allow(clippy::cast_possible_truncation, clippy::cast_precision_loss, clippy::cast_sign_loss, clippy::cast_possible_wrap)]
+#![allow(
+    clippy::cast_possible_truncation,
+    clippy::cast_precision_loss,
+    clippy::cast_sign_loss,
+    clippy::cast_possible_wrap
+)]
 use std::collections::VecDeque;
 use std::sync::Mutex;
 
@@ -23,7 +28,10 @@ pub enum MockResponse {
         calls: Vec<crate::client::ToolCall>,
     },
     Error(String),
-    Delay { ms: u64, then: Box<MockResponse> },
+    Delay {
+        ms: u64,
+        then: Box<MockResponse>,
+    },
 }
 
 pub struct MockClient {
@@ -147,7 +155,8 @@ fn mock_error_to_llm_error(s: &str) -> LlmError {
         LlmError::RateLimited(s.into())
     } else if lower.contains("401") || lower.contains("auth") || lower.contains("missing") {
         LlmError::AuthMissing(ProviderId::Claude) // mock 은 provider 무관하게 처리
-    } else if lower.contains("context") || lower.contains("overflow") || lower.contains("too long") {
+    } else if lower.contains("context") || lower.contains("overflow") || lower.contains("too long")
+    {
         LlmError::ContextOverflow(s.into())
     } else if lower.contains("model") && lower.contains("not") {
         LlmError::ModelNotFound(s.into())

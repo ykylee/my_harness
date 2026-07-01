@@ -16,7 +16,7 @@ use serde::{Deserialize, Serialize};
 use thiserror::Error;
 use url::Url;
 
-use crate::pkce::{generate_pkce, generate_state, PkcePair};
+use crate::pkce::{PkcePair, generate_pkce, generate_state};
 
 #[derive(Debug, Error)]
 pub enum OAuthError {
@@ -109,10 +109,7 @@ pub trait OAuthProvider: Send + Sync {
 ///
 /// # Panics
 /// provider 의 `authorize_endpoint` 가 올바른 URL 형식이 아니면 panic 발생합니다.
-pub fn build_authorize_url(
-    provider: &dyn OAuthProvider,
-    redirect_uri: &str,
-) -> AuthorizeRequest {
+pub fn build_authorize_url(provider: &dyn OAuthProvider, redirect_uri: &str) -> AuthorizeRequest {
     let state = generate_state();
     let pkce = generate_pkce();
     let mut url = Url::parse(provider.authorize_endpoint()).expect("invalid authorize endpoint");
@@ -132,7 +129,12 @@ pub fn build_authorize_url(
             q.append_pair(k, &v);
         }
     }
-    AuthorizeRequest { url, state, pkce, redirect_uri: redirect_uri.to_string() }
+    AuthorizeRequest {
+        url,
+        state,
+        pkce,
+        redirect_uri: redirect_uri.to_string(),
+    }
 }
 
 /// authorization code + PKCE verifier → access token.
@@ -164,7 +166,9 @@ pub async fn exchange_code(
     let status = resp.status();
     let body: serde_json::Value = resp.json().await?;
     if !status.is_success() {
-        return Err(OAuthError::Provider(format!("token exchange failed: {body}")));
+        return Err(OAuthError::Provider(format!(
+            "token exchange failed: {body}"
+        )));
     }
     parse_token_response(&body)
 }
@@ -189,7 +193,11 @@ pub async fn refresh_token(
     for (k, v) in provider.extra_token_params() {
         form.push((k, v));
     }
-    let resp = client.post(provider.token_endpoint()).form(&form).send().await?;
+    let resp = client
+        .post(provider.token_endpoint())
+        .form(&form)
+        .send()
+        .await?;
     let status = resp.status();
     let body: serde_json::Value = resp.json().await?;
     if !status.is_success() {
@@ -235,13 +243,27 @@ mod tests {
 
     struct MockProvider;
     impl OAuthProvider for MockProvider {
-        fn id(&self) -> &'static str { "mock" }
-        fn display_name(&self) -> &'static str { "Mock Provider" }
-        fn authorize_endpoint(&self) -> &'static str { "https://example.com/authorize" }
-        fn token_endpoint(&self) -> &'static str { "https://example.com/token" }
-        fn client_id(&self) -> &'static str { "client-123" }
-        fn client_secret(&self) -> Option<&str> { Some("secret-456") }
-        fn default_scopes(&self) -> &[&str] { &["read", "write"] }
+        fn id(&self) -> &'static str {
+            "mock"
+        }
+        fn display_name(&self) -> &'static str {
+            "Mock Provider"
+        }
+        fn authorize_endpoint(&self) -> &'static str {
+            "https://example.com/authorize"
+        }
+        fn token_endpoint(&self) -> &'static str {
+            "https://example.com/token"
+        }
+        fn client_id(&self) -> &'static str {
+            "client-123"
+        }
+        fn client_secret(&self) -> Option<&str> {
+            Some("secret-456")
+        }
+        fn default_scopes(&self) -> &[&str] {
+            &["read", "write"]
+        }
     }
 
     #[test]
@@ -260,13 +282,27 @@ mod tests {
     fn build_authorize_url_without_secret_works() {
         struct NoSecret;
         impl OAuthProvider for NoSecret {
-            fn id(&self) -> &'static str { "ns" }
-            fn display_name(&self) -> &'static str { "No Secret" }
-            fn authorize_endpoint(&self) -> &'static str { "https://example.com/authorize" }
-            fn token_endpoint(&self) -> &'static str { "https://example.com/token" }
-            fn client_id(&self) -> &'static str { "client-789" }
-            fn client_secret(&self) -> Option<&str> { None }
-            fn default_scopes(&self) -> &[&str] { &[] }
+            fn id(&self) -> &'static str {
+                "ns"
+            }
+            fn display_name(&self) -> &'static str {
+                "No Secret"
+            }
+            fn authorize_endpoint(&self) -> &'static str {
+                "https://example.com/authorize"
+            }
+            fn token_endpoint(&self) -> &'static str {
+                "https://example.com/token"
+            }
+            fn client_id(&self) -> &'static str {
+                "client-789"
+            }
+            fn client_secret(&self) -> Option<&str> {
+                None
+            }
+            fn default_scopes(&self) -> &[&str] {
+                &[]
+            }
         }
         let p = NoSecret;
         let req = build_authorize_url(&p, "http://localhost/cb");
@@ -300,6 +336,9 @@ mod tests {
     #[test]
     fn parse_token_response_missing_access_token_errors() {
         let body = serde_json::json!({"refresh_token": "rt"});
-        assert!(matches!(parse_token_response(&body), Err(OAuthError::Provider(_))));
+        assert!(matches!(
+            parse_token_response(&body),
+            Err(OAuthError::Provider(_))
+        ));
     }
 }

@@ -62,9 +62,15 @@ pub enum RegisterError {
     ConnectionRefused { url: String },
 
     #[error("HTTP {status} at {url}: {body}")]
-    HttpError { url: String, status: u16, body: String },
+    HttpError {
+        url: String,
+        status: u16,
+        body: String,
+    },
 
-    #[error("no models found at {url}: 모델을 먼저 다운로드 받으세요 (e.g., `ollama pull llama3.1`)")]
+    #[error(
+        "no models found at {url}: 모델을 먼저 다운로드 받으세요 (e.g., `ollama pull llama3.1`)"
+    )]
     NoModels { url: String },
 
     #[error("not interactive: stdin/stdout 이 tty 아님 — interactive 만 지원")]
@@ -126,8 +132,10 @@ async fn probe_ollama_tags(
             let models = parse_ollama_tags(&body);
             Ok(Some(models))
         }
-        Err(RegisterError::HttpError { status: 404, .. } | RegisterError::HttpError {
-status: 405, .. }) => Ok(None),
+        Err(
+            RegisterError::HttpError { status: 404, .. }
+            | RegisterError::HttpError { status: 405, .. },
+        ) => Ok(None),
         Err(e) => Err(e),
     }
 }
@@ -175,7 +183,9 @@ async fn fetch_json_body(
 
     let resp = req.send().await.map_err(|e| {
         if e.is_connect() || e.is_timeout() {
-            RegisterError::ConnectionRefused { url: url.to_string() }
+            RegisterError::ConnectionRefused {
+                url: url.to_string(),
+            }
         } else {
             RegisterError::HttpError {
                 url: url.to_string(),
@@ -211,16 +221,14 @@ pub(crate) fn parse_ollama_tags(body: &serde_json::Value) -> Vec<ModelInfo> {
         .map(|arr| {
             arr.iter()
                 .filter_map(|m| {
-                    m.get("name")
-                        .and_then(|n| n.as_str())
-                        .map(|s| ModelInfo {
-                            id: s.to_string(),
-                            owned_by: m
-                                .get("details")
-                                .and_then(|d| d.get("family"))
-                                .and_then(|f| f.as_str())
-                                .map(String::from),
-                        })
+                    m.get("name").and_then(|n| n.as_str()).map(|s| ModelInfo {
+                        id: s.to_string(),
+                        owned_by: m
+                            .get("details")
+                            .and_then(|d| d.get("family"))
+                            .and_then(|f| f.as_str())
+                            .map(String::from),
+                    })
                 })
                 .collect()
         })
@@ -238,10 +246,7 @@ pub(crate) fn parse_openai_models(body: &serde_json::Value) -> Vec<ModelInfo> {
                 .filter_map(|m| {
                     m.get("id").and_then(|id| id.as_str()).map(|s| ModelInfo {
                         id: s.to_string(),
-                        owned_by: m
-                            .get("owned_by")
-                            .and_then(|o| o.as_str())
-                            .map(String::from),
+                        owned_by: m.get("owned_by").and_then(|o| o.as_str()).map(String::from),
                     })
                 })
                 .collect()
@@ -278,7 +283,14 @@ pub async fn register_local_provider(
     available_models: Vec<ModelInfo>,
 ) -> Result<RegisterReport, RegisterError> {
     let store = KeyringAuthStore::probe();
-    register_local_provider_with_store(&base_url, token.as_deref(), &selected_model, &available_models, &store).await
+    register_local_provider_with_store(
+        &base_url,
+        token.as_deref(),
+        &selected_model,
+        &available_models,
+        &store,
+    )
+    .await
 }
 
 ///
@@ -378,7 +390,13 @@ pub async fn register_local_provider_non_interactive(
     model_id: String,
 ) -> Result<RegisterReport, RegisterError> {
     let store = KeyringAuthStore::probe();
-    register_local_provider_non_interactive_with_store(&base_url, token.as_deref(), &model_id, &store).await
+    register_local_provider_non_interactive_with_store(
+        &base_url,
+        token.as_deref(),
+        &model_id,
+        &store,
+    )
+    .await
 }
 
 ///
@@ -436,11 +454,8 @@ pub(crate) fn atomic_write(path: &Path, content: &str) -> std::io::Result<()> {
 /// # Returns
 /// - `Some(backup_path)`: backup 성공 (또는 skip)
 /// - `None`: backup 시도했으나 실패 (warn 만, register 계속)
-#[must_use] 
-pub fn backup_providers_toml(
-    path: &Path,
-    max_backups: usize,
-) -> Option<std::path::PathBuf> {
+#[must_use]
+pub fn backup_providers_toml(path: &Path, max_backups: usize) -> Option<std::path::PathBuf> {
     if !path.exists() {
         return Some(path.to_path_buf());
     }
@@ -483,10 +498,14 @@ fn with_backup_suffix(path: &Path, ts: u64, hash8: &str) -> std::path::PathBuf {
 /// '9' > '1' 으로 retention 거꾸로 동작. **numeric parse** 로 `unix_ts` 추출 후 정렬.
 /// hash suffix 는 tie-breaker (동일 ts 시 stable sort) — 동일 ts 내 여러 backup 보존.
 fn cleanup_old_backups(path: &Path, max_backups: usize) -> std::io::Result<()> {
-    let Some(parent) = path.parent() else { return Ok(()) };
+    let Some(parent) = path.parent() else {
+        return Ok(());
+    };
     let prefix = format!(
         "{}.backup.",
-        path.file_name().and_then(|s| s.to_str()).unwrap_or("providers.toml")
+        path.file_name()
+            .and_then(|s| s.to_str())
+            .unwrap_or("providers.toml")
     );
     let mut backups: Vec<_> = std::fs::read_dir(parent)?
         .filter_map(std::result::Result::ok)
@@ -564,7 +583,9 @@ mod tests {
         // SAFETY: test 전용 env mutation. parallel test 시 충돌 가능 → 본 TC 는 serial 가정
         // (CI 에서 cargo test --workspace 시 tempfile 격리로 안전)
         // SAFETY: test 전용 env mutation
-        unsafe { std::env::set_var("MYHARNESS_HOME", tmp.path()); }
+        unsafe {
+            std::env::set_var("MYHARNESS_HOME", tmp.path());
+        }
 
         let report = register_local_provider(
             "http://localhost:11434/v1".into(),
@@ -599,14 +620,18 @@ mod tests {
         assert!(content.contains("llama3.1"));
 
         // SAFETY: test 전용 env cleanup
-        unsafe { std::env::remove_var("MYHARNESS_HOME"); }
+        unsafe {
+            std::env::remove_var("MYHARNESS_HOME");
+        }
     }
 
     #[tokio::test]
     #[serial_test::serial(env)]
     async fn tc_w17_004_non_interactive_empty_model_id() {
         let tmp = tempfile::tempdir().unwrap();
-        unsafe { std::env::set_var("MYHARNESS_HOME", tmp.path()); }
+        unsafe {
+            std::env::set_var("MYHARNESS_HOME", tmp.path());
+        }
 
         // 빈 model_id 도 register 자체는 성공 (사용자 책임) — 단 available_models 에 빈 string 1개
         let report = register_local_provider_non_interactive(
@@ -619,7 +644,9 @@ mod tests {
 
         assert_eq!(report.model_id, "");
         assert_eq!(report.available_models, vec![String::new()]);
-        unsafe { std::env::remove_var("MYHARNESS_HOME"); }
+        unsafe {
+            std::env::remove_var("MYHARNESS_HOME");
+        }
     }
 
     // ── W18 (v1.5 R-4 대응) backup TC ─────────────────────────────────────────
@@ -628,14 +655,22 @@ mod tests {
     #[serial_test::serial(env)]
     async fn tc_w18_001_backup_created_before_overwrite() {
         let tmp = tempfile::tempdir().unwrap();
-        unsafe { std::env::set_var("MYHARNESS_HOME", tmp.path()); }
+        unsafe {
+            std::env::set_var("MYHARNESS_HOME", tmp.path());
+        }
 
         // 1) 첫 register — providers.toml 신규 생성 (backup ❌)
         let r1 = register_local_provider(
             "http://localhost:11434/v1".into(),
             None,
-            ModelInfo { id: "llama3.1".into(), owned_by: None },
-            vec![ModelInfo { id: "llama3.1".into(), owned_by: None }],
+            ModelInfo {
+                id: "llama3.1".into(),
+                owned_by: None,
+            },
+            vec![ModelInfo {
+                id: "llama3.1".into(),
+                owned_by: None,
+            }],
         )
         .await
         .unwrap();
@@ -657,8 +692,14 @@ mod tests {
         let _r2 = register_local_provider(
             "http://localhost:11434/v1".into(),
             None,
-            ModelInfo { id: "qwen2.5".into(), owned_by: None },
-            vec![ModelInfo { id: "qwen2.5".into(), owned_by: None }],
+            ModelInfo {
+                id: "qwen2.5".into(),
+                owned_by: None,
+            },
+            vec![ModelInfo {
+                id: "qwen2.5".into(),
+                owned_by: None,
+            }],
         )
         .await
         .unwrap();
@@ -673,20 +714,27 @@ mod tests {
         // backup 내용 = 첫 번째 write (llama3.1)
         let backup_content = std::fs::read_to_string(backups_after_second[0].path()).unwrap();
         assert!(backup_content.contains("llama3.1"));
-        assert!(!backup_content.contains("qwen2.5"), "backup 은 덮어쓰기 전 상태");
+        assert!(
+            !backup_content.contains("qwen2.5"),
+            "backup 은 덮어쓰기 전 상태"
+        );
 
         // 현재 providers.toml = 두 번째 write (qwen2.5)
         let current = std::fs::read_to_string(&toml_path).unwrap();
         assert!(current.contains("qwen2.5"));
 
-        unsafe { std::env::remove_var("MYHARNESS_HOME"); }
+        unsafe {
+            std::env::remove_var("MYHARNESS_HOME");
+        }
     }
 
     #[tokio::test]
     #[serial_test::serial(env)]
     async fn tc_w18_002_backup_max_retention_5() {
         let tmp = tempfile::tempdir().unwrap();
-        unsafe { std::env::set_var("MYHARNESS_HOME", tmp.path()); }
+        unsafe {
+            std::env::set_var("MYHARNESS_HOME", tmp.path());
+        }
 
         // 7번 연속 register → backup 6개 생성 시도 → max_backups=5 로 oldest 1개 삭제
         for i in 0..7 {
@@ -697,8 +745,14 @@ mod tests {
             let _ = register_local_provider(
                 "http://localhost:11434/v1".into(),
                 None,
-                ModelInfo { id: format!("m{i}"), owned_by: None },
-                vec![ModelInfo { id: format!("m{i}"), owned_by: None }],
+                ModelInfo {
+                    id: format!("m{i}"),
+                    owned_by: None,
+                },
+                vec![ModelInfo {
+                    id: format!("m{i}"),
+                    owned_by: None,
+                }],
             )
             .await
             .unwrap();
@@ -712,13 +766,11 @@ mod tests {
         // 6번 backup (1~6번 write 각각) + cleanup → 5개 이하
         // 첫 번째 write 는 backup ❌, 두 번째부터 backup
         // → 6번 backup 시도 → max 5개 유지 → 5개
-        assert!(
-            backups.len() <= 5,
-            "max 5개 유지, 실제 {}개",
-            backups.len()
-        );
+        assert!(backups.len() <= 5, "max 5개 유지, 실제 {}개", backups.len());
 
-        unsafe { std::env::remove_var("MYHARNESS_HOME"); }
+        unsafe {
+            std::env::remove_var("MYHARNESS_HOME");
+        }
     }
 
     #[test]
@@ -740,7 +792,9 @@ mod tests {
     async fn tc_w17_001_non_interactive_no_token() {
         let tmp = tempfile::tempdir().unwrap();
         // SAFETY: serial_test::serial(env) 로 다른 env-mutating test 와 직렬화
-        unsafe { std::env::set_var("MYHARNESS_HOME", tmp.path()); }
+        unsafe {
+            std::env::set_var("MYHARNESS_HOME", tmp.path());
+        }
 
         let report = register_local_provider_non_interactive(
             "http://localhost:11434/v1".into(),
@@ -767,14 +821,18 @@ mod tests {
         );
         assert!(content.contains("llama3.1:8b"));
 
-        unsafe { std::env::remove_var("MYHARNESS_HOME"); }
+        unsafe {
+            std::env::remove_var("MYHARNESS_HOME");
+        }
     }
 
     #[tokio::test]
     #[serial_test::serial(env)]
     async fn tc_w17_002_non_interactive_with_token() {
         let tmp = tempfile::tempdir().unwrap();
-        unsafe { std::env::set_var("MYHARNESS_HOME", tmp.path()); }
+        unsafe {
+            std::env::set_var("MYHARNESS_HOME", tmp.path());
+        }
 
         // W19-1 (D-62 follow-up): store 1개 만들어서 with_store 에 전달 — cache lifecycle 단일화
         let store = KeyringAuthStore::probe();
@@ -798,18 +856,17 @@ mod tests {
         } else {
             assert!(report.token_saved);
         }
-        unsafe { std::env::remove_var("MYHARNESS_HOME"); }
+        unsafe {
+            std::env::remove_var("MYHARNESS_HOME");
+        }
     }
 
     #[tokio::test]
     async fn tc_w17_003_non_interactive_invalid_url() {
-        let err = register_local_provider_non_interactive(
-            "not a url at all".into(),
-            None,
-            "x".into(),
-        )
-        .await
-        .unwrap_err();
+        let err =
+            register_local_provider_non_interactive("not a url at all".into(), None, "x".into())
+                .await
+                .unwrap_err();
         assert!(matches!(err, RegisterError::InvalidUrl(_)));
         assert!(err.to_string().contains("invalid URL"));
     }
@@ -822,7 +879,9 @@ mod tests {
     #[serial_test::serial(env)]
     async fn tc_w19_001_with_store_same_instance_shares_cache() {
         let tmp = tempfile::tempdir().unwrap();
-        unsafe { std::env::set_var("MYHARNESS_HOME", tmp.path()); }
+        unsafe {
+            std::env::set_var("MYHARNESS_HOME", tmp.path());
+        }
 
         let store = KeyringAuthStore::probe();
         let selected = ModelInfo {
@@ -843,7 +902,9 @@ mod tests {
         let cached = store.get(ProviderId::LocalLlm).await.unwrap();
         assert_eq!(cached.as_deref(), Some("w19-token-abc"));
 
-        unsafe { std::env::remove_var("MYHARNESS_HOME"); }
+        unsafe {
+            std::env::remove_var("MYHARNESS_HOME");
+        }
     }
 
     /// TC-W19-002: store 주입 변형 + `token = None` 일 때 `token_saved = false` + cache 무변경.
@@ -851,7 +912,9 @@ mod tests {
     #[serial_test::serial(env)]
     async fn tc_w19_002_with_store_none_token_no_save() {
         let tmp = tempfile::tempdir().unwrap();
-        unsafe { std::env::set_var("MYHARNESS_HOME", tmp.path()); }
+        unsafe {
+            std::env::set_var("MYHARNESS_HOME", tmp.path());
+        }
 
         let store = KeyringAuthStore::probe();
         let selected = ModelInfo {
@@ -874,13 +937,18 @@ mod tests {
         // backend 있는 환경: cache miss + 영구 저장소 미스 → Ok(None)
         if store.backend() == crate::KeyringBackend::None {
             let r = store.get(ProviderId::LocalLlm).await;
-            assert!(r.is_err(), "token=None + backend=None → BackendUnavailable, got {r:?}");
+            assert!(
+                r.is_err(),
+                "token=None + backend=None → BackendUnavailable, got {r:?}"
+            );
         } else {
             let cached = store.get(ProviderId::LocalLlm).await.unwrap();
             assert_eq!(cached, None, "token=None 시 store cache 도 비어있어야");
         }
 
-        unsafe { std::env::remove_var("MYHARNESS_HOME"); }
+        unsafe {
+            std::env::remove_var("MYHARNESS_HOME");
+        }
     }
 
     /// TC-W19-003: store A (caller) 와 별개 store B (wrapper 내부) 는 in-memory cache 공유 안 함.
@@ -890,7 +958,9 @@ mod tests {
     #[serial_test::serial(env)]
     async fn tc_w19_003_thin_wrapper_creates_separate_store() {
         let tmp = tempfile::tempdir().unwrap();
-        unsafe { std::env::set_var("MYHARNESS_HOME", tmp.path()); }
+        unsafe {
+            std::env::set_var("MYHARNESS_HOME", tmp.path());
+        }
 
         let store_outer = KeyringAuthStore::probe();
         let report = register_local_provider(
@@ -911,10 +981,15 @@ mod tests {
         assert!(report.token_saved);
         if store_outer.backend() == crate::KeyringBackend::None {
             let r = store_outer.get(ProviderId::LocalLlm).await;
-            assert!(r.is_err(), "outer store 에는 token 이 없어야 (별개 instance), got {r:?}");
+            assert!(
+                r.is_err(),
+                "outer store 에는 token 이 없어야 (별개 instance), got {r:?}"
+            );
         }
 
-        unsafe { std::env::remove_var("MYHARNESS_HOME"); }
+        unsafe {
+            std::env::remove_var("MYHARNESS_HOME");
+        }
     }
 
     // ── W21 (v1.5 D-64 F-1+F-2) backup filename + sort fix ─────────────────────
@@ -924,7 +999,9 @@ mod tests {
     #[serial_test::serial(env)]
     async fn tc_w21_001_backup_filename_includes_hash8() {
         let tmp = tempfile::tempdir().unwrap();
-        unsafe { std::env::set_var("MYHARNESS_HOME", tmp.path()); }
+        unsafe {
+            std::env::set_var("MYHARNESS_HOME", tmp.path());
+        }
 
         let toml_path = tmp.path().join("providers.toml");
         std::fs::write(&toml_path, "[placeholder]\n").unwrap();
@@ -937,11 +1014,21 @@ mod tests {
         let suffix = &name[prefix.len()..];
         let parts: Vec<_> = suffix.split('.').collect();
         assert_eq!(parts.len(), 2, "expected <ts>.<hash8>, got {suffix}");
-        assert!(parts[0].parse::<u64>().is_ok(), "ts not numeric: {}", parts[0]);
+        assert!(
+            parts[0].parse::<u64>().is_ok(),
+            "ts not numeric: {}",
+            parts[0]
+        );
         assert_eq!(parts[1].len(), 8, "hash8 must be 8-char, got {}", parts[1]);
-        assert!(parts[1].chars().all(|c| c.is_ascii_hexdigit()), "hash8 not hex: {}", parts[1]);
+        assert!(
+            parts[1].chars().all(|c| c.is_ascii_hexdigit()),
+            "hash8 not hex: {}",
+            parts[1]
+        );
 
-        unsafe { std::env::remove_var("MYHARNESS_HOME"); }
+        unsafe {
+            std::env::remove_var("MYHARNESS_HOME");
+        }
     }
 
     /// TC-W21-002 — `cleanup_old_backups` sort 정확도 (D-64 fix)
@@ -952,7 +1039,9 @@ mod tests {
     #[serial_test::serial(env)]
     async fn tc_w21_002_cleanup_old_backups_uses_numeric_sort() {
         let tmp = tempfile::tempdir().unwrap();
-        unsafe { std::env::set_var("MYHARNESS_HOME", tmp.path()); }
+        unsafe {
+            std::env::set_var("MYHARNESS_HOME", tmp.path());
+        }
 
         // 8개 backup 파일 (ts=100~107) — string sort 와 numeric sort 가 다른 순서를 보이는 구간
         for ts in 100u64..108 {
@@ -988,9 +1077,15 @@ mod tests {
         assert_eq!(remaining.len(), 5, "remaining 5개여야, got {remaining:?}");
         assert_eq!(remaining[0], 104, "104 가 가장 오래된 남은 ts 여야");
         assert_eq!(remaining[3], 107, "107 가 두번째 신선한 ts 여야");
-        assert!(remaining[4] >= 108, "마지막은 새 backup (ts={}, >= 108)", remaining[4]);
+        assert!(
+            remaining[4] >= 108,
+            "마지막은 새 backup (ts={}, >= 108)",
+            remaining[4]
+        );
 
-        unsafe { std::env::remove_var("MYHARNESS_HOME"); }
+        unsafe {
+            std::env::remove_var("MYHARNESS_HOME");
+        }
     }
 
     /// TC-W21-003 — sub-second 연속 backup (sleep 없이) → 모두 다른 filename 보존 (D-64 F-1+F-2 핵심)
@@ -1002,7 +1097,9 @@ mod tests {
     #[serial_test::serial(env)]
     async fn tc_w21_003_subsecond_backups_all_preserved_with_distinct_hashes() {
         let tmp = tempfile::tempdir().unwrap();
-        unsafe { std::env::set_var("MYHARNESS_HOME", tmp.path()); }
+        unsafe {
+            std::env::set_var("MYHARNESS_HOME", tmp.path());
+        }
 
         let toml_path = tmp.path().join("providers.toml");
         std::fs::write(&toml_path, "v1\n").unwrap();
@@ -1021,7 +1118,11 @@ mod tests {
                     .starts_with("providers.toml.backup.")
             })
             .collect();
-        assert_eq!(backups.len(), 3, "3개 backup 모두 보존되어야, got {backups:?}");
+        assert_eq!(
+            backups.len(),
+            3,
+            "3개 backup 모두 보존되어야, got {backups:?}"
+        );
 
         let mut contents: Vec<String> = backups
             .iter()
@@ -1032,7 +1133,9 @@ mod tests {
         assert!(contents.iter().any(|c| c == "v2\n"));
         assert!(contents.iter().any(|c| c == "v3\n"));
 
-        unsafe { std::env::remove_var("MYHARNESS_HOME"); }
+        unsafe {
+            std::env::remove_var("MYHARNESS_HOME");
+        }
     }
 
     /// TC-W21-004 — 동일 content 백업 시 hash 동일 (deterministic)
@@ -1040,7 +1143,9 @@ mod tests {
     #[serial_test::serial(env)]
     async fn tc_w21_004_same_content_same_hash_deterministic() {
         let tmp = tempfile::tempdir().unwrap();
-        unsafe { std::env::set_var("MYHARNESS_HOME", tmp.path()); }
+        unsafe {
+            std::env::set_var("MYHARNESS_HOME", tmp.path());
+        }
 
         let toml_path = tmp.path().join("providers.toml");
         std::fs::write(&toml_path, "identical-content\n").unwrap();
@@ -1054,7 +1159,8 @@ mod tests {
         let h2 = n2.rsplit('.').next().unwrap();
         assert_eq!(h1, h2, "동일 content → 동일 hash8: {n1} vs {n2}");
 
-        unsafe { std::env::remove_var("MYHARNESS_HOME"); }
+        unsafe {
+            std::env::remove_var("MYHARNESS_HOME");
+        }
     }
 }
-

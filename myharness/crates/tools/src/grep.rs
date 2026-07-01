@@ -51,15 +51,16 @@ impl Tool for GrepTool {
             .and_then(|v| v.as_str())
             .ok_or_else(|| ToolError::InvalidInput("missing pattern".into()))?;
 
-        let search_path = input
-            .get("path")
-            .and_then(|v| v.as_str()).map_or_else(|| ctx.cwd.clone(), |p| {
+        let search_path = input.get("path").and_then(|v| v.as_str()).map_or_else(
+            || ctx.cwd.clone(),
+            |p| {
                 if PathBuf::from(p).is_absolute() {
                     PathBuf::from(p)
                 } else {
                     ctx.cwd.join(p)
                 }
-            });
+            },
+        );
 
         let include_filter = input.get("include").and_then(|v| v.as_str());
 

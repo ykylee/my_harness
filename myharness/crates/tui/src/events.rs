@@ -23,7 +23,10 @@ impl TtyGuard {
         let mut stdout = io::stdout();
         enable_raw_mode()?;
         execute!(stdout, EnterAlternateScreen)?;
-        Ok(Self { stdout, active: true })
+        Ok(Self {
+            stdout,
+            active: true,
+        })
     }
 
     /// # Errors
@@ -62,7 +65,7 @@ pub enum AppKey {
 }
 
 impl AppKey {
-    #[must_use] 
+    #[must_use]
     #[allow(clippy::needless_pass_by_value)]
     pub fn from_crossterm(event: Event) -> Option<Self> {
         match event {
@@ -72,7 +75,11 @@ impl AppKey {
                 kind: KeyEventKind::Press,
                 ..
             }) => Some(AppKey::CtrlC),
-            Event::Key(KeyEvent { kind: KeyEventKind::Press, code, .. }) => match code {
+            Event::Key(KeyEvent {
+                kind: KeyEventKind::Press,
+                code,
+                ..
+            }) => match code {
                 KeyCode::Char(c) => Some(AppKey::Char(c)),
                 KeyCode::Enter => Some(AppKey::Enter),
                 KeyCode::Backspace => Some(AppKey::Backspace),

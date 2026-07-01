@@ -33,7 +33,7 @@ pub struct InMemoryAuthStore {
 }
 
 impl InMemoryAuthStore {
-    #[must_use] 
+    #[must_use]
     pub fn new() -> Self {
         Self::default()
     }
@@ -74,7 +74,10 @@ mod tests {
         assert!(s.get(ProviderId::Claude).await.unwrap().is_none());
         s.set(ProviderId::Claude, "k1").await.unwrap();
         s.set(ProviderId::Codex, "k2").await.unwrap();
-        assert_eq!(s.get(ProviderId::Claude).await.unwrap().as_deref(), Some("k1"));
+        assert_eq!(
+            s.get(ProviderId::Claude).await.unwrap().as_deref(),
+            Some("k1")
+        );
         let ids = s.list().await.unwrap();
         assert_eq!(ids.len(), 2);
         s.clear(ProviderId::Claude).await.unwrap();
@@ -86,7 +89,10 @@ mod tests {
         let s = InMemoryAuthStore::new();
         s.set(ProviderId::Claude, "v1").await.unwrap();
         s.set(ProviderId::Claude, "v2").await.unwrap();
-        assert_eq!(s.get(ProviderId::Claude).await.unwrap().as_deref(), Some("v2"));
+        assert_eq!(
+            s.get(ProviderId::Claude).await.unwrap().as_deref(),
+            Some("v2")
+        );
     }
 
     #[tokio::test]

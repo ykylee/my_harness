@@ -103,14 +103,34 @@ impl Orchestrator {
                 return DispatchDecision {
                     kind,
                     dispatch: DispatchKind::Direct,
-                    extracted_input: if extracted.is_empty() { user_input.to_string() } else { extracted },
+                    extracted_input: if extracted.is_empty() {
+                        user_input.to_string()
+                    } else {
+                        extracted
+                    },
                 };
             }
         }
 
         // 2) domain keyword 매칭
-        let code_kw = ["review", "refactor", "implement", "fix", "bug", "function", "class"];
-        let env_kw = ["environment", "env ", "path", "version", "rust ", "node ", "python "];
+        let code_kw = [
+            "review",
+            "refactor",
+            "implement",
+            "fix",
+            "bug",
+            "function",
+            "class",
+        ];
+        let env_kw = [
+            "environment",
+            "env ",
+            "path",
+            "version",
+            "rust ",
+            "node ",
+            "python ",
+        ];
         let git_kw = ["commit", "branch", "merge", "pr", "push", "pull", "rebase"];
 
         if code_kw.iter().any(|k| lower.contains(k)) {
@@ -179,7 +199,9 @@ impl Orchestrator {
                 crate::agent::tool_spec_section(agent.def().allowed_tools)
             );
             let mut messages: Vec<myharness_llm::client::Message> =
-                vec![myharness_llm::client::Message::user(decision.extracted_input.clone())];
+                vec![myharness_llm::client::Message::user(
+                    decision.extracted_input.clone(),
+                )];
 
             // D-102 (2026-06-30) — 같은 tool_call (name+canonical_args) 가 2회 이상이면 loop break + synthetic final prompt.
             let mut call_counts: std::collections::HashMap<String, u32> =
@@ -270,7 +292,11 @@ impl Orchestrator {
                                     tc.name.clone(),
                                 ));
                                 let truncated = if tool_result_text.len() > 2000 {
-                                    format!("{}…[truncated {} chars]", &tool_result_text[..2000], tool_result_text.len() - 2000)
+                                    format!(
+                                        "{}…[truncated {} chars]",
+                                        &tool_result_text[..2000],
+                                        tool_result_text.len() - 2000
+                                    )
                                 } else {
                                     tool_result_text.clone()
                                 };
@@ -336,17 +362,14 @@ impl Orchestrator {
                             }
 
                             // tool dispatch (AcceptEdits + confirm_override true → prompt skip)
-                            let (tool_result_text, tool_is_error) = match self
-                                .dispatch_tool_call(&name, args)
-                                .await
-                            {
-                                Ok(text) => (text, false),
-                                Err(e) => (format!("[tool-error] {e}"), true),
-                            };
+                            let (tool_result_text, tool_is_error) =
+                                match self.dispatch_tool_call(&name, args).await {
+                                    Ok(text) => (text, false),
+                                    Err(e) => (format!("[tool-error] {e}"), true),
+                                };
                             // 결과를 assistant 응답 + tool 메시지로 메시지 추가 → 다음 round
-                            messages.push(myharness_llm::client::Message::assistant(
-                                r.content.clone(),
-                            ));
+                            messages
+                                .push(myharness_llm::client::Message::assistant(r.content.clone()));
                             messages.push(myharness_llm::client::Message::tool(
                                 tool_result_text.clone(),
                                 name.clone(),
@@ -354,7 +377,11 @@ impl Orchestrator {
                             // D-101 (2026-06-30) — tool result 를 response 에도 누적 (이전엔 "[tool_call] X → ok" 만)
                             // 너무 길면 첫 2000자만 출력 (response 가독성)
                             let truncated = if tool_result_text.len() > 2000 {
-                                format!("{}…[truncated {} chars]", &tool_result_text[..2000], tool_result_text.len() - 2000)
+                                format!(
+                                    "{}…[truncated {} chars]",
+                                    &tool_result_text[..2000],
+                                    tool_result_text.len() - 2000
+                                )
                             } else {
                                 tool_result_text.clone()
                             };
@@ -409,11 +436,9 @@ impl Orchestrator {
             .get(name)
             .ok_or_else(|| SubAgentError::Tool(format!("tool not found: {name}")))?;
         let cwd = std::env::current_dir().unwrap_or_else(|_| std::path::PathBuf::from("."));
-        let ctx = myharness_tools::ToolContext::new(
-            cwd,
-            myharness_tools::PermissionMode::AcceptEdits,
-        )
-        .with_confirm_override(true); // D-101: 비대화형 hang 방지
+        let ctx =
+            myharness_tools::ToolContext::new(cwd, myharness_tools::PermissionMode::AcceptEdits)
+                .with_confirm_override(true); // D-101: 비대화형 hang 방지
         match tool.execute(&ctx, args).await {
             Ok(r) => Ok(r.output),
             Err(e) => Err(SubAgentError::Tool(e.to_string())),
@@ -458,8 +483,12 @@ fn extract_tool_call(content: &str) -> Option<(String, serde_json::Value)> {
 /// `Tool` impl so the OpenAI-compat wire format (D-108 follow-up) can
 /// emit real `function.description` + `function.parameters` fields.
 /// Empty registry → empty vec.
-fn tool_specs_for(registry: Option<&myharness_tools::ToolRegistry>) -> Vec<myharness_llm::client::ToolSpec> {
-    let Some(reg) = registry else { return Vec::new() };
+fn tool_specs_for(
+    registry: Option<&myharness_tools::ToolRegistry>,
+) -> Vec<myharness_llm::client::ToolSpec> {
+    let Some(reg) = registry else {
+        return Vec::new();
+    };
     reg.names()
         .into_iter()
         .map(|n| {
@@ -632,7 +661,10 @@ mod tests {
 
     #[test]
     fn strip_prefix_ci_basic() {
-        assert_eq!(("Code Review foo").strip_prefix_ci("code "), Some("Review foo"));
+        assert_eq!(
+            ("Code Review foo").strip_prefix_ci("code "),
+            Some("Review foo")
+        );
         assert_eq!(("xyz").strip_prefix_ci("code "), None);
     }
 
@@ -678,13 +710,11 @@ Then I'll analyze."#;
             r#"```tool_call
 {"name": "Read", "args": {"file_path": "Cargo.toml"}}
 ```"#
-            .into(),
+                .into(),
         ));
         c.push(MockResponse::Text("After reading: looks good.".into()));
         let reg = Arc::new(myharness_tools::ToolRegistry::default_tools());
-        let o = Orchestrator::new()
-            .with_llm(c.clone())
-            .with_tools(reg);
+        let o = Orchestrator::new().with_llm(c.clone()).with_tools(reg);
         let out = o.run("code review").await.unwrap();
         assert!(out.contains("[tool_call] Read"));
         assert!(out.contains("After reading: looks good."));
@@ -697,9 +727,7 @@ Then I'll analyze."#;
         let c = Arc::new(MockClient::new(ProviderId::Claude, "claude-sonnet-4-6"));
         c.push(MockResponse::Text("plain answer, no tools needed".into()));
         let reg = Arc::new(myharness_tools::ToolRegistry::default_tools());
-        let o = Orchestrator::new()
-            .with_llm(c.clone())
-            .with_tools(reg);
+        let o = Orchestrator::new().with_llm(c.clone()).with_tools(reg);
         let out = o.run("code review").await.unwrap();
         assert!(out.contains("plain answer"));
         assert!(!out.contains("[tool_call]"));
@@ -730,17 +758,18 @@ Then I'll analyze."#;
             r#"```tool_call
 {"name": "Bash", "args": {"command": "echo hello-d101"}}
 ```"#
-            .into(),
+                .into(),
         ));
         c.push(MockResponse::Text("done.".into()));
         let reg = Arc::new(myharness_tools::ToolRegistry::default_tools());
-        let o = Orchestrator::new()
-            .with_llm(c.clone())
-            .with_tools(reg);
+        let o = Orchestrator::new().with_llm(c.clone()).with_tools(reg);
         let out = o.run("env diagnose").await.unwrap();
         assert!(out.contains("[tool_call] Bash"));
         assert!(out.contains("[tool_result]"));
-        assert!(out.contains("hello-d101"), "tool stdout visible in response: {out}");
+        assert!(
+            out.contains("hello-d101"),
+            "tool stdout visible in response: {out}"
+        );
         assert!(out.contains("done."));
         assert_eq!(c.calls.lock().unwrap().len(), 2);
     }
@@ -753,13 +782,13 @@ Then I'll analyze."#;
             r#"```tool_call
 {"name": "Bash", "args": {"command": "echo r1"}}
 ```"#
-            .into(),
+                .into(),
         ));
         c.push(MockResponse::Text(
             r#"```tool_call
 {"name": "Bash", "args": {"command": "echo r2"}}
 ```"#
-            .into(),
+                .into(),
         ));
         // 3rd 응답은 안 옴 (max round 초과로 dispatch 중단)
         let reg = Arc::new(myharness_tools::ToolRegistry::default_tools());
@@ -817,19 +846,17 @@ Then I'll analyze."#;
             r#"```tool_call
 {"name": "Bash", "args": {"command": "echo dup"}}
 ```"#
-            .into(),
+                .into(),
         ));
         c.push(MockResponse::Text(
             r#"```tool_call
 {"name": "Bash", "args": {"command": "echo dup"}}
 ```"#
-            .into(),
+                .into(),
         ));
         c.push(MockResponse::Text("FINAL: enough info, done.".into()));
         let reg = Arc::new(myharness_tools::ToolRegistry::default_tools());
-        let o = Orchestrator::new()
-            .with_llm(c.clone())
-            .with_tools(reg);
+        let o = Orchestrator::new().with_llm(c.clone()).with_tools(reg);
         let out = o.run("env diagnose").await.unwrap();
         assert!(out.contains("[tool-loop-detected]"));
         assert!(out.contains("repeated"));
@@ -845,19 +872,17 @@ Then I'll analyze."#;
             r#"```tool_call
 {"name": "Bash", "args": {"command": "echo r1"}}
 ```"#
-            .into(),
+                .into(),
         ));
         c.push(MockResponse::Text(
             r#"```tool_call
 {"name": "Bash", "args": {"command": "echo r2"}}
 ```"#
-            .into(),
+                .into(),
         ));
         c.push(MockResponse::Text("done.".into()));
         let reg = Arc::new(myharness_tools::ToolRegistry::default_tools());
-        let o = Orchestrator::new()
-            .with_llm(c.clone())
-            .with_tools(reg);
+        let o = Orchestrator::new().with_llm(c.clone()).with_tools(reg);
         let out = o.run("env diagnose").await.unwrap();
         assert!(!out.contains("[tool-loop-detected]"));
         assert!(out.contains("done."));
@@ -866,7 +891,11 @@ Then I'll analyze."#;
 
     // --- A-proper native tool calling (D-108) ---------------------------------
 
-    fn native_call(id: &str, name: &str, args: serde_json::Value) -> myharness_llm::client::ToolCall {
+    fn native_call(
+        id: &str,
+        name: &str,
+        args: serde_json::Value,
+    ) -> myharness_llm::client::ToolCall {
         myharness_llm::client::ToolCall {
             id: id.into(),
             name: name.into(),
@@ -890,9 +919,7 @@ Then I'll analyze."#;
         });
         c.push(MockResponse::Text("all done.".into()));
         let reg = Arc::new(myharness_tools::ToolRegistry::default_tools());
-        let o = Orchestrator::new()
-            .with_llm(c.clone())
-            .with_tools(reg);
+        let o = Orchestrator::new().with_llm(c.clone()).with_tools(reg);
         let out = o.run("env diagnose").await.unwrap();
         assert!(out.contains("[tool_call-native] Bash (ok)"), "out: {out}");
         assert!(out.contains("[LLM] all done."), "out: {out}");
@@ -906,15 +933,16 @@ Then I'll analyze."#;
         let c = Arc::new(MockClient::new(ProviderId::Claude, "claude-sonnet-4-6"));
         c.push(MockResponse::Text("ok".into()));
         let reg = Arc::new(myharness_tools::ToolRegistry::default_tools());
-        let o = Orchestrator::new()
-            .with_llm(c.clone())
-            .with_tools(reg);
+        let o = Orchestrator::new().with_llm(c.clone()).with_tools(reg);
         let _ = o.run("hi").await.unwrap();
         let calls = c.calls.lock().unwrap();
         assert_eq!(calls.len(), 1);
         let names: Vec<&str> = calls[0].tools.iter().map(|t| t.name.as_str()).collect();
         for required in ["Bash", "Edit", "Glob", "Grep", "Read", "Write"] {
-            assert!(names.contains(&required), "missing tool {required} in {names:?}");
+            assert!(
+                names.contains(&required),
+                "missing tool {required} in {names:?}"
+            );
         }
     }
 
@@ -937,15 +965,16 @@ Then I'll analyze."#;
         });
         c.push(MockResponse::Text("ok".into()));
         let reg = Arc::new(myharness_tools::ToolRegistry::default_tools());
-        let o = Orchestrator::new()
-            .with_llm(c.clone())
-            .with_tools(reg);
+        let o = Orchestrator::new().with_llm(c.clone()).with_tools(reg);
         let out = o.run("hi").await.unwrap();
         // Exactly one dispatch — the native one, not the text one.
         let native_count = out.matches("[tool_call-native]").count();
         let text_count = out.matches("[tool_call] Bash (ok)").count();
         assert_eq!(native_count, 1, "expected 1 native dispatch, out: {out}");
-        assert_eq!(text_count, 0, "expected 0 text-based dispatches, out: {out}");
+        assert_eq!(
+            text_count, 0,
+            "expected 0 text-based dispatches, out: {out}"
+        );
     }
 
     #[tokio::test]

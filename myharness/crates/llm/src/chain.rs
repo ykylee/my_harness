@@ -2,7 +2,12 @@
 //!
 //! load/save: `~/.myharness/state/active-providers.toml`
 
-#![allow(clippy::cast_possible_truncation, clippy::cast_precision_loss, clippy::cast_sign_loss, clippy::cast_possible_wrap)]
+#![allow(
+    clippy::cast_possible_truncation,
+    clippy::cast_precision_loss,
+    clippy::cast_sign_loss,
+    clippy::cast_possible_wrap
+)]
 use std::path::Path;
 
 use chrono::{DateTime, Utc};
@@ -53,7 +58,7 @@ pub enum ChainError {
 }
 
 impl ActiveProviderChain {
-    #[must_use] 
+    #[must_use]
     pub fn new() -> Self {
         Self {
             version: 1,
@@ -65,7 +70,7 @@ impl ActiveProviderChain {
 
     /// discovered 목록을 우선순위별로 정렬해 chain 생성.
     /// 우선순위: `env_var=0..99`, keychain=100..199, manual=200..299, `local_detected=300..399`.
-    #[must_use] 
+    #[must_use]
     pub fn from_discovered(discovered: Vec<DiscoveredProvider>) -> Self {
         let mut sorted = discovered;
         sorted.sort_by_key(|d| match d.auth_state {
@@ -106,7 +111,7 @@ impl ActiveProviderChain {
         self.entries.iter()
     }
 
-    #[must_use] 
+    #[must_use]
     pub fn primary(&self) -> Option<&ChainEntry> {
         self.entries.iter().min_by_key(|e| e.priority)
     }
@@ -190,11 +195,10 @@ mod tests {
         ];
         let c = ActiveProviderChain::from_discovered(d);
         let providers: Vec<_> = c.iter().map(|e| e.provider).collect();
-        assert_eq!(providers, vec![
-            ProviderId::Claude,
-            ProviderId::Codex,
-            ProviderId::LocalLlm,
-        ]);
+        assert_eq!(
+            providers,
+            vec![ProviderId::Claude, ProviderId::Codex, ProviderId::LocalLlm,]
+        );
     }
 
     #[test]
@@ -253,7 +257,9 @@ mod tests {
 
     #[test]
     fn load_missing_file_returns_empty_chain() {
-        let c = ActiveProviderChain::load(std::path::Path::new("/nonexistent/active-providers.toml")).unwrap();
+        let c =
+            ActiveProviderChain::load(std::path::Path::new("/nonexistent/active-providers.toml"))
+                .unwrap();
         assert!(c.entries.is_empty());
     }
 

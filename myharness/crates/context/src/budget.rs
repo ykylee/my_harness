@@ -6,7 +6,12 @@
 //! - 압축 전략: Truncate (`keep_recent`) / Summarize (stub) / Hybrid (둘 다)
 //! - /compact slash command 는 user-callable 수동 압축
 
-#![allow(clippy::cast_possible_truncation, clippy::cast_precision_loss, clippy::cast_sign_loss, clippy::cast_possible_wrap)]
+#![allow(
+    clippy::cast_possible_truncation,
+    clippy::cast_precision_loss,
+    clippy::cast_sign_loss,
+    clippy::cast_possible_wrap
+)]
 use std::collections::VecDeque;
 
 use serde::{Deserialize, Serialize};
@@ -31,13 +36,22 @@ pub struct Message {
 
 impl Message {
     pub fn user(content: impl Into<String>) -> Self {
-        Self { role: Role::User, content: content.into() }
+        Self {
+            role: Role::User,
+            content: content.into(),
+        }
     }
     pub fn assistant(content: impl Into<String>) -> Self {
-        Self { role: Role::Assistant, content: content.into() }
+        Self {
+            role: Role::Assistant,
+            content: content.into(),
+        }
     }
     pub fn system(content: impl Into<String>) -> Self {
-        Self { role: Role::System, content: content.into() }
+        Self {
+            role: Role::System,
+            content: content.into(),
+        }
     }
 }
 
@@ -123,7 +137,11 @@ impl ContextManager {
         if config.chars_per_token == 0 {
             return Err(BudgetError::Invalid("chars_per_token must be > 0".into()));
         }
-        Ok(Self { config, history: VecDeque::new(), summarizer: None })
+        Ok(Self {
+            config,
+            history: VecDeque::new(),
+            summarizer: None,
+        })
     }
 
     #[must_use]
@@ -140,7 +158,7 @@ impl ContextManager {
         self.summarizer = None;
     }
 
-    #[must_use] 
+    #[must_use]
     pub fn summarizer_name(&self) -> Option<&'static str> {
         self.summarizer.as_ref().map(|s| s.name())
     }
@@ -149,29 +167,29 @@ impl ContextManager {
         self.history.push_back(msg);
     }
 
-    #[must_use] 
+    #[must_use]
     pub fn history(&self) -> &VecDeque<Message> {
         &self.history
     }
 
-    #[must_use] 
+    #[must_use]
     pub fn len(&self) -> usize {
         self.history.len()
     }
 
-    #[must_use] 
+    #[must_use]
     pub fn is_empty(&self) -> bool {
         self.history.is_empty()
     }
 
     /// 현재 token 사용량 추정 (모든 message content 의 char 합 / `chars_per_token`).
-    #[must_use] 
+    #[must_use]
     pub fn estimate_tokens(&self) -> u32 {
         let total_chars: usize = self.history.iter().map(|m| m.content.chars().count()).sum();
         (total_chars as u32) / self.config.chars_per_token
     }
 
-    #[must_use] 
+    #[must_use]
     pub fn budget_report(&self) -> BudgetReport {
         let current = self.estimate_tokens();
         let max = self.config.max_tokens;
@@ -242,7 +260,8 @@ impl ContextManager {
             tokio::runtime::Handle::current().block_on(summarizer.summarize(&combined))
         });
         if let Ok(s) = summary {
-            self.history.push_front(Message::assistant(format!("[Summary] {s}")));
+            self.history
+                .push_front(Message::assistant(format!("[Summary] {s}")));
         } else {
             // 실패 시 fallback: drop 만
         }

@@ -31,7 +31,7 @@ impl ProviderId {
         ProviderId::LocalLlm,
     ];
 
-    #[must_use] 
+    #[must_use]
     pub fn as_str(&self) -> &'static str {
         match self {
             ProviderId::Claude => "claude",
@@ -44,7 +44,7 @@ impl ProviderId {
     }
 
     #[allow(clippy::should_implement_trait)]
-    #[must_use] 
+    #[must_use]
     pub fn from_str(s: &str) -> Option<Self> {
         match s {
             "claude" => Some(ProviderId::Claude),
@@ -76,7 +76,7 @@ pub enum ProviderKind {
 
 impl ProviderId {
     /// native vs `OpenAI` 호환 분류. Codex 도 v1 에서는 `OpenAI` 호환 (`CompletionsClient`) 으로 wrap.
-    #[must_use] 
+    #[must_use]
     pub fn kind(&self) -> ProviderKind {
         match self {
             ProviderId::Claude | ProviderId::Gemini => ProviderKind::Native,

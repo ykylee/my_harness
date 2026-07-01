@@ -6,7 +6,12 @@
 //!
 //! v1.5+: persistence (`SQLite`), LLM-based segment selection, round-trip 비용 trade-off.
 
-#![allow(clippy::cast_possible_truncation, clippy::cast_precision_loss, clippy::cast_sign_loss, clippy::cast_possible_wrap)]
+#![allow(
+    clippy::cast_possible_truncation,
+    clippy::cast_precision_loss,
+    clippy::cast_sign_loss,
+    clippy::cast_possible_wrap
+)]
 use std::collections::HashMap;
 use std::sync::Mutex;
 
@@ -27,12 +32,12 @@ struct CcrInner {
 }
 
 impl CcrStore {
-    #[must_use] 
+    #[must_use]
     pub fn new() -> Self {
         Self::default()
     }
 
-    #[must_use] 
+    #[must_use]
     pub fn marker_format() -> &'static str {
         "{ccr:%d}"
     }
@@ -67,7 +72,9 @@ impl CcrStore {
     /// marker → original 복원. 없으면 None.
     pub fn retrieve(&self, marker: &str) -> Option<String> {
         let g = self.inner.lock().unwrap();
-        g.reverse.get(marker).and_then(|id| g.forward.get(id).cloned())
+        g.reverse
+            .get(marker)
+            .and_then(|id| g.forward.get(id).cloned())
     }
 
     /// 압축: `min_length` 이상이고 알파벳/숫자 위주 segment 만 marker 화.
@@ -161,7 +168,7 @@ pub struct CcrStats {
 }
 
 impl CcrStats {
-    #[must_use] 
+    #[must_use]
     pub fn savings_ratio(&self) -> f32 {
         if self.original_chars == 0 {
             return 0.0;

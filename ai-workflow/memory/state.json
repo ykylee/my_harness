@@ -571,6 +571,13 @@
         "status": "decided",
         "date": "2026-07-01",
         "summary": "chore(cargo): myharness/Cargo.toml 에 [workspace.lints.rust] + [workspace.lints.clippy] baseline 추가 (Cargo 1.74+). 6개 lint 모두 `warn` (강한 deny/forbid 는 opt-in): unsafe_code, missing_debug_implementations, rust_2018_idioms, module_name_repetitions, needless_pass_by_value, redundant_closure_for_method_calls. 8 crate 가 자동 상속. 새 warning 0개. workspace 507/507 pass + 4 ignored. clippy 0 warning. (h-2: cargo fmt 적용은 511 line diff 로 별도 사이클 분리)"
+      },
+      {
+        "id": "D-120",
+        "title": "cargo fmt 일괄 적용 (옵션 h-2)",
+        "status": "decided",
+        "date": "2026-07-01",
+        "summary": "chore(fmt): cargo fmt 일괄 적용. 67 files / +1980 / -948. production code 의미 0 변경 (rustfmt whitespace reformat). D-119 (h-1, lints baseline) 종료 후 D-114~117 의 deferred list 와 별도 사이클 분리 결정 후 진행. cargo fmt --check 0 diff. workspace 507/507 pass + 4 ignored (회귀 0). clippy 0 warning. h scope 전체 종료."
       }
     ],
     "deferred": [
@@ -708,7 +715,7 @@
     "path": null,
     "present": false
   },
-  "decision_count": 62,
+  "decision_count": 63,
   "last_updated": "2026-07-01",
   "decided": []
 }

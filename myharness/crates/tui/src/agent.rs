@@ -41,14 +41,18 @@ pub fn tool_spec_section(allowed_tools: &[&str]) -> String {
 
     let mut out = String::new();
     out.push_str("\n\n## Tool use (text-based, A-min 2026-06-30)\n\n");
-    out.push_str("You can call the tools above by emitting a ```tool_call``` block in your response:\n\n");
+    out.push_str(
+        "You can call the tools above by emitting a ```tool_call``` block in your response:\n\n",
+    );
     out.push_str("```tool_call\n");
     out.push_str("{\"name\": \"Read\", \"args\": {\"file_path\": \"path/to/file.rs\"}}\n");
     out.push_str("```\n\n");
     out.push_str("The Orchestrator will run the tool, append the result to the conversation, and let you continue. ");
     out.push_str("You may call multiple tools across turns (typically up to ~10 rounds).\n\n");
     // D-102 (2026-06-30) — stop condition: 무한 루프 방지
-    out.push_str("**Stop conditions** — respond with plain markdown (no tool_call block) when ANY of:\n");
+    out.push_str(
+        "**Stop conditions** — respond with plain markdown (no tool_call block) when ANY of:\n",
+    );
     out.push_str("1. You have enough information to fully answer the user's request.\n");
     out.push_str("2. You've already called the same tool with essentially the same arguments (the result won't change).\n");
     out.push_str("3. The last 2-3 tool calls returned similar information — don't repeat.\n");
@@ -80,7 +84,7 @@ pub enum SubAgentDomain {
 }
 
 impl SubAgentDomain {
-    #[must_use] 
+    #[must_use]
     pub fn label(&self) -> &'static str {
         match self {
             SubAgentDomain::Code => "code",
@@ -107,7 +111,7 @@ impl SubAgentKind {
         SubAgentKind::GitOperator,
     ];
 
-    #[must_use] 
+    #[must_use]
     pub fn as_str(&self) -> &'static str {
         match self {
             SubAgentKind::CodeReviewer => "code-reviewer",
@@ -118,7 +122,7 @@ impl SubAgentKind {
     }
 
     #[allow(clippy::should_implement_trait)]
-    #[must_use] 
+    #[must_use]
     pub fn from_str(s: &str) -> Option<Self> {
         match s {
             "code-reviewer" => Some(Self::CodeReviewer),
@@ -129,7 +133,7 @@ impl SubAgentKind {
         }
     }
 
-    #[must_use] 
+    #[must_use]
     pub fn domain(&self) -> SubAgentDomain {
         match self {
             SubAgentKind::CodeReviewer | SubAgentKind::CodeImplementer => SubAgentDomain::Code,
@@ -173,7 +177,7 @@ pub struct EnvDiagnoseAgent;
 pub struct GitOperatorAgent;
 
 impl SubAgentDef {
-    #[must_use] 
+    #[must_use]
     pub fn for_kind(kind: SubAgentKind) -> Self {
         match kind {
             SubAgentKind::CodeReviewer => Self {
@@ -273,7 +277,7 @@ impl SubAgent for GitOperatorAgent {
 pub struct SubAgentRegistry;
 
 impl SubAgentRegistry {
-    #[must_use] 
+    #[must_use]
     pub fn all() -> Vec<&'static dyn SubAgent> {
         vec![
             &CodeReviewerAgent,
@@ -283,7 +287,7 @@ impl SubAgentRegistry {
         ]
     }
 
-    #[must_use] 
+    #[must_use]
     pub fn for_kind(kind: SubAgentKind) -> Option<&'static dyn SubAgent> {
         match kind {
             SubAgentKind::CodeReviewer => Some(&CodeReviewerAgent),
@@ -293,12 +297,15 @@ impl SubAgentRegistry {
         }
     }
 
-    #[must_use] 
+    #[must_use]
     pub fn by_domain(domain: SubAgentDomain) -> Vec<&'static dyn SubAgent> {
-        Self::all().into_iter().filter(|a| a.def().domain == domain).collect()
+        Self::all()
+            .into_iter()
+            .filter(|a| a.def().domain == domain)
+            .collect()
     }
 
-    #[must_use] 
+    #[must_use]
     pub fn by_name(name: &str) -> Option<&'static dyn SubAgent> {
         let kind = SubAgentKind::from_str(name)?;
         Self::for_kind(kind)
@@ -311,7 +318,10 @@ mod tests {
 
     #[test]
     fn all_kind_six_unique_strings() {
-        let mut names: Vec<_> = SubAgentKind::ALL.iter().map(super::SubAgentKind::as_str).collect();
+        let mut names: Vec<_> = SubAgentKind::ALL
+            .iter()
+            .map(super::SubAgentKind::as_str)
+            .collect();
         names.sort_unstable();
         names.dedup();
         assert_eq!(names.len(), 4);
@@ -333,7 +343,10 @@ mod tests {
     fn domain_classification() {
         assert_eq!(SubAgentKind::CodeReviewer.domain(), SubAgentDomain::Code);
         assert_eq!(SubAgentKind::CodeImplementer.domain(), SubAgentDomain::Code);
-        assert_eq!(SubAgentKind::EnvDiagnose.domain(), SubAgentDomain::Environment);
+        assert_eq!(
+            SubAgentKind::EnvDiagnose.domain(),
+            SubAgentDomain::Environment
+        );
         assert_eq!(SubAgentKind::GitOperator.domain(), SubAgentDomain::Utility);
     }
 

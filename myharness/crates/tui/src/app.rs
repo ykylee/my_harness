@@ -2,13 +2,18 @@
 //!
 //! 최소 TUI shell: welcome header + message list + input box.
 
-#![allow(clippy::cast_possible_truncation, clippy::cast_precision_loss, clippy::cast_sign_loss, clippy::cast_possible_wrap)]
+#![allow(
+    clippy::cast_possible_truncation,
+    clippy::cast_precision_loss,
+    clippy::cast_sign_loss,
+    clippy::cast_possible_wrap
+)]
+use ratatui::Frame;
 use ratatui::buffer::Buffer;
 use ratatui::layout::{Constraint, Direction, Layout, Rect};
 use ratatui::style::{Color, Modifier, Style};
 use ratatui::text::{Line, Span};
 use ratatui::widgets::{Block, Borders, List, ListItem, Paragraph, Widget};
-use ratatui::Frame;
 
 use crate::events::AppKey;
 
@@ -29,19 +34,34 @@ pub struct AppMessage {
 
 impl AppMessage {
     pub fn user(content: impl Into<String>) -> Self {
-        Self { role: MessageRole::User, content: content.into() }
+        Self {
+            role: MessageRole::User,
+            content: content.into(),
+        }
     }
     pub fn assistant(content: impl Into<String>) -> Self {
-        Self { role: MessageRole::Assistant, content: content.into() }
+        Self {
+            role: MessageRole::Assistant,
+            content: content.into(),
+        }
     }
     pub fn system(content: impl Into<String>) -> Self {
-        Self { role: MessageRole::System, content: content.into() }
+        Self {
+            role: MessageRole::System,
+            content: content.into(),
+        }
     }
     pub fn tool(content: impl Into<String>) -> Self {
-        Self { role: MessageRole::Tool, content: content.into() }
+        Self {
+            role: MessageRole::Tool,
+            content: content.into(),
+        }
     }
     pub fn error(content: impl Into<String>) -> Self {
-        Self { role: MessageRole::Error, content: content.into() }
+        Self {
+            role: MessageRole::Error,
+            content: content.into(),
+        }
     }
 }
 
@@ -62,7 +82,9 @@ impl App {
         Self {
             title: title.into(),
             mode: mode.into(),
-            messages: vec![AppMessage::system("Welcome to myharness. Type a message and press Enter.")],
+            messages: vec![AppMessage::system(
+                "Welcome to myharness. Type a message and press Enter.",
+            )],
             input: String::new(),
             input_cursor: 0,
             running: true,
@@ -110,7 +132,7 @@ impl App {
         }
     }
 
-    #[must_use] 
+    #[must_use]
     pub fn submitted_messages(&self) -> Vec<&str> {
         self.messages
             .iter()
@@ -125,18 +147,26 @@ pub fn draw(f: &mut Frame, app: &mut App) {
     let chunks = Layout::default()
         .direction(Direction::Vertical)
         .constraints([
-            Constraint::Length(3),      // header
-            Constraint::Min(3),         // messages
-            Constraint::Length(3),      // input
-            Constraint::Length(1),      // status
+            Constraint::Length(3), // header
+            Constraint::Min(3),    // messages
+            Constraint::Length(3), // input
+            Constraint::Length(1), // status
         ])
         .split(area);
 
     // header
     let header = Paragraph::new(Line::from(vec![
-        Span::styled(&app.title, Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD)),
+        Span::styled(
+            &app.title,
+            Style::default()
+                .fg(Color::Cyan)
+                .add_modifier(Modifier::BOLD),
+        ),
         Span::raw("  "),
-        Span::styled(format!("[{}]", app.mode), Style::default().fg(Color::Yellow)),
+        Span::styled(
+            format!("[{}]", app.mode),
+            Style::default().fg(Color::Yellow),
+        ),
     ]))
     .block(Block::default().borders(Borders::ALL));
     f.render_widget(header, chunks[0]);
@@ -154,7 +184,10 @@ pub fn draw(f: &mut Frame, app: &mut App) {
                 MessageRole::Error => ("[err] ", Color::Red),
             };
             ListItem::new(Line::from(vec![
-                Span::styled(prefix, Style::default().fg(color).add_modifier(Modifier::BOLD)),
+                Span::styled(
+                    prefix,
+                    Style::default().fg(color).add_modifier(Modifier::BOLD),
+                ),
                 Span::raw(m.content.as_str()),
             ]))
         })
@@ -169,10 +202,7 @@ pub fn draw(f: &mut Frame, app: &mut App) {
         .block(Block::default().borders(Borders::ALL).title("input"));
     f.render_widget(input, chunks[2]);
     // cursor
-    f.set_cursor_position((
-        chunks[2].x + 1 + app.input_cursor as u16,
-        chunks[2].y + 1,
-    ));
+    f.set_cursor_position((chunks[2].x + 1 + app.input_cursor as u16, chunks[2].y + 1));
 
     // status
     let status = Paragraph::new(format!(
@@ -201,9 +231,17 @@ pub fn render_to_buffer(area: Rect, app: &mut App) -> Buffer {
 
     // header
     let header = Paragraph::new(Line::from(vec![
-        Span::styled(&app.title, Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD)),
+        Span::styled(
+            &app.title,
+            Style::default()
+                .fg(Color::Cyan)
+                .add_modifier(Modifier::BOLD),
+        ),
         Span::raw("  "),
-        Span::styled(format!("[{}]", app.mode), Style::default().fg(Color::Yellow)),
+        Span::styled(
+            format!("[{}]", app.mode),
+            Style::default().fg(Color::Yellow),
+        ),
     ]))
     .block(Block::default().borders(Borders::ALL));
     header.render(chunks[0], &mut buf);
@@ -221,7 +259,10 @@ pub fn render_to_buffer(area: Rect, app: &mut App) -> Buffer {
                 MessageRole::Error => ("[err] ", Color::Red),
             };
             ListItem::new(Line::from(vec![
-                Span::styled(prefix, Style::default().fg(color).add_modifier(Modifier::BOLD)),
+                Span::styled(
+                    prefix,
+                    Style::default().fg(color).add_modifier(Modifier::BOLD),
+                ),
                 Span::raw(m.content.as_str()),
             ]))
         })
@@ -327,7 +368,11 @@ mod tests {
         terminal.draw(|f| draw(f, &mut app)).unwrap();
         let buf = terminal.backend().buffer().clone();
         // welcome 메시지가 어딘가에 그려져야 함
-        let text: String = buf.content.iter().map(|c| c.symbol().chars().next().unwrap_or(' ')).collect();
+        let text: String = buf
+            .content
+            .iter()
+            .map(|c| c.symbol().chars().next().unwrap_or(' '))
+            .collect();
         assert!(text.contains("Welcome"));
     }
 
@@ -336,7 +381,11 @@ mod tests {
         let mut app = App::new("myharness", "orchestrator");
         app.push_message(AppMessage::assistant("hello"));
         let buf = render_to_buffer(Rect::new(0, 0, 80, 24), &mut app);
-        let text: String = buf.content.iter().map(|c| c.symbol().chars().next().unwrap_or(' ')).collect();
+        let text: String = buf
+            .content
+            .iter()
+            .map(|c| c.symbol().chars().next().unwrap_or(' '))
+            .collect();
         assert!(text.contains("myharness"));
         assert!(text.contains("hello"));
     }
@@ -351,7 +400,10 @@ mod tests {
 
     /// Buffer 의 모든 cell symbol 을 평문화하는 helper.
     fn buffer_text(buf: &Buffer) -> String {
-        buf.content.iter().map(|c| c.symbol().chars().next().unwrap_or(' ')).collect()
+        buf.content
+            .iter()
+            .map(|c| c.symbol().chars().next().unwrap_or(' '))
+            .collect()
     }
 
     /// 5 가지 role 의 prefix 가 모두 정상 렌더되는지 검증.
@@ -367,10 +419,13 @@ mod tests {
         let buf = render_to_buffer(Rect::new(0, 0, 80, 24), &mut app);
         let text = buffer_text(&buf);
         // 80 cols x 24 rows 안에서 모든 prefix 등장.
-        assert!(text.contains("[sys]"),  "system prefix missing in {text:?}");
+        assert!(text.contains("[sys]"), "system prefix missing in {text:?}");
         assert!(text.contains("[you]"), "user prefix missing in {text:?}");
-        assert!(text.contains("[bot]"), "assistant prefix missing in {text:?}");
-        assert!(text.contains("[tool]"),"tool prefix missing in {text:?}");
+        assert!(
+            text.contains("[bot]"),
+            "assistant prefix missing in {text:?}"
+        );
+        assert!(text.contains("[tool]"), "tool prefix missing in {text:?}");
         assert!(text.contains("[err]"), "error prefix missing in {text:?}");
         assert!(text.contains("sys-info"));
         assert!(text.contains("user-msg"));
@@ -387,7 +442,10 @@ mod tests {
         let buf = render_to_buffer(Rect::new(0, 0, 80, 12), &mut app);
         let text = buffer_text(&buf);
         assert!(text.contains("myharness-tui"), "title missing in {text:?}");
-        assert!(text.contains("[orchestrator]"), "mode tag missing in {text:?}");
+        assert!(
+            text.contains("[orchestrator]"),
+            "mode tag missing in {text:?}"
+        );
     }
 
     /// 여러 메시지 push 후 status 줄 (`{} msg`) 이 정확한 카운트를 표시하는지.
@@ -401,7 +459,10 @@ mod tests {
         }
         let buf = render_to_buffer(Rect::new(0, 0, 80, 12), &mut app);
         let text = buffer_text(&buf);
-        assert!(text.contains("5 msg"), "status should read '5 msg' in {text:?}");
+        assert!(
+            text.contains("5 msg"),
+            "status should read '5 msg' in {text:?}"
+        );
         assert!(!text.contains("4 msg"));
     }
 
@@ -426,8 +487,11 @@ mod tests {
         let t_helper = buffer_text(&buf_helper);
         let t_draw = buffer_text(&buf_draw);
         for token in ["agree", "[loop]", "[you]", "hello", "[bot]", "world"] {
-            assert!(t_helper.contains(token), "helper missing {token}: {t_helper:?}");
-            assert!(t_draw.contains(token),    "draw missing {token}: {t_draw:?}");
+            assert!(
+                t_helper.contains(token),
+                "helper missing {token}: {t_helper:?}"
+            );
+            assert!(t_draw.contains(token), "draw missing {token}: {t_draw:?}");
         }
     }
 }

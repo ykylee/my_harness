@@ -29,7 +29,7 @@ pub struct MinimaxOAuth {
 
 impl MinimaxOAuth {
     /// env var 매번 재읽기. instance 새로 생성하여 env 변경 즉시 반영.
-    #[must_use] 
+    #[must_use]
     pub fn from_env() -> Self {
         Self {
             client_id: std::env::var("MYHARNESS_OAUTH_CLIENT_ID_MINIMAX")
@@ -47,7 +47,7 @@ impl Default for MinimaxOAuth {
 }
 
 impl MinimaxOAuth {
-    #[must_use] 
+    #[must_use]
     pub fn new() -> Arc<Self> {
         Arc::new(Self::from_env())
     }
@@ -55,8 +55,12 @@ impl MinimaxOAuth {
 
 #[async_trait]
 impl OAuthProvider for MinimaxOAuth {
-    fn id(&self) -> &'static str { "minimax" }
-    fn display_name(&self) -> &'static str { "MiniMax" }
+    fn id(&self) -> &'static str {
+        "minimax"
+    }
+    fn display_name(&self) -> &'static str {
+        "MiniMax"
+    }
     fn authorize_endpoint(&self) -> &str {
         if self.base_host == "https://api.minimax.io" {
             "https://api.minimax.io/oauth/authorize"
@@ -68,10 +72,18 @@ impl OAuthProvider for MinimaxOAuth {
             "https://api.minimax.io/oauth/authorize"
         }
     }
-    fn token_endpoint(&self) -> &'static str { "https://api.minimax.io/oauth/token" }
-    fn client_id(&self) -> &str { &self.client_id }
-    fn client_secret(&self) -> Option<&str> { None }
-    fn default_scopes(&self) -> &[&str] { &["completions.read", "completions.write"] }
+    fn token_endpoint(&self) -> &'static str {
+        "https://api.minimax.io/oauth/token"
+    }
+    fn client_id(&self) -> &str {
+        &self.client_id
+    }
+    fn client_secret(&self) -> Option<&str> {
+        None
+    }
+    fn default_scopes(&self) -> &[&str] {
+        &["completions.read", "completions.write"]
+    }
     fn extra_authorize_params(&self) -> Vec<(&str, String)> {
         // response_type=code 는 flow.rs:115 에서 push 함 (중복 회피).
         vec![]
@@ -83,30 +95,48 @@ pub struct OpenAiOAuth {
 }
 
 impl OpenAiOAuth {
-    #[must_use] 
+    #[must_use]
     pub fn from_env() -> Self {
         Self {
             client_id: std::env::var("MYHARNESS_OAUTH_CLIENT_ID_OPENAI")
                 .unwrap_or_else(|_| "myharness-cli".into()),
         }
     }
-    #[must_use] 
-    pub fn new() -> Arc<Self> { Arc::new(Self::from_env()) }
+    #[must_use]
+    pub fn new() -> Arc<Self> {
+        Arc::new(Self::from_env())
+    }
 }
 
 impl Default for OpenAiOAuth {
-    fn default() -> Self { Self::from_env() }
+    fn default() -> Self {
+        Self::from_env()
+    }
 }
 
 #[async_trait]
 impl OAuthProvider for OpenAiOAuth {
-    fn id(&self) -> &'static str { "openai" }
-    fn display_name(&self) -> &'static str { "OpenAI" }
-    fn authorize_endpoint(&self) -> &'static str { "https://auth.openai.com/oauth/authorize" }
-    fn token_endpoint(&self) -> &'static str { "https://auth.openai.com/oauth/token" }
-    fn client_id(&self) -> &str { &self.client_id }
-    fn client_secret(&self) -> Option<&str> { None }
-    fn default_scopes(&self) -> &[&str] { &["openid", "profile", "email", "offline_access"] }
+    fn id(&self) -> &'static str {
+        "openai"
+    }
+    fn display_name(&self) -> &'static str {
+        "OpenAI"
+    }
+    fn authorize_endpoint(&self) -> &'static str {
+        "https://auth.openai.com/oauth/authorize"
+    }
+    fn token_endpoint(&self) -> &'static str {
+        "https://auth.openai.com/oauth/token"
+    }
+    fn client_id(&self) -> &str {
+        &self.client_id
+    }
+    fn client_secret(&self) -> Option<&str> {
+        None
+    }
+    fn default_scopes(&self) -> &[&str] {
+        &["openid", "profile", "email", "offline_access"]
+    }
 }
 
 pub struct GoogleOAuth {
@@ -114,31 +144,51 @@ pub struct GoogleOAuth {
 }
 
 impl GoogleOAuth {
-    #[must_use] 
+    #[must_use]
     pub fn from_env() -> Self {
         Self {
             client_id: std::env::var("MYHARNESS_OAUTH_CLIENT_ID_GOOGLE")
                 .unwrap_or_else(|_| "myharness-cli".into()),
         }
     }
-    #[must_use] 
-    pub fn new() -> Arc<Self> { Arc::new(Self::from_env()) }
+    #[must_use]
+    pub fn new() -> Arc<Self> {
+        Arc::new(Self::from_env())
+    }
 }
 
 impl Default for GoogleOAuth {
-    fn default() -> Self { Self::from_env() }
+    fn default() -> Self {
+        Self::from_env()
+    }
 }
 
 #[async_trait]
 impl OAuthProvider for GoogleOAuth {
-    fn id(&self) -> &'static str { "google" }
-    fn display_name(&self) -> &'static str { "Google (Gemini)" }
-    fn authorize_endpoint(&self) -> &'static str { "https://accounts.google.com/o/oauth2/v2/auth" }
-    fn token_endpoint(&self) -> &'static str { "https://oauth2.googleapis.com/token" }
-    fn client_id(&self) -> &str { &self.client_id }
-    fn client_secret(&self) -> Option<&str> { None }
+    fn id(&self) -> &'static str {
+        "google"
+    }
+    fn display_name(&self) -> &'static str {
+        "Google (Gemini)"
+    }
+    fn authorize_endpoint(&self) -> &'static str {
+        "https://accounts.google.com/o/oauth2/v2/auth"
+    }
+    fn token_endpoint(&self) -> &'static str {
+        "https://oauth2.googleapis.com/token"
+    }
+    fn client_id(&self) -> &str {
+        &self.client_id
+    }
+    fn client_secret(&self) -> Option<&str> {
+        None
+    }
     fn default_scopes(&self) -> &[&str] {
-        &["openid", "https://www.googleapis.com/auth/userinfo.email", "https://www.googleapis.com/auth/cloud-platform"]
+        &[
+            "openid",
+            "https://www.googleapis.com/auth/userinfo.email",
+            "https://www.googleapis.com/auth/cloud-platform",
+        ]
     }
     fn extra_authorize_params(&self) -> Vec<(&str, String)> {
         vec![
@@ -184,7 +234,7 @@ pub struct MinimaxDeviceOAuth {
 impl MinimaxDeviceOAuth {
     /// env 재읽기. 한국 환경 default = global (`https://account.minimax.io`).
     /// CN 으로 전환: `MYHARNESS_MINIMAX_CN=1` 또는 `MINIMAX_OAUTH_BASE_URL` 직접 설정.
-    #[must_use] 
+    #[must_use]
     pub fn from_env() -> Self {
         let cn = std::env::var("MYHARNESS_MINIMAX_CN")
             .ok()
@@ -203,18 +253,26 @@ impl MinimaxDeviceOAuth {
         };
         Self { base_url, region }
     }
-    #[must_use] 
-    pub fn new() -> Arc<Self> { Arc::new(Self::from_env()) }
+    #[must_use]
+    pub fn new() -> Arc<Self> {
+        Arc::new(Self::from_env())
+    }
 }
 
 impl Default for MinimaxDeviceOAuth {
-    fn default() -> Self { Self::from_env() }
+    fn default() -> Self {
+        Self::from_env()
+    }
 }
 
 #[async_trait]
 impl DeviceCodeProvider for MinimaxDeviceOAuth {
-    fn id(&self) -> &'static str { "minimax" }
-    fn display_name(&self) -> &'static str { "MiniMax" }
+    fn id(&self) -> &'static str {
+        "minimax"
+    }
+    fn display_name(&self) -> &'static str {
+        "MiniMax"
+    }
     fn code_endpoint(&self) -> &str {
         // D-114 갱신: real MiniMax device code endpoint. base_url 이
         // "https://account.minimax.io" 또는 "https://account.minimaxi.com" 이면
@@ -244,17 +302,15 @@ impl DeviceCodeProvider for MinimaxDeviceOAuth {
     fn scope(&self) -> &'static str {
         "group_id profile model.completion"
     }
-    fn region(&self) -> &str { &self.region }
+    fn region(&self) -> &str {
+        &self.region
+    }
 }
 
 /// 등록된 3 provider.
-#[must_use] 
+#[must_use]
 pub fn oauth_providers() -> Vec<Arc<dyn OAuthProvider>> {
-    vec![
-        MinimaxOAuth::new(),
-        OpenAiOAuth::new(),
-        GoogleOAuth::new(),
-    ]
+    vec![MinimaxOAuth::new(), OpenAiOAuth::new(), GoogleOAuth::new()]
 }
 
 pub static OAUTH_PROVIDERS: std::sync::LazyLock<Vec<std::sync::Arc<dyn OAuthProvider>>> =
@@ -271,7 +327,7 @@ pub fn find_provider(id: &str) -> Option<Arc<dyn OAuthProvider>> {
 
 /// `DeviceCodeProvider` (W14). `MiniMax` 만 `DeviceCodeFlow` 사용. `find_device_provider("minimax`")
 /// 로 `MinimaxDeviceOAuth` instance 반환.
-#[must_use] 
+#[must_use]
 pub fn find_device_provider(id: &str) -> Option<Arc<dyn DeviceCodeProvider>> {
     match id {
         "minimax" => Some(MinimaxDeviceOAuth::new() as Arc<dyn DeviceCodeProvider>),
@@ -321,8 +377,12 @@ mod tests {
         let mut has_offline = false;
         let mut has_consent = false;
         for (k, _) in &extras {
-            if *k == "access_type" { has_offline = true; }
-            if *k == "prompt" { has_consent = true; }
+            if *k == "access_type" {
+                has_offline = true;
+            }
+            if *k == "prompt" {
+                has_consent = true;
+            }
         }
         assert!(has_offline);
         assert!(has_consent);

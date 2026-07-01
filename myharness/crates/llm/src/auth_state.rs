@@ -36,7 +36,7 @@ pub struct AuthStatus {
 }
 
 impl AuthStatus {
-    #[must_use] 
+    #[must_use]
     pub fn new(provider: ProviderId) -> Self {
         Self {
             provider,
@@ -51,13 +51,13 @@ impl AuthStatus {
     }
 
     /// 호출 가능한 상태인지 (Unset/Error 가 아니면 true).
-    #[must_use] 
+    #[must_use]
     pub fn is_usable(&self) -> bool {
         !matches!(self.state, AuthState::Unset | AuthState::Error)
     }
 
     /// prefix 만 남기고 나머지 마스킹 (operator-visible 진단용).
-    #[must_use] 
+    #[must_use]
     pub fn redact_key(key: &str) -> String {
         if key.len() <= 7 {
             return "***".into();
@@ -91,7 +91,10 @@ mod tests {
             AuthState::LocalDetected,
             AuthState::Error,
         ] {
-            let status = AuthStatus { state: s, ..AuthStatus::new(ProviderId::Claude) };
+            let status = AuthStatus {
+                state: s,
+                ..AuthStatus::new(ProviderId::Claude)
+            };
             let expected = !matches!(s, AuthState::Unset | AuthState::Error);
             assert_eq!(status.is_usable(), expected, "state: {s:?}");
         }

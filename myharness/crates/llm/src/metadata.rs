@@ -38,7 +38,7 @@ pub struct ProviderMetadata {
 
 impl ProviderMetadata {
     /// `ProviderId` → built-in metadata.
-    #[must_use] 
+    #[must_use]
     pub fn builtin(id: ProviderId) -> Self {
         match id {
             ProviderId::Claude => Self::builtin_claude(),
@@ -51,9 +51,12 @@ impl ProviderMetadata {
     }
 
     /// 6 built-in 의 Vec (id 순서).
-    #[must_use] 
+    #[must_use]
     pub fn all_builtins() -> Vec<Self> {
-        ProviderId::ALL.iter().map(|id| Self::builtin(*id)).collect()
+        ProviderId::ALL
+            .iter()
+            .map(|id| Self::builtin(*id))
+            .collect()
     }
 
     fn builtin_claude() -> Self {
@@ -118,10 +121,7 @@ impl ProviderMetadata {
             keychain_account: "default".into(),
             base_url: "https://generativelanguage.googleapis.com".into(),
             default_model: "gemini-2.5-pro".into(),
-            available_models: vec![
-                "gemini-2.5-pro".into(),
-                "gemini-2.5-flash".into(),
-            ],
+            available_models: vec!["gemini-2.5-pro".into(), "gemini-2.5-flash".into()],
             requires_key: true,
             kind: ProviderKind::Native,
             supports: ProviderCapabilities {

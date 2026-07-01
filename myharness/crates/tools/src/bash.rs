@@ -81,9 +81,7 @@ impl Tool for BashTool {
                 .await
         })
         .await
-        .map_err(|_| {
-            ToolError::ExecutionFailed(format!("command timed out after {timeout_ms}ms"))
-        })?
+        .map_err(|_| ToolError::ExecutionFailed(format!("command timed out after {timeout_ms}ms")))?
         .map_err(ToolError::IoError)?;
 
         let stdout = String::from_utf8_lossy(&output.stdout).to_string();

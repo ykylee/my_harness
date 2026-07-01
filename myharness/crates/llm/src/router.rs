@@ -33,7 +33,7 @@ pub struct RouterResponse {
 }
 
 impl FallbackRouter {
-    #[must_use] 
+    #[must_use]
     pub fn new(chain: ActiveProviderChain) -> Self {
         Self {
             chain: Arc::new(RwLock::new(chain)),
@@ -43,7 +43,7 @@ impl FallbackRouter {
         }
     }
 
-    #[must_use] 
+    #[must_use]
     pub fn with_consecutive_failure_threshold(mut self, n: u32) -> Self {
         self.max_consecutive_failures_skip = n;
         self
@@ -73,7 +73,9 @@ impl FallbackRouter {
 
         for entry in entries {
             attempts += 1;
-            let client = if let Some(c) = self.clients.read().await.get(&entry.provider) { Arc::clone(c) } else {
+            let client = if let Some(c) = self.clients.read().await.get(&entry.provider) {
+                Arc::clone(c)
+            } else {
                 last_err = Some(LlmError::ProviderUnavailable(format!(
                     "no client for {}",
                     entry.provider
@@ -189,8 +191,18 @@ mod tests {
         c1.push(MockResponse::Text("from claude".into()));
         let router = FallbackRouter::new(chain3());
         router.with_client(ProviderId::Claude, c1.clone()).await;
-        router.with_client(ProviderId::Codex, Arc::new(MockClient::new(ProviderId::Codex, "gpt-4o"))).await;
-        router.with_client(ProviderId::Gemini, Arc::new(MockClient::new(ProviderId::Gemini, "gemini-2.5-pro"))).await;
+        router
+            .with_client(
+                ProviderId::Codex,
+                Arc::new(MockClient::new(ProviderId::Codex, "gpt-4o")),
+            )
+            .await;
+        router
+            .with_client(
+                ProviderId::Gemini,
+                Arc::new(MockClient::new(ProviderId::Gemini, "gemini-2.5-pro")),
+            )
+            .await;
         let r = router.complete(req()).await.unwrap();
         assert_eq!(r.served_by, ProviderId::Claude);
         assert_eq!(r.attempts, 1);
@@ -255,7 +267,12 @@ mod tests {
         let router = FallbackRouter::new(chain3());
         router.with_client(ProviderId::Claude, c1).await;
         router.with_client(ProviderId::Gemini, c2).await;
-        router.with_client(ProviderId::Codex, Arc::new(MockClient::new(ProviderId::Codex, "gpt-4o"))).await;
+        router
+            .with_client(
+                ProviderId::Codex,
+                Arc::new(MockClient::new(ProviderId::Codex, "gpt-4o")),
+            )
+            .await;
         let e = router.complete(req()).await.unwrap_err();
         assert!(matches!(e, LlmError::AuthMissing(_)));
     }

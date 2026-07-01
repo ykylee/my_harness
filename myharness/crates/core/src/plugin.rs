@@ -73,7 +73,7 @@ pub struct PluginManifest {
 
 impl PluginManifest {
     /// `name@version` 형식.
-    #[must_use] 
+    #[must_use]
     pub fn id(&self) -> String {
         format!("{}@{}", self.name, self.version)
     }
@@ -124,7 +124,7 @@ pub struct PluginLocation {
 }
 
 impl PluginLocation {
-    #[must_use] 
+    #[must_use]
     pub fn id(&self) -> String {
         self.manifest.id()
     }
@@ -137,7 +137,7 @@ pub struct PluginRegistry {
 }
 
 impl PluginRegistry {
-    #[must_use] 
+    #[must_use]
     pub fn new() -> Self {
         Self::default()
     }
@@ -185,12 +185,11 @@ impl PluginRegistry {
             path: manifest_path.to_path_buf(),
             source: e,
         })?;
-        let manifest: PluginManifest = serde_json::from_slice(&bytes).map_err(|e| {
-            PluginError::Parse {
+        let manifest: PluginManifest =
+            serde_json::from_slice(&bytes).map_err(|e| PluginError::Parse {
                 path: manifest_path.to_path_buf(),
                 source: e,
-            }
-        })?;
+            })?;
         if manifest.name.is_empty() {
             return Err(PluginError::MissingField {
                 path: manifest_path.to_path_buf(),
@@ -209,22 +208,22 @@ impl PluginRegistry {
         })
     }
 
-    #[must_use] 
+    #[must_use]
     pub fn get(&self, name: &str) -> Option<&PluginLocation> {
         self.plugins.get(name)
     }
 
-    #[must_use] 
+    #[must_use]
     pub fn names(&self) -> Vec<String> {
         self.plugins.keys().cloned().collect()
     }
 
-    #[must_use] 
+    #[must_use]
     pub fn len(&self) -> usize {
         self.plugins.len()
     }
 
-    #[must_use] 
+    #[must_use]
     pub fn is_empty(&self) -> bool {
         self.plugins.is_empty()
     }
@@ -312,7 +311,10 @@ mod tests {
         let m: PluginManifest = serde_json::from_str(body).unwrap();
         assert_eq!(m.entrypoints.commands, "cmds");
         assert_eq!(m.entrypoints.hooks, "events");
-        assert_eq!(m.requires.get("myharness").map(String::as_str), Some(">=0.1.0"));
+        assert_eq!(
+            m.requires.get("myharness").map(String::as_str),
+            Some(">=0.1.0")
+        );
     }
 
     #[test]

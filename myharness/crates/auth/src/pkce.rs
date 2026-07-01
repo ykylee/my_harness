@@ -20,7 +20,7 @@ pub enum PkceMethod {
 }
 
 impl PkceMethod {
-    #[must_use] 
+    #[must_use]
     pub fn as_str(&self) -> &'static str {
         match self {
             PkceMethod::S256 => "S256",
@@ -28,7 +28,7 @@ impl PkceMethod {
     }
 }
 
-#[must_use] 
+#[must_use]
 pub fn generate_pkce() -> PkcePair {
     let mut bytes = [0u8; 32];
     rand::thread_rng().fill_bytes(&mut bytes);
@@ -37,11 +37,15 @@ pub fn generate_pkce() -> PkcePair {
     hasher.update(verifier.as_bytes());
     let digest = hasher.finalize();
     let challenge = URL_SAFE_NO_PAD.encode(digest);
-    PkcePair { verifier, challenge, method: PkceMethod::S256 }
+    PkcePair {
+        verifier,
+        challenge,
+        method: PkceMethod::S256,
+    }
 }
 
 /// random state (CSRF 방지) — URL-safe 16 byte
-#[must_use] 
+#[must_use]
 pub fn generate_state() -> String {
     let mut bytes = [0u8; 16];
     rand::thread_rng().fill_bytes(&mut bytes);
@@ -55,7 +59,11 @@ mod tests {
     #[test]
     fn pkce_verifier_is_url_safe() {
         let p = generate_pkce();
-        assert!(p.verifier.chars().all(|c| c.is_ascii_alphanumeric() || c == '-' || c == '_'));
+        assert!(
+            p.verifier
+                .chars()
+                .all(|c| c.is_ascii_alphanumeric() || c == '-' || c == '_')
+        );
         assert!(!p.verifier.is_empty());
         assert!(!p.challenge.is_empty());
         assert_eq!(p.method, PkceMethod::S256);
@@ -83,7 +91,10 @@ mod tests {
         let s = generate_state();
         // 16 byte → ~22 char base64url
         assert_eq!(s.len(), 22);
-        assert!(s.chars().all(|c| c.is_ascii_alphanumeric() || c == '-' || c == '_'));
+        assert!(
+            s.chars()
+                .all(|c| c.is_ascii_alphanumeric() || c == '-' || c == '_')
+        );
     }
 
     #[test]

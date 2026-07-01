@@ -24,7 +24,7 @@ impl PermissionMode {
         PermissionMode::BypassPermissions,
     ];
 
-    #[must_use] 
+    #[must_use]
     pub fn as_str(&self) -> &'static str {
         match self {
             PermissionMode::Default => "default",
@@ -35,7 +35,7 @@ impl PermissionMode {
     }
 
     #[allow(clippy::should_implement_trait)]
-    #[must_use] 
+    #[must_use]
     pub fn from_str(s: &str) -> Option<Self> {
         match s {
             "default" => Some(Self::Default),
@@ -46,13 +46,17 @@ impl PermissionMode {
         }
     }
 
-    #[must_use] 
+    #[must_use]
     pub fn label(&self) -> &'static str {
         match self {
             PermissionMode::Default => "Default (prompt for each destructive action)",
-            PermissionMode::AcceptEdits => "Accept Edits (auto-approve Edit/Write, prompt for Bash)",
+            PermissionMode::AcceptEdits => {
+                "Accept Edits (auto-approve Edit/Write, prompt for Bash)"
+            }
             PermissionMode::Plan => "Plan (read-only, requires explicit plan approval)",
-            PermissionMode::BypassPermissions => "Bypass Permissions (auto-approve all, CI/non-interactive)",
+            PermissionMode::BypassPermissions => {
+                "Bypass Permissions (auto-approve all, CI/non-interactive)"
+            }
         }
     }
 }
@@ -79,7 +83,7 @@ pub enum ToolCategory {
 }
 
 impl ToolCategory {
-    #[must_use] 
+    #[must_use]
     pub fn from_name(name: &str) -> Option<Self> {
         match name.to_ascii_lowercase().as_str() {
             "read" => Some(Self::Read),
@@ -92,7 +96,7 @@ impl ToolCategory {
         }
     }
 
-    #[must_use] 
+    #[must_use]
     pub fn is_destructive(&self) -> bool {
         matches!(self, Self::Edit | Self::Write | Self::Bash)
     }
@@ -108,24 +112,30 @@ pub struct PermissionPolicy {
 
 impl Default for PermissionPolicy {
     fn default() -> Self {
-        Self { mode: PermissionMode::Default, auto_approve: false }
+        Self {
+            mode: PermissionMode::Default,
+            auto_approve: false,
+        }
     }
 }
 
 impl PermissionPolicy {
-    #[must_use] 
+    #[must_use]
     pub fn new(mode: PermissionMode) -> Self {
-        Self { mode, auto_approve: false }
+        Self {
+            mode,
+            auto_approve: false,
+        }
     }
 
-    #[must_use] 
+    #[must_use]
     pub fn with_auto_approve(mut self, yes: bool) -> Self {
         self.auto_approve = yes;
         self
     }
 
     /// tool name + mode → decision.
-    #[must_use] 
+    #[must_use]
     pub fn decide(&self, tool_name: &str) -> PermissionDecision {
         let Some(cat) = ToolCategory::from_name(tool_name) else {
             // unknown tool — default 에서 prompt
@@ -185,8 +195,14 @@ mod tests {
 
     #[test]
     fn from_str_aliases() {
-        assert_eq!(PermissionMode::from_str("acceptEdits"), Some(PermissionMode::AcceptEdits));
-        assert_eq!(PermissionMode::from_str("bypassPermissions"), Some(PermissionMode::BypassPermissions));
+        assert_eq!(
+            PermissionMode::from_str("acceptEdits"),
+            Some(PermissionMode::AcceptEdits)
+        );
+        assert_eq!(
+            PermissionMode::from_str("bypassPermissions"),
+            Some(PermissionMode::BypassPermissions)
+        );
     }
 
     #[test]

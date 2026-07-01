@@ -24,13 +24,13 @@ pub enum RegistryError {
 }
 
 impl ProviderRegistry {
-    #[must_use] 
+    #[must_use]
     pub fn new() -> Self {
         Self::default()
     }
 
     /// 6 built-in 으로 시작.
-    #[must_use] 
+    #[must_use]
     pub fn with_builtins() -> Self {
         let mut r = Self::new();
         for m in ProviderMetadata::all_builtins() {
@@ -63,7 +63,7 @@ impl ProviderRegistry {
         })
     }
 
-    #[must_use] 
+    #[must_use]
     pub fn get(&self, id: ProviderId) -> Option<&ProviderMetadata> {
         self.providers.get(&id)
     }
@@ -77,22 +77,22 @@ impl ProviderRegistry {
     }
 
     /// id 순서 (`BTreeMap` 이므로 정렬됨).
-    #[must_use] 
+    #[must_use]
     pub fn list(&self) -> Vec<&ProviderMetadata> {
         self.providers.values().collect()
     }
 
-    #[must_use] 
+    #[must_use]
     pub fn ids(&self) -> Vec<ProviderId> {
         self.providers.keys().copied().collect()
     }
 
-    #[must_use] 
+    #[must_use]
     pub fn len(&self) -> usize {
         self.providers.len()
     }
 
-    #[must_use] 
+    #[must_use]
     pub fn is_empty(&self) -> bool {
         self.providers.is_empty()
     }
@@ -217,7 +217,8 @@ mod tests {
 
     #[test]
     fn load_from_missing_path_returns_empty() {
-        let r = ProviderRegistry::load_from_path(std::path::Path::new("/nonexistent.toml")).unwrap();
+        let r =
+            ProviderRegistry::load_from_path(std::path::Path::new("/nonexistent.toml")).unwrap();
         assert!(r.is_empty());
     }
 

@@ -7,8 +7,8 @@
 use async_trait::async_trait;
 use thiserror::Error;
 
-use myharness_llm::client::{CompletionRequest, Message};
 use myharness_llm::LLMClient;
+use myharness_llm::client::{CompletionRequest, Message};
 
 #[derive(Debug, Error)]
 pub enum SummarizerError {
@@ -77,9 +77,11 @@ pub struct MockSummarizer {
 }
 
 impl MockSummarizer {
-    #[must_use] 
+    #[must_use]
     pub fn new() -> Self {
-        Self { queue: std::sync::Mutex::new(Vec::new()) }
+        Self {
+            queue: std::sync::Mutex::new(Vec::new()),
+        }
     }
 
     /// # Panics
@@ -123,7 +125,10 @@ pub struct TrivialSummarizer {
 
 impl Default for TrivialSummarizer {
     fn default() -> Self {
-        Self { keep_sentences: 3, max_chars: 400 }
+        Self {
+            keep_sentences: 3,
+            max_chars: 400,
+        }
     }
 }
 
@@ -133,7 +138,8 @@ impl Summarizer for TrivialSummarizer {
         // 문장 단위 분리 (간단: '. ', '! ', '? ' 기준)
         let mut sentences: Vec<&str> = Vec::new();
         let mut rest = input;
-        while let Some(idx) = rest.find(['.', '!', '?'])
+        while let Some(idx) = rest
+            .find(['.', '!', '?'])
             .map(|i| (i, rest.as_bytes()[i] as char))
         {
             let (i, _) = idx;
@@ -149,7 +155,11 @@ impl Summarizer for TrivialSummarizer {
                 break;
             }
         }
-        let mut out: String = sentences.into_iter().take(self.keep_sentences).collect::<Vec<_>>().join(" ");
+        let mut out: String = sentences
+            .into_iter()
+            .take(self.keep_sentences)
+            .collect::<Vec<_>>()
+            .join(" ");
         if out.len() > self.max_chars {
             out.truncate(self.max_chars);
         }
@@ -202,8 +212,14 @@ mod tests {
 
     #[tokio::test]
     async fn trivial_summarizer_keeps_first_n_sentences() {
-        let s = TrivialSummarizer { keep_sentences: 2, max_chars: 200 };
-        let out = s.summarize("First sentence. Second sentence. Third sentence. Fourth.").await.unwrap();
+        let s = TrivialSummarizer {
+            keep_sentences: 2,
+            max_chars: 200,
+        };
+        let out = s
+            .summarize("First sentence. Second sentence. Third sentence. Fourth.")
+            .await
+            .unwrap();
         assert!(out.contains("First"));
         assert!(out.contains("Second"));
         assert!(!out.contains("Third"));
@@ -211,7 +227,10 @@ mod tests {
 
     #[tokio::test]
     async fn trivial_summarizer_truncates_long_output() {
-        let s = TrivialSummarizer { keep_sentences: 100, max_chars: 10 };
+        let s = TrivialSummarizer {
+            keep_sentences: 100,
+            max_chars: 10,
+        };
         let out = s.summarize("abcdefghijklmnop").await.unwrap();
         assert!(out.len() <= 10);
     }

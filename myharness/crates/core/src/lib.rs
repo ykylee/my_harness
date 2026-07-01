@@ -16,14 +16,14 @@ pub mod workflow;
 
 pub use permission::{PermissionDecision, PermissionMode, PermissionPolicy, ToolCategory};
 pub use plugin::{Entrypoints, PluginError, PluginLocation, PluginManifest, PluginRegistry};
-pub use tool_alias::{resolve_all_aliases, resolve_tool_alias, KNOWN_TOOL_ALIASES};
+pub use tool_alias::{KNOWN_TOOL_ALIASES, resolve_all_aliases, resolve_tool_alias};
 pub use workflow::{
     EventKind, EventLog, EventLogEntry, FollowUpEntry, HandoffDoc, RiskEntry, RiskKind,
     TaskEndReport, TaskStartReport, TaskStatus,
 };
 
 /// Crate 버전.
-#[must_use] 
+#[must_use]
 pub fn version() -> &'static str {
     env!("CARGO_PKG_VERSION")
 }

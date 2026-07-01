@@ -5,7 +5,12 @@
 //! - `SmartCrusher`: JSON key 순서 정규화 + whitespace 제거 + 숫자 정밀도 축소
 //! - `CodeCompressor`: tree-sitter 식별자 shorten + 주석 제거 (v1.5+, 현재는 간단 regex 기반 stub)
 
-#![allow(clippy::cast_possible_truncation, clippy::cast_precision_loss, clippy::cast_sign_loss, clippy::cast_possible_wrap)]
+#![allow(
+    clippy::cast_possible_truncation,
+    clippy::cast_precision_loss,
+    clippy::cast_sign_loss,
+    clippy::cast_possible_wrap
+)]
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
@@ -52,14 +57,18 @@ pub struct BuiltinPipeline {
 }
 
 impl BuiltinPipeline {
-    #[must_use] 
+    #[must_use]
     pub fn new(config: BuiltinConfig) -> Self {
         Self { config }
     }
 
     /// 전체 파이프라인. messages + system 을 받아서 압축된 (system, messages) 반환.
-    #[must_use] 
-    pub fn run(&self, system: Option<String>, messages: Vec<Message>) -> (Option<String>, Vec<Message>) {
+    #[must_use]
+    pub fn run(
+        &self,
+        system: Option<String>,
+        messages: Vec<Message>,
+    ) -> (Option<String>, Vec<Message>) {
         let (system, messages) = if self.config.cache_aligner {
             self.cache_align(system, messages)
         } else {
@@ -80,10 +89,15 @@ impl BuiltinPipeline {
                     };
                     let compressed = match ctype {
                         ContentType::Json if self.config.smart_crusher => smart_crush(&m.content),
-                        ContentType::Code if self.config.code_compressor => code_compress(&m.content),
+                        ContentType::Code if self.config.code_compressor => {
+                            code_compress(&m.content)
+                        }
                         _ => m.content,
                     };
-                    Message { role: m.role, content: compressed }
+                    Message {
+                        role: m.role,
+                        content: compressed,
+                    }
                 })
                 .collect()
         } else {
@@ -95,19 +109,26 @@ impl BuiltinPipeline {
 
     /// `CacheAligner`: system prompt 의 공백/개행 정규화 + 최근 N message 의 선두 공백 제거.
     /// 효과: KV cache 의 prefix 가 안정화되어 hit rate ↑.
-    #[must_use] 
-    pub fn cache_align(&self, system: Option<String>, messages: Vec<Message>) -> (Option<String>, Vec<Message>) {
+    #[must_use]
+    pub fn cache_align(
+        &self,
+        system: Option<String>,
+        messages: Vec<Message>,
+    ) -> (Option<String>, Vec<Message>) {
         let sys = system.map(|s| normalize_whitespace(&s));
         let msgs = messages
             .into_iter()
-            .map(|m| Message { role: m.role, content: trim_leading_ws(&m.content) })
+            .map(|m| Message {
+                role: m.role,
+                content: trim_leading_ws(&m.content),
+            })
             .collect();
         (sys, msgs)
     }
 }
 
 /// `ContentRouter` — content type 분류. 휴리스틱 기반.
-#[must_use] 
+#[must_use]
 pub fn detect_content_type(content: &str) -> ContentType {
     let trimmed = content.trim_start();
     if (trimmed.starts_with('{') || trimmed.starts_with('['))
@@ -126,7 +147,11 @@ pub fn detect_content_type(content: &str) -> ContentType {
 
 fn looks_like_code(s: &str) -> bool {
     let s = s.trim_start();
-    if s.starts_with("fn ") || s.starts_with("pub fn ") || s.starts_with("def ") || s.starts_with("class ") {
+    if s.starts_with("fn ")
+        || s.starts_with("pub fn ")
+        || s.starts_with("def ")
+        || s.starts_with("class ")
+    {
         return true;
     }
     if s.starts_with("use ") || s.starts_with("import ") || s.starts_with("#include") {
@@ -144,17 +169,27 @@ fn looks_like_code(s: &str) -> bool {
 fn looks_like_log(s: &str) -> bool {
     // RFC3339 timestamp prefix or [LEVEL] marker
     let first_line = s.lines().next().unwrap_or("");
-    if first_line.starts_with('[') && (first_line.contains("INFO") || first_line.contains("WARN") || first_line.contains("ERROR") || first_line.contains("DEBUG")) {
+    if first_line.starts_with('[')
+        && (first_line.contains("INFO")
+            || first_line.contains("WARN")
+            || first_line.contains("ERROR")
+            || first_line.contains("DEBUG"))
+    {
         return true;
     }
-    if first_line.len() >= 20 && first_line.chars().take(19).all(|c| c.is_ascii_digit() || c == '-' || c == 'T' || c == ':' || c == 'Z' || c == ' ') {
+    if first_line.len() >= 20
+        && first_line
+            .chars()
+            .take(19)
+            .all(|c| c.is_ascii_digit() || c == '-' || c == 'T' || c == ':' || c == 'Z' || c == ' ')
+    {
         return true;
     }
     false
 }
 
 /// `SmartCrusher` — JSON key 순서 정규화 + whitespace 제거 + 숫자 정밀도 축소.
-#[must_use] 
+#[must_use]
 pub fn smart_crush(s: &str) -> String {
     // 1) JSON parse 시도
     if let Ok(v) = serde_json::from_str::<serde_json::Value>(s) {
@@ -177,9 +212,11 @@ fn reduce_number_precision(v: &serde_json::Value, decimals: usize) -> serde_json
             }
             v.clone()
         }
-        serde_json::Value::Array(arr) => {
-            serde_json::Value::Array(arr.iter().map(|x| reduce_number_precision(x, decimals)).collect())
-        }
+        serde_json::Value::Array(arr) => serde_json::Value::Array(
+            arr.iter()
+                .map(|x| reduce_number_precision(x, decimals))
+                .collect(),
+        ),
         serde_json::Value::Object(obj) => {
             let mut new_obj = serde_json::Map::new();
             // key 알파벳 순 정렬
@@ -195,7 +232,7 @@ fn reduce_number_precision(v: &serde_json::Value, decimals: usize) -> serde_json
 }
 
 /// `CodeCompressor` — 간단한 정규식 기반 압축 (v1.5+ 에서 tree-sitter 통합).
-#[must_use] 
+#[must_use]
 pub fn code_compress(s: &str) -> String {
     let mut out = String::with_capacity(s.len());
     for line in s.lines() {
@@ -258,7 +295,10 @@ fn normalize_whitespace(s: &str) -> String {
 }
 
 fn trim_leading_ws(s: &str) -> String {
-    s.lines().map(|l| l.trim_start().to_string()).collect::<Vec<_>>().join("\n")
+    s.lines()
+        .map(|l| l.trim_start().to_string())
+        .collect::<Vec<_>>()
+        .join("\n")
 }
 
 #[cfg(test)]
@@ -281,13 +321,22 @@ mod tests {
 
     #[test]
     fn detect_code_rust() {
-        assert_eq!(detect_content_type("fn main() { println!(\"hi\"); }"), ContentType::Code);
-        assert_eq!(detect_content_type("pub fn foo() -> i32 { 1 }"), ContentType::Code);
+        assert_eq!(
+            detect_content_type("fn main() { println!(\"hi\"); }"),
+            ContentType::Code
+        );
+        assert_eq!(
+            detect_content_type("pub fn foo() -> i32 { 1 }"),
+            ContentType::Code
+        );
     }
 
     #[test]
     fn detect_code_python() {
-        assert_eq!(detect_content_type("def hello():\n    print('hi')"), ContentType::Code);
+        assert_eq!(
+            detect_content_type("def hello():\n    print('hi')"),
+            ContentType::Code
+        );
     }
 
     #[test]
@@ -297,8 +346,14 @@ mod tests {
 
     #[test]
     fn detect_log() {
-        assert_eq!(detect_content_type("[INFO] server started on :8080"), ContentType::Log);
-        assert_eq!(detect_content_type("2026-06-09T12:00:00Z request handled"), ContentType::Log);
+        assert_eq!(
+            detect_content_type("[INFO] server started on :8080"),
+            ContentType::Log
+        );
+        assert_eq!(
+            detect_content_type("2026-06-09T12:00:00Z request handled"),
+            ContentType::Log
+        );
     }
 
     #[test]
@@ -399,6 +454,9 @@ mod tests {
 
     #[test]
     fn detect_text_after_routing() {
-        assert_eq!(detect_content_type("Just a normal sentence."), ContentType::Text);
+        assert_eq!(
+            detect_content_type("Just a normal sentence."),
+            ContentType::Text
+        );
     }
 }

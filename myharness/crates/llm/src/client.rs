@@ -26,16 +26,32 @@ pub struct Message {
 
 impl Message {
     pub fn user(content: impl Into<String>) -> Self {
-        Self { role: Role::User, content: content.into(), name: None }
+        Self {
+            role: Role::User,
+            content: content.into(),
+            name: None,
+        }
     }
     pub fn assistant(content: impl Into<String>) -> Self {
-        Self { role: Role::Assistant, content: content.into(), name: None }
+        Self {
+            role: Role::Assistant,
+            content: content.into(),
+            name: None,
+        }
     }
     pub fn system(content: impl Into<String>) -> Self {
-        Self { role: Role::System, content: content.into(), name: None }
+        Self {
+            role: Role::System,
+            content: content.into(),
+            name: None,
+        }
     }
     pub fn tool(content: impl Into<String>, name: impl Into<String>) -> Self {
-        Self { role: Role::Tool, content: content.into(), name: Some(name.into()) }
+        Self {
+            role: Role::Tool,
+            content: content.into(),
+            name: Some(name.into()),
+        }
     }
 }
 

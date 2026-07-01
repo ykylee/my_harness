@@ -600,3 +600,26 @@
   - (i) Lark multi-section parser
   - (j) block-aware insert/replace
   - (g-추가) TUI SubAgent dispatch 또는 AppKey 엣지케이스
+
+## 세션 종료 (2026-07-01 16th)
+
+- **상태**: **D-120 cargo fmt 일괄 적용 완료** — 옵션 h-2, h scope 종료.
+- **main**: D-120 commit (코드 + 메모리 단일 push, hash push 후 확정).
+- **누적 결정**: **67 + D-120 = 68** (decision_count handoff SSOT 갱신).
+- **build/test 상태**: `cargo build --workspace` = clean / `cargo clippy --workspace --all-targets -- -D warnings` = **0 warning** / `cargo test --workspace --lib` = **507 pass + 0 fail + 4 ignored** (D-119 507 → 동, 회귀 0) / `cargo fmt --check` = **0 diff** (drift 해소).
+- **구현 요약** (옵션 h-2, D-120):
+  - `cargo fmt` 일괄 적용 → **67 files / +1980 / -948** (rustfmt whitespace reformat only).
+  - production code 의미 0 변경. 모든 변경은 rustfmt 의 stable formatting (struct literal multi-line, function arg multi-line, closure 위치, 등) 표준화.
+  - `cargo fmt --check` 0 diff — drift 완전 해소.
+- **scope 명확화**:
+  - D-120 = rustfmt 일괄 적용만. 8 crate 모두 영향. 가장 큰 사이즈 (1980 lines 추가, 948 제거) 의 single commit.
+  - 의미 변경 0 — review 부담은 줄 수는 없지만 git blame 보존 (large commit 으로 흡수).
+- **h scope 종료**:
+  - h-1 (D-119, workspace lints baseline) ✓
+  - h-2 (D-120, cargo fmt 일괄) ✓
+- **다음 세션 시작 시 yklee 결정 옵션**:
+  - (B) Anthropic wire format
+  - (e) TASK-002 도메인 명령
+  - (i) Lark multi-section parser
+  - (j) block-aware insert/replace
+  - (g-추가) TUI SubAgent dispatch 또는 AppKey 엣지케이스

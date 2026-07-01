@@ -3,7 +3,7 @@ use std::path::PathBuf;
 use async_trait::async_trait;
 use tokio::fs;
 
-use crate::content_hash::{compute_content_hash, format_line_anchored, HASH_TAG_LENGTH};
+use crate::content_hash::{HASH_TAG_LENGTH, compute_content_hash, format_line_anchored};
 use crate::error::ToolError;
 use crate::tool::{Tool, ToolContext, ToolResult};
 
@@ -233,7 +233,10 @@ mod tests {
         assert_eq!(meta["hash_length"], 4);
         let hash = meta["content_hash"].as_str().expect("content_hash string");
         assert_eq!(hash.len(), 4);
-        assert!(hash.chars().all(|c| c.is_ascii_hexdigit() && !c.is_ascii_lowercase()));
+        assert!(
+            hash.chars()
+                .all(|c| c.is_ascii_hexdigit() && !c.is_ascii_lowercase())
+        );
     }
 
     #[tokio::test]
@@ -342,7 +345,10 @@ mod tests {
         fs::write(&file_path, &body).await.unwrap();
 
         let result = ReadTool
-            .execute(&ctx_default(), serde_json::json!({ "file_path": file_path.to_string_lossy() }))
+            .execute(
+                &ctx_default(),
+                serde_json::json!({ "file_path": file_path.to_string_lossy() }),
+            )
             .await
             .unwrap();
         assert!(!result.is_error);
@@ -409,7 +415,10 @@ mod tests {
         fs::write(&file_path, &body).await.unwrap();
 
         let result = ReadTool
-            .execute(&ctx_default(), serde_json::json!({ "file_path": file_path.to_string_lossy() }))
+            .execute(
+                &ctx_default(),
+                serde_json::json!({ "file_path": file_path.to_string_lossy() }),
+            )
             .await
             .unwrap();
         let meta = result.metadata.expect("metadata required");
@@ -468,7 +477,10 @@ mod tests {
 
         // First chunk: lines 1..=500, has_more → next_offset 500.
         let r1 = ReadTool
-            .execute(&ctx_default(), serde_json::json!({ "file_path": file_path.to_string_lossy() }))
+            .execute(
+                &ctx_default(),
+                serde_json::json!({ "file_path": file_path.to_string_lossy() }),
+            )
             .await
             .unwrap();
         let m1 = r1.metadata.unwrap();
