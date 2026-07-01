@@ -4,7 +4,7 @@
 - 범위: 전체 태스크 목록, 우선순위, 진행 상태, 날짜별 기록 연결
 - 대상 독자: 개발자, AI 에이전트, 프로젝트 매니저
 - 상태: stable
-- 최종 수정일: 2026-07-01 (**D-120 cargo fmt 일괄 적용 완료** — 옵션 h-2, h scope 종료. `cargo fmt` 일괄 적용 → **67 files / +1980 / -948** (rustfmt whitespace reformat only, production 의미 0 변경). `cargo fmt --check` 0 diff. workspace **507/507 pass + 4 ignored** (D-119 507 → 동, 회귀 0). clippy 0 warning. 누적 결정 **68** (D-120 추가). main = D-120 commit. h scope 종료: h-1 (D-119 lints baseline) + h-2 (D-120 fmt 일괄). 다음: (B) Anthropic / (e) TASK-002 / (i) Lark / (j) block-aware / (g-추가) TUI SubAgent dispatch. 이전: D-119 lints baseline / D-118 TUI snapshot / D-117 response_type / D-116 contract / D-115 base_resp / D-114 endpoint)
+- 최종 수정일: 2026-07-01 (**D-121 TUI SubAgent dispatch 통합 test 4종 추가 완료** — 옵션 g-추가, TUI 검증 보강. `orchestrator.rs::tests` 에 4개 SubAgent dispatch 통합 test 추가: 1) `d121_dispatch_prefix_each_subagent` (6 prefix × kind/direct/extracted), 2) `d121_dispatch_domain_keyword_fallback` (code/env/git_kw 분기), 3) `d121_dispatch_default_fallback` (default + 특수문자), 4) `d121_subagent_registry_4_unique` (registry 4종 + for_kind/by_domain/by_name). 1 file / +~110 lines test. 회귀 0. workspace **511/511 pass + 4 ignored** (D-120 507 → +4). tui crate 79 → 83. 누적 결정 **69** (D-121 추가). main = D-121 commit. 다음: (B) Anthropic / (e) TASK-002 / (i) Lark / (j) block-aware. 이전: D-120 fmt / D-119 lints / D-118 TUI snapshot / D-117 response_type / D-116 contract / D-115 base_resp)
 - 관련 문서: [세션 인계](./session_handoff.md), [프로젝트 프로필](../../docs/PROJECT_PROFILE.md), [CONCEPT.md](../../docs/CONCEPT.md)
 
 ## 1. 운영 원칙

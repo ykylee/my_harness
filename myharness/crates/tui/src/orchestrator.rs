@@ -1052,4 +1052,113 @@ Then I'll analyze."#;
         assert!(edit_props.contains_key("block_anchored"));
         assert!(edit_props.contains_key("pure_edit"));
     }
+    // --- D-121: SubAgent dispatch 통합 test (옵션 g-추가) ---
+
+    /// 6개 prefix 각각이 정확한 SubAgentKind + DispatchKind::Direct 로 라우팅되는지.
+    /// 회귀 시 prefix table 변경/오타 시 즉시 감지.
+    #[test]
+    fn d121_dispatch_prefix_each_subagent() {
+        let o = Orchestrator::new();
+        // code review
+        let d = o.dispatch("code review this PR");
+        assert_eq!(d.kind, SubAgentKind::CodeReviewer);
+        assert_eq!(d.dispatch, DispatchKind::Direct);
+        assert_eq!(d.extracted_input, "this PR");
+        // code implement
+        let d = o.dispatch("code implement foo.rs");
+        assert_eq!(d.kind, SubAgentKind::CodeImplementer);
+        assert_eq!(d.dispatch, DispatchKind::Direct);
+        assert_eq!(d.extracted_input, "foo.rs");
+        // code refactor
+        let d = o.dispatch("code refactor lib.rs");
+        assert_eq!(d.kind, SubAgentKind::CodeImplementer);
+        assert_eq!(d.dispatch, DispatchKind::Direct);
+        assert_eq!(d.extracted_input, "lib.rs");
+        // env diagnose
+        let d = o.dispatch("env diagnose");
+        assert_eq!(d.kind, SubAgentKind::EnvDiagnose);
+        assert_eq!(d.dispatch, DispatchKind::Direct);
+        // prefix 만 있고 extracted 가 비면 user_input 그대로
+        assert_eq!(d.extracted_input, "env diagnose");
+        // git (with trailing space)
+        let d = o.dispatch("git status");
+        assert_eq!(d.kind, SubAgentKind::GitOperator);
+        assert_eq!(d.dispatch, DispatchKind::Direct);
+        assert_eq!(d.extracted_input, "status");
+        // git-operator (with hyphen)
+        let d = o.dispatch("git-operator help");
+        assert_eq!(d.kind, SubAgentKind::GitOperator);
+        assert_eq!(d.dispatch, DispatchKind::Direct);
+        assert_eq!(d.extracted_input, "help");
+    }
+
+    /// prefix 매칭 실패 후 domain keyword 로 fallback 되는 path 검증.
+    /// code_kw match -> CodeReviewer (kind 만 검증, not CodeImplementer).
+    /// env_kw / git_kw 도 각각 정확한 도메인으로 라우팅.
+    #[test]
+    fn d121_dispatch_domain_keyword_fallback() {
+        let o = Orchestrator::new();
+        // code_kw: fix / bug / function etc
+        let d = o.dispatch("please fix the bug in foo.rs");
+        assert_eq!(d.kind, SubAgentKind::CodeReviewer);
+        assert_eq!(d.dispatch, DispatchKind::DomainKeyword);
+        assert_eq!(d.extracted_input, "please fix the bug in foo.rs");
+        // env_kw: path / version
+        let d = o.dispatch("check the rust version");
+        assert_eq!(d.kind, SubAgentKind::EnvDiagnose);
+        assert_eq!(d.dispatch, DispatchKind::DomainKeyword);
+        // git_kw: commit / branch / merge
+        let d = o.dispatch("create a commit for WIP");
+        assert_eq!(d.kind, SubAgentKind::GitOperator);
+        assert_eq!(d.dispatch, DispatchKind::DomainKeyword);
+    }
+
+    /// 어떤 prefix/keyword 도 안 잡으면 default (CodeReviewer + DispatchKind::Default).
+    /// 회귀 시 default 분기 누락 / 잘못된 kind 로 빠지는 경우 감지.
+    #[test]
+    fn d121_dispatch_default_fallback() {
+        let o = Orchestrator::new();
+        let d = o.dispatch("hello world");
+        assert_eq!(d.kind, SubAgentKind::CodeReviewer);
+        assert_eq!(d.dispatch, DispatchKind::Default);
+        assert_eq!(d.extracted_input, "hello world");
+        // 특수문자 / 공백 / 비ASCII
+        let d = o.dispatch("!!! ? ?");
+        assert_eq!(d.kind, SubAgentKind::CodeReviewer);
+        assert_eq!(d.dispatch, DispatchKind::Default);
+    }
+
+    /// `SubAgentRegistry::all()` 정확히 4개 + `for_kind` 4종 모두 Some + 도메인 분류 일치.
+    /// 회귀 시 agent 추가/제거, domain 분류 변경 시 즉시 감지.
+    #[test]
+    fn d121_subagent_registry_4_unique() {
+        use crate::agent::{SubAgentDomain, SubAgentRegistry};
+        let all = SubAgentRegistry::all();
+        assert_eq!(all.len(), 4, "expected exactly 4 SubAgents");
+        // 4종 모두 등장
+        let names: Vec<&'static str> = all.iter().map(|a| a.def().kind.as_str()).collect();
+        assert!(names.contains(&"code-reviewer"));
+        assert!(names.contains(&"code-implementer"));
+        assert!(names.contains(&"env-diagnose"));
+        assert!(names.contains(&"git-operator"));
+        // for_kind 4종 모두 Some
+        for kind in [
+            SubAgentKind::CodeReviewer,
+            SubAgentKind::CodeImplementer,
+            SubAgentKind::EnvDiagnose,
+            SubAgentKind::GitOperator,
+        ] {
+            assert!(SubAgentRegistry::for_kind(kind).is_some(), "{kind:?} missing");
+        }
+        // domain 분류
+        let code = SubAgentRegistry::by_domain(SubAgentDomain::Code);
+        assert_eq!(code.len(), 2, "Code domain = 2 (CodeReviewer + CodeImplementer)");
+        let env = SubAgentRegistry::by_domain(SubAgentDomain::Environment);
+        assert_eq!(env.len(), 1, "Environment domain = 1 (EnvDiagnose)");
+        let util = SubAgentRegistry::by_domain(SubAgentDomain::Utility);
+        assert_eq!(util.len(), 1, "Utility domain = 1 (GitOperator)");
+        // by_name 도 동작
+        assert!(SubAgentRegistry::by_name("code-reviewer").is_some());
+        assert!(SubAgentRegistry::by_name("nonexistent").is_none());
+    }
 }

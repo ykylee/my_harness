@@ -578,6 +578,13 @@
         "status": "decided",
         "date": "2026-07-01",
         "summary": "chore(fmt): cargo fmt 일괄 적용. 67 files / +1980 / -948. production code 의미 0 변경 (rustfmt whitespace reformat). D-119 (h-1, lints baseline) 종료 후 D-114~117 의 deferred list 와 별도 사이클 분리 결정 후 진행. cargo fmt --check 0 diff. workspace 507/507 pass + 4 ignored (회귀 0). clippy 0 warning. h scope 전체 종료."
+      },
+      {
+        "id": "D-121",
+        "title": "TUI SubAgent dispatch 통합 test 4종 추가 (옵션 g-추가)",
+        "status": "decided",
+        "date": "2026-07-01",
+        "summary": "test(tui): orchestrator.rs::tests 에 4개 SubAgent dispatch 통합 test 추가. 1) d121_dispatch_prefix_each_subagent (6개 prefix 모두 정확한 kind + DispatchKind::Direct + extracted 검증), 2) d121_dispatch_domain_keyword_fallback (code/env/git_kw 매칭 분기 검증), 3) d121_dispatch_default_fallback (default 분기 + 특수문자 input), 4) d121_subagent_registry_4_unique (4종 모두 등록 + for_kind 4종 Some + domain 분류 2/1/1 + by_name 동작). 회귀 0. workspace 511/511 pass + 4 ignored (D-120 507 -> +4). tui crate 79 -> 83."
       }
     ],
     "deferred": [
@@ -715,7 +722,7 @@
     "path": null,
     "present": false
   },
-  "decision_count": 63,
+  "decision_count": 64,
   "last_updated": "2026-07-01",
   "decided": []
 }

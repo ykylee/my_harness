@@ -623,3 +623,25 @@
   - (i) Lark multi-section parser
   - (j) block-aware insert/replace
   - (g-추가) TUI SubAgent dispatch 또는 AppKey 엣지케이스
+
+## 세션 종료 (2026-07-01 17th)
+
+- **상태**: **D-121 TUI SubAgent dispatch 통합 test 4종 추가 완료** — 옵션 g-추가, TUI 검증 보강.
+- **main**: D-121 commit (코드 + 메모리 단일 push, hash push 후 확정).
+- **누적 결정**: **68 + D-121 = 69** (decision_count handoff SSOT 갱신).
+- **build/test 상태**: `cargo build --workspace` = clean / `cargo clippy --workspace --all-targets -- -D warnings` = **0 warning** / `cargo test --workspace --lib` = **511 pass + 0 fail + 4 ignored** (D-120 507 → +4, 회귀 0) / tui crate 79 → 83.
+- **구현 요약** (옵션 g-추가, D-121):
+  - `myharness/crates/tui/src/orchestrator.rs::tests` 모듈에 4개 test 추가:
+    1. `d121_dispatch_prefix_each_subagent` — 6개 prefix (`code review`/`code implement`/`code refactor`/`env diagnose`/`git `/`git-operator`) 각각이 정확한 `SubAgentKind` + `DispatchKind::Direct` + `extracted_input` 으로 라우팅
+    2. `d121_dispatch_domain_keyword_fallback` — prefix 매칭 실패 후 `code_kw` → `CodeReviewer`, `env_kw` → `EnvDiagnose`, `git_kw` → `GitOperator` (각각 `DispatchKind::DomainKeyword`)
+    3. `d121_dispatch_default_fallback` — `Default` 분기 (`hello world`, `!!! ? ?`)
+    4. `d121_subagent_registry_4_unique` — `SubAgentRegistry::all()` 4개 + `for_kind` 4종 모두 `Some` + `by_domain` 분류 2/1/1 (Code/Environment/Utility) + `by_name` 동작
+  - 회귀 0. production code 무변경.
+- **scope 명확화**:
+  - D-121 = orchestrator dispatch + registry 통합 test 만. `SubAgent::run` (LLM 호출) 은 mock LLM 필요 → 미수행.
+  - 옵션 (2) `AppKey::from_crossterm` 엣지케이스 보강은 미수행 (기존 5개 test + Release 이벤트 자연 reject 으로 충분).
+- **다음 세션 시작 시 yklee 결정 옵션**:
+  - (B) Anthropic wire format
+  - (e) TASK-002 도메인 명령
+  - (i) Lark multi-section parser
+  - (j) block-aware insert/replace
