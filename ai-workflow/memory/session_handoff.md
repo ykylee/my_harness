@@ -645,3 +645,26 @@
   - (e) TASK-002 도메인 명령
   - (i) Lark multi-section parser
   - (j) block-aware insert/replace
+
+## 세션 종료 (2026-07-01 18th)
+
+- **상태**: **D-122 Anthropic wire format tool_use block parse + mock server test 완료** — 옵션 B. 옵션 i (Lark) 보류 후 진행.
+- **main**: D-122 commit (코드 + 메모리 단일 push, hash push 후 확정).
+- **누적 결정**: **69 + D-122 = 70** (decision_count handoff SSOT 갱신).
+- **build/test 상태**: `cargo build --workspace` = clean / `cargo clippy --workspace --all-targets -- -D warnings` = **0 warning** / `cargo test --workspace --lib` = **512 pass + 0 fail + 4 ignored** (D-121 511 → +1, 회귀 0) / llm crate 128 → 131.
+- **구현 요약** (옵션 B, D-122):
+  - `myharness/crates/llm/src/client_anthropic.rs`:
+    - `AnthropicProvider` 에 `api_key: String`, `base_url: String` field + `with_base_url()` builder 추가.
+    - `complete()` 진입 시 `req.tools.is_empty()` 아니면 `complete_wire_format()` 으로 분기.
+    - `complete_wire_format`: reqwest 직접 POST `{base_url}/v1/messages` (x-api-key, anthropic-version: 2023-06-01). tool spec 은 Anthropic native shape (`{name, description, input_schema}`) 그대로 wire.
+    - `parse_anthropic_response`: `serde_json::Value` content[] 를 `text` / `tool_use` / `other` variant 로 deserialize. `tool_use` → `ToolCall { id, name, arguments }`.
+    - rig-core native path 도 `extract_tool_calls()` helper 로 `AssistantContent::ToolCall` → `ToolCall` 변환 (양 path 동일 shape).
+  - **1 신규 mock server test** `d122_wire_format_parses_tool_use_block`: TcpListener mock 이 text + tool_use 동시 emit → 우리 parser 가 content 분리 + tool_call (id, name, arguments) 정확히 파싱 검증.
+- **scope 명확화**:
+  - D-122 = hand-rolled wire format + tool_use parse + 1 mock test. **anthropic-version `2023-06-01` 고정** (현재 stable). system/top-level 처리, tool_result user content[] 매핑, usage 파싱 모두 포함.
+  - 옵션 i (Lark) 은 source code 에 Lark 가 부재 (handoff 메모리에만 언급) — 의미 정의 필요. 보류 결정.
+- **다음 세션 시작 시 yklee 결정 옵션**:
+  - (e) TASK-002 도메인 명령
+  - (j) block-aware insert/replace
+  - (B-추가) Anthropic streaming / system prompt injection / tool_result tool_use_id 매핑 정확성 추가 test
+  - (i) Lark multi-section parser — 의미 정의 후 재개

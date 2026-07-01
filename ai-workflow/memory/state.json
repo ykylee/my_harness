@@ -585,6 +585,13 @@
         "status": "decided",
         "date": "2026-07-01",
         "summary": "test(tui): orchestrator.rs::tests 에 4개 SubAgent dispatch 통합 test 추가. 1) d121_dispatch_prefix_each_subagent (6개 prefix 모두 정확한 kind + DispatchKind::Direct + extracted 검증), 2) d121_dispatch_domain_keyword_fallback (code/env/git_kw 매칭 분기 검증), 3) d121_dispatch_default_fallback (default 분기 + 특수문자 input), 4) d121_subagent_registry_4_unique (4종 모두 등록 + for_kind 4종 Some + domain 분류 2/1/1 + by_name 동작). 회귀 0. workspace 511/511 pass + 4 ignored (D-120 507 -> +4). tui crate 79 -> 83."
+      },
+      {
+        "id": "D-122",
+        "title": "Anthropic wire format tool_use block parse + mock server test (옵션 B)",
+        "status": "decided",
+        "date": "2026-07-01",
+        "summary": "feat(llm): client_anthropic.rs 에 Anthropic wire format path 추가. req.tools 비어있지 않으면 hand-rolled POST {base_url}/v1/messages 로 전환 (x-api-key + anthropic-version 헤더, native tools block). response.content[] 중 type:tool_use 를 우리 ToolCall 로 변환. AnthropicProvider 에 api_key/base_url field + with_base_url builder 추가. rig-core native path (AssistantContent::ToolCall) 도 extract_tool_calls helper 로 동일 shape normalize. 1 신규 mock server test (d122_wire_format_parses_tool_use_block — text + tool_use 동시 emit, 우리 파서가 분리 검증). 회귀 0. workspace 512/512 pass + 4 ignored (D-121 511 -> +1). llm crate 128 -> 131."
       }
     ],
     "deferred": [
@@ -722,7 +729,7 @@
     "path": null,
     "present": false
   },
-  "decision_count": 64,
+  "decision_count": 65,
   "last_updated": "2026-07-01",
   "decided": []
 }
