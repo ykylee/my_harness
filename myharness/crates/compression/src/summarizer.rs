@@ -60,6 +60,7 @@ impl Summarizer for LlmSummarizer {
             stop: vec![],
             stream: false,
             metadata: serde_json::Value::Null,
+            tools: Vec::new(),
         };
         let resp = self.client.complete(req).await?;
         Ok(resp.content)

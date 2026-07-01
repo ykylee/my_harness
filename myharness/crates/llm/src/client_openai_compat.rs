@@ -96,6 +96,7 @@ impl LLMClient for OpenAiCompatProvider {
             input_tokens: u32::try_from(resp.usage.input_tokens).ok(),
             output_tokens: u32::try_from(resp.usage.output_tokens).ok(),
             raw: None,
+            tool_calls: Vec::new(),
         })
     }
 }
@@ -210,6 +211,7 @@ mod tests {
             stop: vec![],
             stream: false,
             metadata: serde_json::Value::Null,
+            tools: Vec::new(),
         };
         let resp = p.complete(req).await.expect("MiniMax API call failed");
         eprintln!("MiniMax response: model={} content={:?}", resp.model, resp.content);

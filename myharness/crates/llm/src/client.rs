@@ -39,6 +39,48 @@ impl Message {
     }
 }
 
+/// A-proper native tool calling (D-108, v1.5+): tool specification sent
+/// to the LLM in the completion request.
+///
+/// `input_schema` is a JSON Schema object describing the arguments the
+/// LLM is allowed to emit for this tool. Providers that do not
+/// support native tool calling (text-only models) will simply ignore
+/// this field on the request side.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ToolSpec {
+    pub name: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub description: Option<String>,
+    /// JSON Schema object (e.g. `{"type":"object","properties":{...}}`).
+    #[serde(default = "empty_object_schema")]
+    pub input_schema: serde_json::Value,
+}
+
+fn empty_object_schema() -> serde_json::Value {
+    serde_json::json!({"type": "object", "properties": {}})
+}
+
+impl ToolSpec {
+    pub fn new(name: impl Into<String>, description: impl Into<String>) -> Self {
+        Self {
+            name: name.into(),
+            description: Some(description.into()),
+            input_schema: empty_object_schema(),
+        }
+    }
+}
+
+/// A-proper native tool calling (D-108): a single structured tool call
+/// the LLM emitted in its completion response. `id` is provider-opaque
+/// (OpenAI uses "call_xxx", Anthropic uses "toolu_xxx"); `arguments`
+/// is the parsed JSON object the LLM chose for the tool.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ToolCall {
+    pub id: String,
+    pub name: String,
+    pub arguments: serde_json::Value,
+}
+
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct CompletionRequest {
     #[serde(default)]
@@ -57,6 +99,10 @@ pub struct CompletionRequest {
     pub stream: bool,
     #[serde(default)]
     pub metadata: serde_json::Value,
+    /// A-proper native tool calling (D-108): tool specs the model may
+    /// invoke. Empty for text-only completions.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub tools: Vec<ToolSpec>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -71,6 +117,13 @@ pub struct CompletionResponse {
     pub output_tokens: Option<u32>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub raw: Option<serde_json::Value>,
+    /// A-proper native tool calling (D-108): structured tool calls the
+    /// LLM emitted. Empty when the model responded with plain text.
+    /// Callers should treat the presence of any `tool_calls` as
+    /// authoritative — `content` may be empty or contain
+    /// intermediate text the model said before invoking the tool.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub tool_calls: Vec<ToolCall>,
 }
 
 #[async_trait]
@@ -115,6 +168,7 @@ mod tests {
             input_tokens: Some(10),
             output_tokens: Some(3),
             raw: None,
+            tool_calls: Vec::new(),
         };
         let s = serde_json::to_string(&r).unwrap();
         let back: CompletionResponse = serde_json::from_str(&s).unwrap();

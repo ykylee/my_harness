@@ -73,6 +73,7 @@ impl LLMClient for GeminiProvider {
             input_tokens: u32::try_from(resp.usage.input_tokens).ok(),
             output_tokens: u32::try_from(resp.usage.output_tokens).ok(),
             raw: None,
+            tool_calls: Vec::new(),
         })
     }
 }

@@ -14,6 +14,14 @@ use crate::provider::ProviderId;
 #[derive(Debug, Clone)]
 pub enum MockResponse {
     Text(String),
+    /// A-proper native tool calling (D-108): emit structured tool
+    /// calls exactly as a wire-format provider would. Optional
+    /// `text_before` carries any text the model said before invoking
+    /// the tool.
+    ToolCalls {
+        text_before: String,
+        calls: Vec<crate::client::ToolCall>,
+    },
     Error(String),
     Delay { ms: u64, then: Box<MockResponse> },
 }
@@ -94,6 +102,19 @@ impl LLMClient for MockClient {
                     input_tokens: Some(10),
                     output_tokens: Some(out_tokens),
                     raw: None,
+                    tool_calls: Vec::new(),
+                })
+            }
+            Some(MockResponse::ToolCalls { text_before, calls }) => {
+                let out_tokens = text_before.len() as u32;
+                Ok(CompletionResponse {
+                    content: text_before,
+                    model: self.model.clone(),
+                    stop_reason: Some("tool_use".into()),
+                    input_tokens: Some(10),
+                    output_tokens: Some(out_tokens),
+                    raw: None,
+                    tool_calls: calls,
                 })
             }
             Some(MockResponse::Error(e)) => Err(mock_error_to_llm_error(&e)),

@@ -392,6 +392,7 @@ mod tests {
             stop: vec![],
             stream: false,
             metadata: json!(null),
+            tools: Vec::new(),
         };
         let result = client.complete(req).await;
         assert!(
@@ -449,6 +450,7 @@ mod tests {
             stop: vec![],
             stream: false,
             metadata: json!(null),
+            tools: Vec::new(),
         };
         let result = client.complete(req).await;
         assert!(result.is_err());

@@ -196,11 +196,96 @@ impl Orchestrator {
                     stop: vec![],
                     stream: false,
                     metadata: serde_json::Value::Null,
+                    tools: tool_specs_for(self.tool_registry.as_deref()),
                 };
 
                 match llm.complete(req).await {
                     Ok(r) if !r.content.is_empty() => {
-                        // tool_call block 추출 시도
+                        // D-108 A-proper native tool calling (v1.5+): if the
+                        // provider emitted structured `tool_calls`, dispatch
+                        // each one before falling back to the text-based
+                        // ```tool_call``` block parse. Native path is
+                        // authoritative — when present, the text-based
+                        // extractor is skipped.
+                        if !r.tool_calls.is_empty() {
+                            for tc in &r.tool_calls {
+                                // D-102 — canonical signature (key 순서 무관) 로 중복 체크
+                                let sig = canonical_tool_call(&tc.name, &tc.arguments);
+                                let count = call_counts.entry(sig.clone()).or_insert(0);
+                                *count += 1;
+                                if *count >= 2 {
+                                    tracing::warn!(
+                                        sig = %sig,
+                                        count = *count,
+                                        "tool-loop-detected (native): same tool+args repeated; breaking loop"
+                                    );
+                                    messages.push(myharness_llm::client::Message::assistant(
+                                        r.content.clone(),
+                                    ));
+                                    messages.push(myharness_llm::client::Message::user(
+                                        "[orchestrator] You have called the same tool with the same arguments multiple times.                                          The result will not change. Please provide your final answer based on the tool results so far.                                          Do not call any more tools."
+                                            .to_string(),
+                                    ));
+                                    let final_req = myharness_llm::CompletionRequest {
+                                        model: String::new(),
+                                        system: Some(system_prompt.clone()),
+                                        messages: messages.clone(),
+                                        max_tokens: Some(2048),
+                                        temperature: Some(0.2),
+                                        stop: vec![],
+                                        stream: false,
+                                        metadata: serde_json::Value::Null,
+                                        tools: tool_specs_for(self.tool_registry.as_deref()),
+                                    };
+                                    match llm.complete(final_req).await {
+                                        Ok(fr) if !fr.content.is_empty() => {
+                                            response.push_str(&format!(
+                                                "\n\n[tool-loop-detected-native] {sig} repeated {count} times, breaking loop"
+                                            ));
+                                            response.push_str("\n\n[LLM-final] ");
+                                            response.push_str(&fr.content);
+                                        }
+                                        _ => {
+                                            response.push_str(&format!(
+                                                "\n\n[tool-loop-detected-native] {sig} repeated {count} times, no final response"
+                                            ));
+                                        }
+                                    }
+                                    return Ok(response);
+                                }
+
+                                // tool dispatch (AcceptEdits + confirm_override true → prompt skip)
+                                let (tool_result_text, tool_is_error) = match self
+                                    .dispatch_tool_call(&tc.name, tc.arguments.clone())
+                                    .await
+                                {
+                                    Ok(text) => (text, false),
+                                    Err(e) => (format!("[tool-error] {e}"), true),
+                                };
+                                messages.push(myharness_llm::client::Message::assistant(
+                                    r.content.clone(),
+                                ));
+                                messages.push(myharness_llm::client::Message::tool(
+                                    tool_result_text.clone(),
+                                    tc.name.clone(),
+                                ));
+                                let truncated = if tool_result_text.len() > 2000 {
+                                    format!("{}…[truncated {} chars]", &tool_result_text[..2000], tool_result_text.len() - 2000)
+                                } else {
+                                    tool_result_text.clone()
+                                };
+                                response.push_str(&format!(
+                                    "\n\n[tool_call-native] {} ({}) → {}\n[tool_result] {}\n[LLM-round-{}] dispatching next",
+                                    tc.name,
+                                    if tool_is_error { "error" } else { "ok" },
+                                    if tool_is_error { "see [tool-error]" } else { "see below" },
+                                    truncated,
+                                    round + 1
+                                ));
+                            }
+                            continue;
+                        }
+                        // tool_call block 추출 시도 (text-based fallback, A-min / D-100)
                         if let Some((name, args)) = extract_tool_call(&r.content) {
                             // D-102 — canonical signature (key 순서 무관) 로 중복 체크
                             let sig = canonical_tool_call(&name, &args);
@@ -231,6 +316,7 @@ impl Orchestrator {
                                     stop: vec![],
                                     stream: false,
                                     metadata: serde_json::Value::Null,
+                                    tools: tool_specs_for(self.tool_registry.as_deref()),
                                 };
                                 match llm.complete(final_req).await {
                                     Ok(fr) if !fr.content.is_empty() => {
@@ -363,6 +449,18 @@ fn extract_tool_call(content: &str) -> Option<(String, serde_json::Value)> {
     let name = parsed.get("name")?.as_str()?.to_string();
     let args = parsed.get("args").cloned().unwrap_or(serde_json::json!({}));
     Some((name, args))
+}
+
+/// D-108 (2026-07-01) — collect native `ToolSpec`s from a
+/// `ToolRegistry`. v1.5 ships a minimal spec (name only) because the
+/// `Tool` trait does not yet expose `description` / `input_schema`
+/// (those land in D-108 follow-up). Empty registry → empty vec.
+fn tool_specs_for(registry: Option<&myharness_tools::ToolRegistry>) -> Vec<myharness_llm::client::ToolSpec> {
+    let Some(reg) = registry else { return Vec::new() };
+    reg.names()
+        .into_iter()
+        .map(|n| myharness_llm::client::ToolSpec::new(n, ""))
+        .collect()
 }
 
 /// D-102 (2026-06-30) — tool_call canonical signature.
@@ -749,5 +847,129 @@ Then I'll analyze."#;
         assert!(!out.contains("[tool-loop-detected]"));
         assert!(out.contains("done."));
         assert_eq!(c.calls.lock().unwrap().len(), 3); // 2 tool rounds + 1 final (no tool_call)
+    }
+
+    // --- A-proper native tool calling (D-108) ---------------------------------
+
+    fn native_call(id: &str, name: &str, args: serde_json::Value) -> myharness_llm::client::ToolCall {
+        myharness_llm::client::ToolCall {
+            id: id.into(),
+            name: name.into(),
+            arguments: args,
+        }
+    }
+
+    #[tokio::test]
+    async fn run_with_native_tool_call_dispatches_and_continues() {
+        // LLM emits a structured `tool_calls` (not a text block).
+        // The orchestrator must dispatch it and continue to the next
+        // round, then accept the final text response.
+        let c = Arc::new(MockClient::new(ProviderId::Claude, "claude-sonnet-4-6"));
+        c.push(MockResponse::ToolCalls {
+            text_before: "I will check the env.".into(),
+            calls: vec![native_call(
+                "call_1",
+                "Bash",
+                serde_json::json!({"command": "echo r1"}),
+            )],
+        });
+        c.push(MockResponse::Text("all done.".into()));
+        let reg = Arc::new(myharness_tools::ToolRegistry::default_tools());
+        let o = Orchestrator::new()
+            .with_llm(c.clone())
+            .with_tools(reg);
+        let out = o.run("env diagnose").await.unwrap();
+        assert!(out.contains("[tool_call-native] Bash (ok)"), "out: {out}");
+        assert!(out.contains("[LLM] all done."), "out: {out}");
+        assert_eq!(c.calls.lock().unwrap().len(), 2);
+    }
+
+    #[tokio::test]
+    async fn run_with_native_tool_call_request_includes_tools() {
+        // The completion request sent to the LLM should carry the
+        // registered tool names as `ToolSpec`s.
+        let c = Arc::new(MockClient::new(ProviderId::Claude, "claude-sonnet-4-6"));
+        c.push(MockResponse::Text("ok".into()));
+        let reg = Arc::new(myharness_tools::ToolRegistry::default_tools());
+        let o = Orchestrator::new()
+            .with_llm(c.clone())
+            .with_tools(reg);
+        let _ = o.run("hi").await.unwrap();
+        let calls = c.calls.lock().unwrap();
+        assert_eq!(calls.len(), 1);
+        let names: Vec<&str> = calls[0].tools.iter().map(|t| t.name.as_str()).collect();
+        for required in ["Bash", "Edit", "Glob", "Grep", "Read", "Write"] {
+            assert!(names.contains(&required), "missing tool {required} in {names:?}");
+        }
+    }
+
+    #[tokio::test]
+    async fn run_with_native_tool_calls_takes_precedence_over_text() {
+        // If the LLM emits BOTH text containing a ```tool_call``` block
+        // AND structured `tool_calls`, native wins (text-based extractor
+        // is skipped). We verify by counting dispatch markers.
+        let c = Arc::new(MockClient::new(ProviderId::Claude, "claude-sonnet-4-6"));
+        c.push(MockResponse::ToolCalls {
+            text_before: r#"```tool_call
+{"name": "Bash", "args": {"command": "echo text"}}
+```"#
+                .into(),
+            calls: vec![native_call(
+                "call_native",
+                "Bash",
+                serde_json::json!({"command": "echo native"}),
+            )],
+        });
+        c.push(MockResponse::Text("ok".into()));
+        let reg = Arc::new(myharness_tools::ToolRegistry::default_tools());
+        let o = Orchestrator::new()
+            .with_llm(c.clone())
+            .with_tools(reg);
+        let out = o.run("hi").await.unwrap();
+        // Exactly one dispatch — the native one, not the text one.
+        let native_count = out.matches("[tool_call-native]").count();
+        let text_count = out.matches("[tool_call] Bash (ok)").count();
+        assert_eq!(native_count, 1, "expected 1 native dispatch, out: {out}");
+        assert_eq!(text_count, 0, "expected 0 text-based dispatches, out: {out}");
+    }
+
+    #[tokio::test]
+    async fn run_with_native_repeated_tool_call_breaks_loop() {
+        // D-102 dedup applies to native path too: same tool+args twice
+        // → synthetic final prompt + break, no infinite loop.
+        let c = Arc::new(MockClient::new(ProviderId::Claude, "claude-sonnet-4-6"));
+        let args = serde_json::json!({"command": "echo same"});
+        c.push(MockResponse::ToolCalls {
+            text_before: "first".into(),
+            calls: vec![native_call("c1", "Bash", args.clone())],
+        });
+        c.push(MockResponse::ToolCalls {
+            text_before: "second".into(),
+            calls: vec![native_call("c2", "Bash", args.clone())],
+        });
+        c.push(MockResponse::Text("final answer".into()));
+        let reg = Arc::new(myharness_tools::ToolRegistry::default_tools());
+        let o = Orchestrator::new()
+            .with_llm(c.clone())
+            .with_tools(reg)
+            .with_max_tool_rounds(5);
+        let out = o.run("hi").await.unwrap();
+        assert!(out.contains("[tool-loop-detected-native]"), "out: {out}");
+        assert!(out.contains("final answer"), "out: {out}");
+    }
+
+    #[test]
+    fn tool_specs_for_empty_registry() {
+        assert!(tool_specs_for(None).is_empty());
+    }
+
+    #[test]
+    fn tool_specs_for_default_registry() {
+        let reg = myharness_tools::ToolRegistry::default_tools();
+        let specs = tool_specs_for(Some(&reg));
+        let names: Vec<&str> = specs.iter().map(|s| s.name.as_str()).collect();
+        assert!(names.contains(&"Bash"));
+        assert!(names.contains(&"Edit"));
+        assert_eq!(specs.len(), 6);
     }
 }
