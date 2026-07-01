@@ -1,6 +1,6 @@
 {
   "schema_version": "1",
-  "generated_at": "2026-07-01",
+  "generated_at": "2026-07-01T05:30:00Z",
   "source_of_truth": {
     "project_profile_path": "docs/PROJECT_PROFILE.md",
     "session_handoff_path": "ai-workflow/memory/session_handoff.md",
@@ -103,7 +103,10 @@
       "W15.b: OAuth token 자동 refresh (LlmError::ProviderCall msg 에 401/unauthorized/auth 키워드 시 AuthManager::ensure_fresh → store save → 새 OpenAiCompatProvider 빌드 → retry 1회). 1회 한정 (무한루프 방지). refresh_token 없으면 expired token 그대로 retry",
       "Gitea PAT (D-44) — ~/.git-credentials (chmod 600). 회전 권고",
       "GitHub auth via gh CLI (ykylee)"
-    ]
+    ],
+    "last_decision_id": "D-112",
+    "last_session_date": "2026-07-01",
+    "decision_count": 60
   },
   "decisions": {
     "decided": [
@@ -470,6 +473,20 @@
         "build_status": "N/A (no code change)",
         "clippy_status": "N/A (no code change)",
         "decision_count": 59
+      },
+      {
+        "id": "D-112",
+        "title": "Read tool auto-truncation + has_more / next_offset hint (옵션 d, 2026-07-01)",
+        "summary": "D-100 한계 follow-up. Read tool 의 1MB cap 은 유지하면서, LLM prompt-only 강제였던 D-103 chunked Read 를 tool 자체가 enforce 하도록 강화. (1) `DEFAULT_READ_LINE_LIMIT=500` — caller 가 `limit` 미지정 시 자동 500 line cap. (2) `MAX_READ_LINE_LIMIT=5_000` — caller 가 명시한 limit 도 5000 초과 시 clamp (1MB 안에 fit). (3) metadata 에 `limit` (실제 적용된 값) + `has_more` (truncated 여부) + `has_more=true` 일 때만 `next_offset` (다음 chunk 의 offset) 노출. (4) `limit:0` 은 `None` 과 동일하게 default 사용. (5) description + input_schema 의 `limit` description 모두 갱신 (LLM 이 schema 만 보고 동작 학습). 1 file (`myharness/crates/tools/src/read.rs`) / +47 / -20 = +27 lines net, 4 신규 test (`test_d112_auto_truncates_large_file` 1000-line → 500 line truncate / `test_d112_clamps_excessive_limit` 7000-line file + limit 10000 → 5000 clamp / `test_d112_no_truncation_signals_correctly` 10-line file → has_more=false / `test_d112_limit_zero_uses_default` defensive / `test_d112_paginated_walk_through_large_file` 1500-line 3-chunk walk). **검증**: cargo build --workspace clean / cargo clippy --workspace --all-targets -- -D warnings 0 warning (no `#[allow]` 추가) / cargo test -p myharness-tools --lib **13/13 read test PASS (기존 9 + 신규 4)**, tools crate 전체 **105/105 pass** / 회귀 0. 효과: (a) LLM 이 1000+ line 파일 prompt 무시하고 한 번에 요청해도 자동 truncate, (b) `has_more`/`next_offset` metadata 가 LLM 에게 next chunk 의 정확한 위치를 알려줌 → D-102 dedup 과 결합 시 large file code review 의 무한 루프 위험도 자동 차단, (c) D-103 prompt 의 `>500 lines 는 offset+limit` 권고가 tool layer 로 강제됨 → prompt 변경 시 description 만 sync 하면 됨. **한계**: 1MB cap 은 그대로 — binary-ish 큰 파일은 여전히 거부. 5000 line cap 도 LLM context window 기준 안전하지만 아주 큰 file (10000+ lines) 은 chunked walk 필요. v1.5+ = Lark parser / block-aware insert/replace.",
+        "type": "feature",
+        "scope": "myharness-tools (ReadTool::execute, +47 -20 lines, 4 신규 test)",
+        "main_hash": "D-112 commit (push 후 확정)",
+        "test_count": 490,
+        "test_delta": 4,
+        "files_changed": 1,
+        "build_status": "clean",
+        "clippy_status": "0 warning",
+        "decision_count": 60
       }
     ],
     "deferred": [
@@ -606,5 +623,6 @@
   "repository_assessment": {
     "path": null,
     "present": false
-  }
+  },
+  "decision_count": 60
 }

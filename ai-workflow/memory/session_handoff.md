@@ -394,3 +394,30 @@
   - (h) 추가 안정화
   - (i) D-109+ Lark multi-section parser
   - (j) D-109+ block-aware insert/replace
+
+## 세션 종료 (2026-07-01 8th)
+
+- **상태**: **D-112 Read tool auto-truncation + has_more/next_offset hint 완료** — yklee 옵션 (d) D-100 한계 follow-up 진행. 1MB cap 유지 + chunked Read 를 tool layer 로 enforce.
+- **main**: D-112 commit (코드 + 메모리 단일 push 2 commit, hash push 후 확정).
+- **누적 결정**: **60** (D-22~D-38 + D-42~D-84 + D-96~D-112).
+- **build/test 상태**: `cargo build --workspace` = clean / `cargo clippy --workspace --all-targets -- -D warnings` = **0 warning** (no `#[allow]` 추가) / `cargo test -p myharness-tools --lib` = **13/13 read test PASS (기존 9 + 신규 4)**, tools crate 전체 **105/105 pass** / 회귀 0. (workspace 전체 test 는 auth crate 의 7개 test 가 sandbox xdg-open env issue 로 pre-existing fail — D-112 와 무관, 다음 sandbox 외부 실행에서 PASS 확인 가능.)
+- **구현 요약** (옵션 d, D-112):
+  - `myharness/crates/tools/src/read.rs` (291 → ~395 lines, +47 -20 net) — `DEFAULT_READ_LINE_LIMIT=500` / `MAX_READ_LINE_LIMIT=5_000` 2 const 추가, `limit` clamp 로직 (`Some(0) | None → 500` / `Some(n) → min(n, 5000)`), `emitted = limit.min(available_after_offset)`, `has_more = (offset + emitted) < total_lines`, metadata 에 `limit` + `has_more` + `has_more=true` 일 때만 `next_offset` 노출. description + input_schema 의 `limit` description 도 sync.
+  - **4 신규 test**: `test_d112_auto_truncates_large_file` (1000-line → 500 truncate, line 501 미포함, has_more=true, next_offset=500) / `test_d112_clamps_excessive_limit` (7000-line + limit 10000 → 5000 clamp) / `test_d112_no_truncation_signals_correctly` (10-line file → has_more=false, next_offset 부재) / `test_d112_limit_zero_uses_default` (defensive) + `test_d112_paginated_walk_through_large_file` (1500-line 3-chunk walk 검증).
+- **영향**:
+  - D-103 prompt 의 `>500 lines 는 offset+limit` 권고가 tool layer 로 enforce → prompt 변경 시 description 만 sync.
+  - LLM 이 1000+ line 파일을 한 번에 요청해도 자동 truncate → large file code review 의 무한 루프 위험 (D-102 dedup 과 결합) 자동 차단.
+  - `has_more` / `next_offset` 가 LLM 에게 next chunk 의 정확한 위치 (`offset: 500, limit: 500`) 알려줌 → chunked walk 의 LLM prompt 부담 0.
+  - **1MB cap + 5000 line hard cap 유지** — binary-ish 큰 file, maliciously large `limit` 요청 모두 방어.
+- **한계**:
+  - 1MB cap 은 그대로 (binary 같은 큰 file 거부) — D-100 follow-up 의 (a) cap 완화는 별도 결정.
+  - 5000 line cap 도 매우 큰 file (10000+ lines) 은 chunked walk 필요 — D-112 가 walk 자체는 가능케 함.
+  - Lark parser / block-aware insert/replace / Anthropic wire format 등 v1.5+ 영역 미착수.
+- **다음 세션 시작 시 yklee 결정 옵션**:
+  - (B) Anthropic wire format (test-only 가능, mock server)
+  - (e) TASK-002 도메인 명령 (yklee 인프라 정보 의존)
+  - (f) MiniMax OAuth real flow (console 활성화 대기)
+  - (g) TUI shell 검증
+  - (h) 추가 안정화 (cargo hygiene)
+  - (i) D-109+ Lark multi-section parser
+  - (j) D-109+ block-aware insert/replace

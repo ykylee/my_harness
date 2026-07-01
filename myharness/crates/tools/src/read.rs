@@ -7,6 +7,17 @@ use crate::content_hash::{compute_content_hash, format_line_anchored, HASH_TAG_L
 use crate::error::ToolError;
 use crate::tool::{Tool, ToolContext, ToolResult};
 
+/// Default line cap when caller does not specify `limit`.
+/// Calibrated against D-103 prompt guidance ("~200 chunks for >500 lines")
+/// and a typical LLM context window — 500 LINE:TEXT lines stay well under
+/// the per-result budget even for ~120-char lines.
+const DEFAULT_READ_LINE_LIMIT: usize = 500;
+
+/// Hard upper bound on `limit`. Defends the tool against a caller asking
+/// for an unbounded slice — anything beyond this is clamped. Picked to
+/// fit comfortably inside the 1MB file-size cap above.
+const MAX_READ_LINE_LIMIT: usize = 5_000;
+
 pub struct ReadTool;
 
 #[async_trait]
@@ -16,7 +27,7 @@ impl Tool for ReadTool {
     }
 
     fn description(&self) -> &'static str {
-        "Read a file from the filesystem. Returns LINE:TEXT prefixed content          for hashline addressing, with a final content hash line."
+        "Read a file from the filesystem. Returns LINE:TEXT prefixed content for hashline addressing. When the file is larger than the read limit, the response is automatically truncated and metadata signals `has_more` + `next_offset` so the caller can fetch the next chunk."
     }
 
     fn input_schema(&self) -> serde_json::Value {
@@ -35,7 +46,7 @@ impl Tool for ReadTool {
                 "limit": {
                     "type": "integer",
                     "minimum": 1,
-                    "description": "Optional maximum number of lines to read."
+                    "description": "Optional maximum number of lines to read. Defaults to 500 when omitted. Capped at 5000; larger values are clamped and the response is marked truncated."
                 },
                 "format": {
                     "type": "string",
@@ -99,6 +110,15 @@ impl Tool for ReadTool {
                 let v = v as usize;
                 v
             });
+        // Apply default + max clamp (D-112). Caller-supplied limits above
+        // MAX_READ_LINE_LIMIT are silently clamped — the resulting metadata
+        // surfaces `has_more: true` if the file was actually truncated, so
+        // the caller can still discover there's more to read. A `limit: 0`
+        // is treated as "not specified" to match the schema's minimum:1 hint.
+        let limit = match limit {
+            Some(0) | None => DEFAULT_READ_LINE_LIMIT,
+            Some(n) => n.min(MAX_READ_LINE_LIMIT),
+        };
 
         // Compute total line count once (cheap — borrowed reference; no extra
         // allocation beyond the iterator).
@@ -109,7 +129,7 @@ impl Tool for ReadTool {
         // chunked reads (`offset`/`limit`), we still number from the ORIGINAL
         // file — i.e. line N in the output corresponds to line N in the file.
         let start_line = offset + 1;
-        let output = if let Some(limit) = limit {
+        let output = if limit > 0 {
             let sliced: String = content
                 .lines()
                 .skip(offset)
@@ -130,28 +150,35 @@ impl Tool for ReadTool {
             format_line_anchored(&content, start_line)
         };
 
-        // Compute the inclusive end_line for metadata — D-105 Edit's
-        // `line_anchored` validator can sanity-check against this.
-        let emitted = if let Some(limit) = limit {
-            limit.min(total_lines.saturating_sub(offset))
-        } else {
-            total_lines
-        };
+        // `emitted` reflects the lines actually returned. If the file has
+        // fewer lines than `limit` requests, `emitted` shrinks to what's
+        // available — `has_more` then correctly reports false.
+        let emitted = limit.min(total_lines.saturating_sub(offset));
         let end_line = start_line.saturating_add(emitted).saturating_sub(1);
+
+        // Build the metadata payload. D-112 adds truncation hints so the
+        // caller (LLM) can discover there's more to read without guessing.
+        let has_more = (offset + emitted) < total_lines;
+        let mut meta = serde_json::json!({
+            "path": path.to_string_lossy(),
+            "size": meta.len(),
+            "line_count": total_lines,
+            "format": "line_text",
+            "content_hash": content_hash,
+            "hash_length": HASH_TAG_LENGTH,
+            "start_line": start_line,
+            "end_line": end_line,
+            "limit": limit,
+            "has_more": has_more,
+        });
+        if has_more {
+            meta["next_offset"] = serde_json::json!(offset + emitted);
+        }
 
         Ok(ToolResult {
             output,
             is_error: false,
-            metadata: Some(serde_json::json!({
-                "path": path.to_string_lossy(),
-                "size": meta.len(),
-                "line_count": total_lines,
-                "format": "line_text",
-                "content_hash": content_hash,
-                "hash_length": HASH_TAG_LENGTH,
-                "start_line": start_line,
-                "end_line": end_line,
-            })),
+            metadata: Some(meta),
         })
     }
 }
@@ -287,5 +314,203 @@ mod tests {
             .unwrap()
             .to_string();
         assert_eq!(full_hash, chunk_hash);
+    }
+
+    // --- D-112: large file auto-truncation + has_more / next_offset hints ---
+
+    fn ctx_default() -> ToolContext {
+        ToolContext {
+            cwd: PathBuf::from("/"),
+            permission_mode: PermissionMode::Default,
+            confirm_override: false,
+            sanitizer_mode: SanitizerMode::default(),
+        }
+    }
+
+    /// 1000-line file read with no `limit` returns the first 500 lines, marks
+    /// `has_more: true`, and surfaces `next_offset = 500` for the caller to
+    /// fetch the next chunk. This is the headline D-112 behavior — the LLM
+    /// no longer has to remember the prompt-level "use limit+offset" rule.
+    #[tokio::test]
+    async fn test_d112_auto_truncates_large_file() {
+        let dir = tempdir().unwrap();
+        let file_path = dir.path().join("big.txt");
+        let body: String = (1..=1000)
+            .map(|i| format!("line{i:04}"))
+            .collect::<Vec<_>>()
+            .join("\n");
+        fs::write(&file_path, &body).await.unwrap();
+
+        let result = ReadTool
+            .execute(&ctx_default(), serde_json::json!({ "file_path": file_path.to_string_lossy() }))
+            .await
+            .unwrap();
+        assert!(!result.is_error);
+        // Output should end with line 500 (1-indexed absolute).
+        assert!(
+            result.output.lines().last().unwrap().starts_with("500:"),
+            "expected last emitted line to be 500:, got: {}",
+            result.output.lines().last().unwrap()
+        );
+        // Output must NOT contain line 501.
+        assert!(!result.output.contains("\n501:"));
+        let meta = result.metadata.expect("metadata required");
+        assert_eq!(meta["has_more"], serde_json::json!(true));
+        assert_eq!(meta["next_offset"], serde_json::json!(500));
+        assert_eq!(meta["limit"], serde_json::json!(500));
+        assert_eq!(meta["line_count"], serde_json::json!(1000));
+        assert_eq!(meta["end_line"], serde_json::json!(500));
+        assert_eq!(meta["start_line"], serde_json::json!(1));
+    }
+
+    /// Caller can request an explicit `limit` above the MAX_READ_LINE_LIMIT
+    /// (5000) — we clamp it to the max and surface `has_more: true` for any
+    /// file larger than the clamp. This protects the tool from unbounded
+    /// output while still being useful for very large explicit scans.
+    #[tokio::test]
+    async fn test_d112_clamps_excessive_limit() {
+        let dir = tempdir().unwrap();
+        let file_path = dir.path().join("big.txt");
+        let body: String = (1..=7000)
+            .map(|i| format!("line{i}"))
+            .collect::<Vec<_>>()
+            .join("\n");
+        fs::write(&file_path, &body).await.unwrap();
+
+        let result = ReadTool
+            .execute(
+                &ctx_default(),
+                serde_json::json!({
+                    "file_path": file_path.to_string_lossy(),
+                    "limit": 10_000,
+                }),
+            )
+            .await
+            .unwrap();
+        let meta = result.metadata.expect("metadata required");
+        // 10000 was clamped down to 5000.
+        assert_eq!(meta["limit"], serde_json::json!(5_000));
+        assert_eq!(meta["has_more"], serde_json::json!(true));
+        assert_eq!(meta["next_offset"], serde_json::json!(5_000));
+        assert_eq!(meta["end_line"], serde_json::json!(5_000));
+    }
+
+    /// When the file is smaller than the (auto or explicit) limit, `has_more`
+    /// must be `false` and `next_offset` must be absent — otherwise the LLM
+    /// would loop forever fetching "more" that doesn't exist.
+    #[tokio::test]
+    async fn test_d112_no_truncation_signals_correctly() {
+        let dir = tempdir().unwrap();
+        let file_path = dir.path().join("small.txt");
+        let body: String = (1..=10)
+            .map(|i| format!("line{i}"))
+            .collect::<Vec<_>>()
+            .join("\n");
+        fs::write(&file_path, &body).await.unwrap();
+
+        let result = ReadTool
+            .execute(&ctx_default(), serde_json::json!({ "file_path": file_path.to_string_lossy() }))
+            .await
+            .unwrap();
+        let meta = result.metadata.expect("metadata required");
+        assert_eq!(meta["has_more"], serde_json::json!(false));
+        assert!(
+            meta.get("next_offset").is_none(),
+            "next_offset must be absent when has_more is false, got: {}",
+            meta
+        );
+        assert_eq!(meta["limit"], serde_json::json!(500));
+        assert_eq!(meta["end_line"], serde_json::json!(10));
+    }
+
+    /// `limit: 0` is treated as "not specified" (defensive — the schema says
+    /// minimum:1, but real callers sometimes pass 0). Result must equal the
+    /// no-limit path.
+    #[tokio::test]
+    async fn test_d112_limit_zero_uses_default() {
+        let dir = tempdir().unwrap();
+        let file_path = dir.path().join("big.txt");
+        let body: String = (1..=1000)
+            .map(|i| format!("line{i}"))
+            .collect::<Vec<_>>()
+            .join("\n");
+        fs::write(&file_path, &body).await.unwrap();
+
+        let result = ReadTool
+            .execute(
+                &ctx_default(),
+                serde_json::json!({
+                    "file_path": file_path.to_string_lossy(),
+                    "limit": 0,
+                }),
+            )
+            .await
+            .unwrap();
+        let meta = result.metadata.expect("metadata required");
+        assert_eq!(meta["limit"], serde_json::json!(500));
+        assert_eq!(meta["has_more"], serde_json::json!(true));
+        assert_eq!(meta["end_line"], serde_json::json!(500));
+    }
+
+    /// Walking a 1500-line file with two Read calls (default 500, then
+    /// `offset: 500`, then `offset: 1000`) — the second call sees
+    /// `has_more: true` and the third sees `has_more: false`. This is the
+    /// end-to-end contract the LLM relies on for large-file code review.
+    #[tokio::test]
+    async fn test_d112_paginated_walk_through_large_file() {
+        let dir = tempdir().unwrap();
+        let file_path = dir.path().join("walk.txt");
+        let body: String = (1..=1500)
+            .map(|i| format!("line{i}"))
+            .collect::<Vec<_>>()
+            .join("\n");
+        fs::write(&file_path, &body).await.unwrap();
+
+        // First chunk: lines 1..=500, has_more → next_offset 500.
+        let r1 = ReadTool
+            .execute(&ctx_default(), serde_json::json!({ "file_path": file_path.to_string_lossy() }))
+            .await
+            .unwrap();
+        let m1 = r1.metadata.unwrap();
+        assert_eq!(m1["start_line"], 1);
+        assert_eq!(m1["end_line"], 500);
+        assert_eq!(m1["has_more"], serde_json::json!(true));
+        assert_eq!(m1["next_offset"], serde_json::json!(500));
+
+        // Second chunk: offset=500, limit=500 → lines 501..=1000, has_more → 1000.
+        let r2 = ReadTool
+            .execute(
+                &ctx_default(),
+                serde_json::json!({
+                    "file_path": file_path.to_string_lossy(),
+                    "offset": 500,
+                    "limit": 500,
+                }),
+            )
+            .await
+            .unwrap();
+        let m2 = r2.metadata.unwrap();
+        assert_eq!(m2["start_line"], 501);
+        assert_eq!(m2["end_line"], 1000);
+        assert_eq!(m2["has_more"], serde_json::json!(true));
+        assert_eq!(m2["next_offset"], serde_json::json!(1000));
+
+        // Third chunk: offset=1000, limit=500 → lines 1001..=1500, has_more=false.
+        let r3 = ReadTool
+            .execute(
+                &ctx_default(),
+                serde_json::json!({
+                    "file_path": file_path.to_string_lossy(),
+                    "offset": 1000,
+                    "limit": 500,
+                }),
+            )
+            .await
+            .unwrap();
+        let m3 = r3.metadata.unwrap();
+        assert_eq!(m3["start_line"], 1001);
+        assert_eq!(m3["end_line"], 1500);
+        assert_eq!(m3["has_more"], serde_json::json!(false));
+        assert!(m3.get("next_offset").is_none());
     }
 }
