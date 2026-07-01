@@ -227,3 +227,32 @@
 - **현재 main**: `a9b5a63` (변동 없음, working tree clean).
 - **누적 결정**: 53 (D-106 미완, 변동 0).
 - **상세**: `backlog/2026-07-01.md` §10.
+
+---
+
+## D-107 (2026-07-01 추가) — pure_edit mode
+
+- **oh-my-pi Hashline 점진 차용 4차 cycle (D-107, v1.5+)** — pure insert/delete 의미론. `insert_before` / `insert_after` / `insert_head` / `insert_tail` / `insert_after_block` (D-106 tree-sitter reuse) / `delete N..M` (single = start==end). multi-section atomic: 모든 op 를 line-DESCENDING 으로 정렬 + priority (Delete > After > Before > Head|Tail) → high anchor 가 low anchor shift 안 함.
+- **stale-anchor gate**: v1.5 safe-by-default — `expected_hash` 필수 (없으면 reject). line_anchored 와 동급.
+- **구현**: `myharness/crates/tools/src/edit.rs` 658 → 1220 lines, +562. PureEdit + PureInsertion enum (serde rename 으로 JSON op tag 보존) + PureDeletion + PendingOp + OpKind + apply_insert_before/after helper + EditTool::execute_pure private async method + dispatch 분기.
+- **10 test 추가** (2 unit + 8 tokio): apply_insert_before/after_basic / insert_before / insert_after_head_tail / delete_single_line / delete_range / multi_section_atomic (insert_before line 2 + delete line 4, atomic) / stale_anchor / empty_rejected / missing_hash_rejected.
+- **3-way verify**: cargo build clean / cargo clippy --workspace --all-targets -- -D warnings 0 warning (no `#[allow]` 추가, no unsafe) / cargo test --workspace **467 pass + 0 fail + 2 ignored** (D-106 baseline 457 → +10, 회귀 0).
+- **main**: `cda6330` (코드 1 commit) + 메모리 commit 단일 push.
+- **누적 결정**: 53 (D-106) → **54** (D-107 추가).
+- **Hashline 점진 차용 누적**: 6 area → **7 area 점유** (LINE:TEXT Read + content hash + replace N..M + replace block N + insert/delete N..M + multi-section atomic). 잔여 2 area = Lark multi-section parser + SnapshotStore.
+
+## 세션 종료 (2026-07-01 2nd)
+
+- **상태**: D-107 pure_edit mode 완료 + commit + dual-push 완료. **oh-my-pi Hashline 점진 차용 4차 cycle 종료**.
+- **main**: `cda6330` (코드) + 메모리 commit (단일 push 2 commit).
+- **누적 결정**: **54** (D-22~D-38 + D-42~D-84 + D-96~D-107).
+- **build/test 상태**: `cargo test --workspace --lib` = **467 pass + 0 fail + 2 ignored** / `cargo clippy --workspace --all-targets -- -D warnings` = **0 warning** / `cargo build -p myharness-tools` = clean.
+- **다음 세션 시작 시 yklee 결정 옵션**:
+  - (c) A-proper native tool calling (OpenAI/Anthropic wire format, v1.5+, 2-3 commit)
+  - (d) D-100 한계 follow-up (큰 file 1000+ lines chunked Read)
+  - (e) TASK-002 도메인 명령 (yklee 인프라 정보 의존)
+  - (f) MiniMax OAuth real flow (console 활성화 대기)
+  - (g) TUI shell 검증
+  - (h) 추가 안정화 (cargo hygiene)
+  - (i) D-108+ Lark multi-section parser (cross-file patch)
+  - (j) D-108+ block-aware insert/replace 통합
