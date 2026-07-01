@@ -4,7 +4,7 @@
 - Scope: current focus, task status, key changes, next actions, risks
 - Audience: yklee, Mavis orchestrator, .MiniMax 워커 에이전트
 - Status: active
-- Updated: 2026-07-01 (**D-105 Edit v2 line_anchored mode 완료** — oh-my-pi Hashline 점진 차용 2차 cycle. **D-105 (`5e39f5e`)** = Edit v2 line_anchored mode (`LineAnchoredEdit` struct + `apply_line_replacement` helper + `execute_line_anchored` path + 10 test 추가 (8 line_anchored + 1 unit + 1 old mode regression), tools 62 → 72 / 회귀 0 / clippy clean). **D-104 (`43bc908`)** = Read v2 LINE:TEXT + 4-hex content_hash (이전 세션). main = `5e39f5e`. 이전: 2026-06-30 D-100/D-101/D-102/D-103 (A-min tool dispatch + follow-up polish + prompt 개선 + dedup 안전망 + large file chunked Read) + 2026-06-14 D-98/D-99 (Plugin 4-계층 Sub-task 1 Auto Memory))
+- Updated: 2026-07-01 (**D-105 Edit v2 line_anchored mode 완료** — oh-my-pi Hashline 점진 차용 2차 cycle. **D-105 (`5e39f5e`)** = Edit v2 line_anchored mode (`LineAnchoredEdit` struct + `apply_line_replacement` helper + `execute_line_anchored` path + 10 test 추가 (8 line_anchored + 1 unit + 1 old mode regression), tools 62 → 72 / 회귀 0 / clippy clean). **D-126 (2026-07-01)** = ENXIO 가드 UX 개선 (b안, 본 operation log §8) — `TtyGuard::enter()?` 비-TTY 시 친절한 한국어 메시지 + exit 1. operation log `ai-workflow/memory/logs/2026-07-01-ENXIO-investigation.md` (186 lines). main = D-126 commit (코드+메모리 단일 push). 누적 결정 73 → 74. = Edit v2 line_anchored mode (`LineAnchoredEdit` struct + `apply_line_replacement` helper + `execute_line_anchored` path + 10 test 추가 (8 line_anchored + 1 unit + 1 old mode regression), tools 62 → 72 / 회귀 0 / clippy clean). **D-104 (`43bc908`)** = Read v2 LINE:TEXT + 4-hex content_hash (이전 세션). main = `5e39f5e`. 이전: 2026-06-30 D-100/D-101/D-102/D-103 (A-min tool dispatch + follow-up polish + prompt 개선 + dedup 안전망 + large file chunked Read) + 2026-06-14 D-98/D-99 (Plugin 4-계층 Sub-task 1 Auto Memory))
 - Related docs: [Project Profile](../../docs/PROJECT_PROFILE.md), [Work Backlog](./work_backlog.md), [State Cache](./state.json), [CONCEPT.md](../../docs/CONCEPT.md) (SSOT)
 
 ## Current Focus
@@ -716,3 +716,12 @@
   - (e) TASK-002 도메인 명령
   - (B-추가) Anthropic streaming / tool_result 매핑 추가 test
   - (i) Lark multi-section parser — 의미 정의 후 재개
+
+## 2026-07-01 D-125 myharness `--mode=orchestrator` `unknown mode` 회귀 복구
+
+- **증상**: `./target/release/myharness --mode=orchestrator` → `unknown mode: orchestrator` 즉시 종료.
+- **원인**: D-83 follow-up (732d6eb) 에서 `"orchestrator" | "single" =>` arm 을 `"cli" =>` 로 교체하면서 모드 분기 2종 누락. 모듈 doc 주석도 dead reference.
+- **수정**: `myharness/crates/cli/src/main.rs` L279 `"cli" =>` → `"orchestrator" | "single" =>`, L189 stale 주석 정정.
+- **검증 (3-way)**: cargo build --workspace ✅ / cargo clippy -D warnings ✅ 0 warning / cargo test --workspace --lib ✅ 516 pass + 0 fail + 4 ignored (회귀 0) / release binary --version ✅ / `ask "ping"` ✅ MiniMax 응답 / `--mode=orchestrator|single` (비-TTY) ✅ TtyGuard ENXIO 정상 실패 (`unknown mode` 메시지 사라짐).
+- **결정 ID**: **D-125** (누적 73). main = D-125 commit (메모리+코드 단일 push).
+- **다음 (yklee 결정 시)**: 동일 1순위 후보 유지 — (a) D-106+ tree-sitter / (b) D-106+ pure insert/delete / (c) A-proper native tool calling OpenAI·Anthropic wire / (d) D-100 chunked Read follow-up / (e) TASK-002 도메인 명령 / (f) MiniMax OAuth real flow / (g) TUI shell + interactive mode 검증 / (h) cargo hygiene / (i) Lark multi-section parser / (j) D-109+ block-aware insert/replace.

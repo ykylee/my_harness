@@ -3,6 +3,7 @@
 //! v1 MVP (TASK-005-1 W13):
 //! - subcommand: code <action>, env <action>, git <action>, ask, loop, task <start|end>, auth <login|logout|status>
 
+use std::io::IsTerminal;
 use std::sync::Arc;
 
 use clap::{Parser, Subcommand};
@@ -186,7 +187,7 @@ enum AuthAction {
     },
 }
 
-#[allow(clippy::too_many_lines)] // entrypoint: matches CLI subcommand dispatch (single, loop, cli) — 의도적 단일 fn
+#[allow(clippy::too_many_lines)] // entrypoint: matches CLI subcommand dispatch + 3-모드 (orchestrator | single | loop) — 의도적 단일 fn
 fn main() -> anyhow::Result<()> {
     tracing_subscriber::fmt()
         .with_env_filter(
@@ -276,8 +277,21 @@ fn main() -> anyhow::Result<()> {
                     report.stop, report.total_iterations
                 );
             }
-            "cli" => {
-                let tty = TtyGuard::enter()?;
+            "orchestrator" | "single" => {
+                let tty = match TtyGuard::enter() {
+                    Ok(t) => t,
+                    Err(e)
+                        if !std::io::stdin().is_terminal()
+                            || !std::io::stdout().is_terminal() =>
+                    {
+                        anyhow::bail!(
+                            "TUI mode ({mode}) requires a real TTY. \
+                             Run from a terminal (Terminal, iTerm, tmux, ...), \
+                             or use a non-interactive subcommand like `myharness ask \"...\"`. ({e})"
+                        );
+                    }
+                    Err(e) => return Err(e),
+                };
                 let mut app = App::new("myharness", mode);
                 app.push_message(myharness_tui::AppMessage::system(format!(
                     "Mode: {mode} (type a message, Ctrl+C to quit)"
