@@ -156,8 +156,11 @@ pub async fn request_code(
 ) -> Result<DeviceRequest, DeviceError> {
     let pkce = generate_pkce();
     let state = generate_state();
+    // D-117: real `MiniMax` Device Authorization Grant spec 은 `response_type=code`
+    // 미포함 (이는 Authorization Code + redirect flow 의 표준 parameter).
+    // 우리 v1 은 `flow.rs:121` 와 혼동했었지만, real `MiniMax` API 가 무시하므로
+    // 제거. mock test 의 JSON body decode 도 `response_type` 에 의존 안 함 → 회귀 0.
     let body = serde_urlencoded::to_string(&[
-        ("response_type", "code".to_string()),
         ("client_id", provider.client_id().to_string()),
         ("scope", provider.scope().to_string()),
         ("code_challenge", pkce.challenge.clone()),
@@ -717,5 +720,80 @@ Connection: close
             auth.expired_in,
             now_ms
         );
+    }
+
+    // --- D-117: request_code form body omits response_type=code ---
+
+    /// D-117 invariant: real `MiniMax` Device Authorization Grant spec 은
+    /// `response_type=code` 미포함 (이는 Authorization Code + redirect flow 의
+    /// 표준 parameter). D-117 에서 `request_code` 의 form body 에서 제거. mock
+    /// server 가 `response_type` 을 검사하지 않으므로 회귀 0. real API
+    /// (D-113 검증) 도 무시.
+    #[tokio::test]
+    async fn d117_request_code_form_body_omits_response_type() {
+        struct CapturingProvider {
+            code_ep: String,
+        }
+        #[async_trait]
+        impl DeviceCodeProvider for CapturingProvider {
+            fn id(&self) -> &'static str { "d117-capture" }
+            fn display_name(&self) -> &str { "D117 capture" }
+            fn code_endpoint(&self) -> &str { &self.code_ep }
+            fn token_endpoint(&self) -> &str { "https://mock/oauth2/token" }
+            fn client_id(&self) -> &'static str { "mock-client" }
+            fn scope(&self) -> &'static str { "group_id profile model.completion" }
+            fn region(&self) -> &'static str { "global" }
+        }
+        let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let addr = listener.local_addr().unwrap();
+        let url = format!("http://{addr}/oauth2/device/code");
+        let captured: std::sync::Arc<tokio::sync::Mutex<Option<String>>> =
+            std::sync::Arc::new(tokio::sync::Mutex::new(None));
+        let captured_clone = captured.clone();
+        const CRLF_CRLF: &str = "\r\n\r\n";
+        let server = tokio::spawn(async move {
+            if let Ok((mut sock, _)) = listener.accept().await {
+                let mut buf = vec![0u8; 8192];
+                let n = sock.read(&mut buf).await.unwrap();
+                let req = String::from_utf8_lossy(&buf[..n]).to_string();
+                if let Some(off) = req.find(CRLF_CRLF) {
+                    let body = &req[off + CRLF_CRLF.len()..];
+                    *captured_clone.lock().await = Some(body.to_string());
+                }
+                let state_param = req
+                    .split("state=")
+                    .nth(1)
+                    .and_then(|s| s.split('&').next().map(std::string::ToString::to_string))
+                    .unwrap_or_else(|| "placeholder".to_string());
+                let now = chrono::Utc::now().timestamp_millis() as u64;
+                let resp_body = format!(
+                    "{{\"base_resp\":{{\"status_code\":0,\"status_msg\":\"success\"}},\"user_code\":\"D117-X\",\"verification_uri\":\"https://platform.test/oauth-authorize?user_code=D117-X\",\"interval\":1000,\"expired_in\":{},\"state\":\"{}\"}}",
+                    now + 60_000,
+                    state_param
+                );
+                let resp = format!(
+                    "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{}",
+                    resp_body.len(),
+                    resp_body
+                );
+                sock.write_all(resp.as_bytes()).await.unwrap();
+                sock.shutdown().await.ok();
+            }
+        });
+        let p = CapturingProvider { code_ep: url };
+        let _ = request_code(&p).await.expect("request_code failed");
+        let body = captured.lock().await.clone().expect("body not captured");
+        // D-117 핵심 assertion: `response_type` 미포함.
+        assert!(
+            !body.contains("response_type"),
+            "form body must NOT contain response_type, got: {body}"
+        );
+        // sanity: PKCE + state + client_id + scope 는 그대로 포함 (회귀 방지).
+        assert!(body.contains("code_challenge="), "PKCE code_challenge must be present, got: {body}");
+        assert!(body.contains("code_challenge_method=S256"), "code_challenge_method=S256 required, got: {body}");
+        assert!(body.contains("state="), "state parameter required, got: {body}");
+        assert!(body.contains("client_id=mock-client"), "client_id required, got: {body}");
+        assert!(body.contains("scope=group_id"), "scope required, got: {body}");
+        drop(server);
     }
 }

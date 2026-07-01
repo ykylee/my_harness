@@ -530,3 +530,24 @@
   - (h) 추가 안정화
   - (i) Lark multi-section parser
   - (j) block-aware insert/replace
+
+## 세션 종료 (2026-07-01 13th)
+
+- **상태**: **D-117 request_code response_type=code 제거 완료** — 옵션 f-4, D-114 의 deferred 3순위 (optional). Real `MiniMax` Device Authorization Grant spec 에 `response_type=code` 미포함.
+- **main**: D-117 commit (코드 + 메모리 단일 push 2 commit, hash push 후 확정).
+- **누적 결정**: **65** (D-22~D-38 + D-42~D-84 + D-96~D-117).
+- **build/test 상태**: `cargo build --workspace` = clean / `cargo clippy --workspace --all-targets -- -D warnings` = **0 warning** / `cargo test --workspace --lib` = **503 pass + 0 fail + 4 ignored** (D-116 baseline 502 → +1, 회귀 0) / D-113 real network 재실행 **PASS**.
+- **구현 요약** (옵션 f-4, D-117):
+  - `myharness/crates/auth/src/device_flow.rs::request_code` form body 에서 `("response_type", "code".to_string())` 제거. doc-comment 추가 (D-114 deferred note 의 "Authorization Code + redirect flow 표준 param" + "real `MiniMax` API 가 무시" 명시).
+  - **1 신규 test**: `d117_request_code_form_body_omits_response_type` — mock server 가 form body 를 capture 후 (1) `response_type` 미포함 + (2) PKCE/state/client_id/scope sanity 5가지 assert. `tokio::sync::Mutex` 로 body capture, `CRLF_CRLF` separator 로 HTTP wire body portion 정확히 분리.
+  - mock test (W14 7개) 회귀 0 — JSON body decode 가 `response_type` 무관.
+- **scope 명확화**:
+  - D-117 = `device_flow.rs:160` 의 `response_type` 만. `flow.rs:121` (Authorization Code + redirect 표준) 은 손대지 않음. `manager.rs:377` 의 `login_non_interactive_returns_url_only` assertion 은 `MinimaxOAuth` (Authorization Code path) 의 URL 검증 → 무관.
+- **다음 세션 시작 시 yklee 결정 옵션**:
+  - **D-114 의 deferred list 전부 해소** (D-115/116/117 ✓ 모두 완료)
+  - (B) Anthropic wire format
+  - (e) TASK-002 도메인 명령
+  - (g) TUI shell 검증
+  - (h) 추가 안정화
+  - (i) Lark multi-section parser
+  - (j) block-aware insert/replace

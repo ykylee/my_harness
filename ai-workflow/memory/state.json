@@ -1,6 +1,6 @@
 {
   "schema_version": "1",
-  "generated_at": "2026-07-01T07:00:00Z",
+  "generated_at": "2026-07-01T07:30:00Z",
   "source_of_truth": {
     "project_profile_path": "docs/PROJECT_PROFILE.md",
     "session_handoff_path": "ai-workflow/memory/session_handoff.md",
@@ -104,9 +104,9 @@
       "Gitea PAT (D-44) — ~/.git-credentials (chmod 600). 회전 권고",
       "GitHub auth via gh CLI (ykylee)"
     ],
-    "last_decision_id": "D-116",
+    "last_decision_id": "D-117",
     "last_session_date": "2026-07-01",
-    "decision_count": 64
+    "decision_count": 65
   },
   "decisions": {
     "decided": [
@@ -543,6 +543,20 @@
         "build_status": "clean",
         "clippy_status": "0 warning",
         "decision_count": 64
+      },
+      {
+        "id": "D-117",
+        "title": "request_code response_type=code 제거 (D-114 follow-up optional)",
+        "summary": "D-114 의 deferred 3순위 (optional). Real `MiniMax` Device Authorization Grant spec 은 `response_type=code` 미포함 (이는 Authorization Code + redirect flow 의 표준 parameter, `flow.rs:121` 의 것). 우리 v1 은 `flow.rs:121` 와 혼동해서 emit 했지만, real `MiniMax` API 가 무시하므로 제거. **scope**: (1) `request_code` form body 에서 `(\"response_type\", \"code\")` 제거, (2) **1 신규 test** (`d117_request_code_form_body_omits_response_type` — form body 가 `response_type` 미포함 + PKCE/state/client_id/scope sanity). 1 file / +~75 lines test. mock test 회귀 0 (JSON body decode 가 `response_type` 무관). **검증**: cargo build --workspace clean / cargo clippy --workspace --all-targets -- -D warnings 0 warning (dead field fix 포함) / cargo test --workspace --lib **503 pass + 0 fail + 4 ignored** (D-116 baseline 502 → +1, 회귀 0) / D-113 real network PASS (real API 의 `response_type` 무시 동작 그대로).",
+        "type": "refactor",
+        "scope": "myharness-auth (request_code form body, +1 신규 test)",
+        "main_hash": "D-117 commit (push 후 확정)",
+        "test_count": 503,
+        "test_delta": 1,
+        "files_changed": 1,
+        "build_status": "clean",
+        "clippy_status": "0 warning",
+        "decision_count": 65
       }
     ],
     "deferred": [
