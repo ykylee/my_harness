@@ -15,6 +15,28 @@ impl Tool for BashTool {
         "Bash"
     }
 
+    fn description(&self) -> &'static str {
+        "Execute a shell command in a sandboxed environment. Returns stdout,          stderr, and exit code. Optional timeout caps execution time."
+    }
+
+    fn input_schema(&self) -> serde_json::Value {
+        serde_json::json!({
+            "type": "object",
+            "properties": {
+                "command": {
+                    "type": "string",
+                    "description": "Shell command to execute."
+                },
+                "timeout_ms": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "description": "Optional execution timeout in milliseconds."
+                }
+            },
+            "required": ["command"]
+        })
+    }
+
     async fn execute(
         &self,
         ctx: &ToolContext,

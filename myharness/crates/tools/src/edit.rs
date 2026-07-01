@@ -379,6 +379,66 @@ impl Tool for EditTool {
         "Edit"
     }
 
+    fn description(&self) -> &'static str {
+        "Edit a file using one of three modes: (1) old_string/new_string with          optional replace_all, (2) line_anchored hashline replace (D-105),          (3) block_anchored hashline replace (D-106), (4) pure_edit multi-section          atomic insert/replace/delete (D-107). Returns the final content hash."
+    }
+
+    fn input_schema(&self) -> serde_json::Value {
+        serde_json::json!({
+            "type": "object",
+            "properties": {
+                "file_path": {
+                    "type": "string",
+                    "description": "Absolute or working-directory-relative path to the file to edit."
+                },
+                "old_string": {
+                    "type": "string",
+                    "description": "Literal text to find (mode 1)."
+                },
+                "new_string": {
+                    "type": "string",
+                    "description": "Replacement text (mode 1)."
+                },
+                "replace_all": {
+                    "type": "boolean",
+                    "description": "If true, replace every occurrence of old_string (mode 1)."
+                },
+                "line_anchored": {
+                    "type": "object",
+                    "description": "Hashline v2 (D-105) line-anchored replace. Schema: {anchor, content_hash, replacement, replace?}",
+                    "properties": {
+                        "anchor": {"type": "string"},
+                        "content_hash": {"type": "string"},
+                        "replacement": {"type": "string"},
+                        "replace": {"type": "string", "enum": ["this", "below", "above", "block"]}
+                    },
+                    "required": ["anchor", "content_hash", "replacement"]
+                },
+                "block_anchored": {
+                    "type": "object",
+                    "description": "Hashline v2 (D-106) block-anchored replace. Schema: {start_anchor, end_anchor, content_hash, replacement}",
+                    "properties": {
+                        "start_anchor": {"type": "string"},
+                        "end_anchor": {"type": "string"},
+                        "content_hash": {"type": "string"},
+                        "replacement": {"type": "string"}
+                    },
+                    "required": ["start_anchor", "end_anchor", "content_hash", "replacement"]
+                },
+                "pure_edit": {
+                    "type": "object",
+                    "description": "Hashline v2 (D-107) multi-section atomic edit. Schema: {content_hash, operations: [{op, ...}]}",
+                    "properties": {
+                        "content_hash": {"type": "string"},
+                        "operations": {"type": "array"}
+                    },
+                    "required": ["content_hash", "operations"]
+                }
+            },
+            "required": ["file_path"]
+        })
+    }
+
     async fn execute(
         &self,
         ctx: &ToolContext,

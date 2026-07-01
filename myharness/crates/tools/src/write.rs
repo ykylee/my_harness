@@ -15,6 +15,27 @@ impl Tool for WriteTool {
         "Write"
     }
 
+    fn description(&self) -> &'static str {
+        "Write or overwrite a file with the given content. Creates parent          directories as needed. Returns the final content hash for verification."
+    }
+
+    fn input_schema(&self) -> serde_json::Value {
+        serde_json::json!({
+            "type": "object",
+            "properties": {
+                "file_path": {
+                    "type": "string",
+                    "description": "Absolute or working-directory-relative path to the file to write."
+                },
+                "content": {
+                    "type": "string",
+                    "description": "Full file content to write (overwrites existing)."
+                }
+            },
+            "required": ["file_path", "content"]
+        })
+    }
+
     async fn execute(
         &self,
         ctx: &ToolContext,

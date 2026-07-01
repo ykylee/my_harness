@@ -70,6 +70,23 @@ impl ToolResult {
 #[async_trait::async_trait]
 pub trait Tool: Send + Sync {
     fn name(&self) -> &'static str;
+
+    /// A-proper native tool calling (D-108 follow-up, D-109): human
+    /// description of the tool, surfaced as the OpenAI `description`
+    /// field. Default is the empty string (minimal-spec behaviour
+    /// from D-108 v1.5). Override to give the LLM a clear hint.
+    fn description(&self) -> &'static str {
+        ""
+    }
+
+    /// A-proper native tool calling (D-108 follow-up, D-109): JSON
+    /// Schema object describing the tool's input arguments. Default
+    /// is an empty `{"type":"object","properties":{}}` (i.e. no
+    /// declared parameters). Override to declare per-tool fields.
+    fn input_schema(&self) -> serde_json::Value {
+        serde_json::json!({"type": "object", "properties": {}})
+    }
+
     async fn execute(
         &self,
         ctx: &ToolContext,

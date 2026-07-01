@@ -452,14 +452,29 @@ fn extract_tool_call(content: &str) -> Option<(String, serde_json::Value)> {
 }
 
 /// D-108 (2026-07-01) — collect native `ToolSpec`s from a
-/// `ToolRegistry`. v1.5 ships a minimal spec (name only) because the
-/// `Tool` trait does not yet expose `description` / `input_schema`
-/// (those land in D-108 follow-up). Empty registry → empty vec.
+/// `ToolRegistry`. v1.5 shipped a name-only spec because the `Tool`
+/// trait did not yet expose `description` / `input_schema` (those land
+/// in D-108 follow-up). D-109 (2026-07-01) now pulls both from each
+/// `Tool` impl so the OpenAI-compat wire format (D-108 follow-up) can
+/// emit real `function.description` + `function.parameters` fields.
+/// Empty registry → empty vec.
 fn tool_specs_for(registry: Option<&myharness_tools::ToolRegistry>) -> Vec<myharness_llm::client::ToolSpec> {
     let Some(reg) = registry else { return Vec::new() };
     reg.names()
         .into_iter()
-        .map(|n| myharness_llm::client::ToolSpec::new(n, ""))
+        .map(|n| {
+            // D-109: prefer the live `Tool` impl's declared description
+            // and JSON Schema. Fall back to the name-only spec if the
+            // tool is somehow missing from the registry.
+            match reg.get(&n) {
+                Some(tool) => myharness_llm::client::ToolSpec {
+                    name: n,
+                    description: Some(tool.description().to_string()),
+                    input_schema: tool.input_schema(),
+                },
+                None => myharness_llm::client::ToolSpec::new(n, ""),
+            }
+        })
         .collect()
 }
 
@@ -971,5 +986,41 @@ Then I'll analyze."#;
         assert!(names.contains(&"Bash"));
         assert!(names.contains(&"Edit"));
         assert_eq!(specs.len(), 6);
+    }
+
+    // D-109 (2026-07-01) — the helper must surface per-tool
+    // description + input_schema so the OpenAI-compat wire format
+    // (D-108 follow-up) can emit real `function.description` and
+    // `function.parameters` fields.
+    #[test]
+    fn d109_tool_specs_carry_description_and_schema() {
+        let reg = myharness_tools::ToolRegistry::default_tools();
+        let specs = tool_specs_for(Some(&reg));
+        let read = specs
+            .iter()
+            .find(|s| s.name == "Read")
+            .expect("Read spec present");
+        let desc = read.description.as_deref().unwrap_or("");
+        assert!(!desc.is_empty(), "Read description must be non-empty");
+        assert!(
+            desc.contains("Read"),
+            "Read description should describe the tool: {desc}"
+        );
+        let params = &read.input_schema;
+        assert_eq!(params["type"], "object");
+        let required = params["required"].as_array().unwrap();
+        assert_eq!(
+            required,
+            &vec![serde_json::Value::String("file_path".to_string())]
+        );
+
+        let edit = specs
+            .iter()
+            .find(|s| s.name == "Edit")
+            .expect("Edit spec present");
+        let edit_props = edit.input_schema["properties"].as_object().unwrap();
+        assert!(edit_props.contains_key("line_anchored"));
+        assert!(edit_props.contains_key("block_anchored"));
+        assert!(edit_props.contains_key("pure_edit"));
     }
 }

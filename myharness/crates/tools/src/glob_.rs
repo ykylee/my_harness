@@ -14,6 +14,27 @@ impl Tool for GlobTool {
         "Glob"
     }
 
+    fn description(&self) -> &'static str {
+        "Find files whose path matches a glob pattern. Returns matching paths,          sorted, relative to the optional base path."
+    }
+
+    fn input_schema(&self) -> serde_json::Value {
+        serde_json::json!({
+            "type": "object",
+            "properties": {
+                "pattern": {
+                    "type": "string",
+                    "description": "Glob pattern (e.g. '**/*.rs', 'src/*.toml')."
+                },
+                "path": {
+                    "type": "string",
+                    "description": "Optional base directory; defaults to working directory."
+                }
+            },
+            "required": ["pattern"]
+        })
+    }
+
     async fn execute(
         &self,
         ctx: &ToolContext,

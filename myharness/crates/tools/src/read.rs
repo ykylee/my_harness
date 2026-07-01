@@ -15,6 +15,38 @@ impl Tool for ReadTool {
         "Read"
     }
 
+    fn description(&self) -> &'static str {
+        "Read a file from the filesystem. Returns LINE:TEXT prefixed content          for hashline addressing, with a final content hash line."
+    }
+
+    fn input_schema(&self) -> serde_json::Value {
+        serde_json::json!({
+            "type": "object",
+            "properties": {
+                "file_path": {
+                    "type": "string",
+                    "description": "Absolute or working-directory-relative path to the file to read."
+                },
+                "offset": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "description": "Optional line offset to start reading from (0-indexed)."
+                },
+                "limit": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "description": "Optional maximum number of lines to read."
+                },
+                "format": {
+                    "type": "string",
+                    "enum": ["line_text", "raw"],
+                    "description": "Output format: line_text (LINE:TEXT prefix, default) or raw (no prefix)."
+                }
+            },
+            "required": ["file_path"]
+        })
+    }
+
     async fn execute(
         &self,
         ctx: &ToolContext,

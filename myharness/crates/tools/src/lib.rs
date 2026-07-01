@@ -67,4 +67,119 @@ mod tests {
         assert!(reg.get("Read").is_some());
         assert!(reg.get("Glob").is_some());
     }
+
+    // D-109 (2026-07-01) — Tool trait description + input_schema
+    // override tests. Every default tool must declare a non-empty
+    // description and a JSON Schema object that lists at least one
+    // required field. The Edit tool may declare additional optional
+    // modes (line_anchored / block_anchored / pure_edit) but its
+    // top-level `required` is still only `file_path`.
+    #[test]
+    fn d109_all_default_tools_declare_description_and_schema() {
+        let reg = registry::ToolRegistry::default_tools();
+        for name in reg.names() {
+            let tool = reg.get(&name).expect("tool must exist");
+            assert!(!tool.description().is_empty(), "{name}: empty description");
+            let schema = tool.input_schema();
+            assert_eq!(
+                schema.get("type").and_then(|v| v.as_str()),
+                Some("object"),
+                "{name}: schema.type != object"
+            );
+            let required = schema
+                .get("required")
+                .and_then(|v| v.as_array())
+                .unwrap_or_else(|| panic!("{name}: schema.required is not an array"));
+            assert!(!required.is_empty(), "{name}: schema.required is empty");
+        }
+    }
+
+    #[test]
+    fn d109_read_tool_schema_is_well_formed() {
+        let reg = registry::ToolRegistry::default_tools();
+        let tool = reg.get("Read").unwrap();
+        let schema = tool.input_schema();
+        let required = schema["required"].as_array().unwrap();
+        assert_eq!(required, &vec![serde_json::Value::String("file_path".to_string())]);
+        let props = schema["properties"].as_object().unwrap();
+        assert!(props.contains_key("file_path"));
+        assert!(props.contains_key("offset"));
+        assert!(props.contains_key("limit"));
+        assert!(props.contains_key("format"));
+    }
+
+    #[test]
+    fn d109_write_tool_schema_requires_content() {
+        let reg = registry::ToolRegistry::default_tools();
+        let tool = reg.get("Write").unwrap();
+        let schema = tool.input_schema();
+        let required: Vec<&str> = schema["required"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .map(|v| v.as_str().unwrap())
+            .collect();
+        assert!(required.contains(&"file_path"));
+        assert!(required.contains(&"content"));
+    }
+
+    #[test]
+    fn d109_edit_tool_schema_includes_modes() {
+        let reg = registry::ToolRegistry::default_tools();
+        let tool = reg.get("Edit").unwrap();
+        let schema = tool.input_schema();
+        let props = schema["properties"].as_object().unwrap();
+        // D-109 surface: 3 hashline modes + classic old_string/new_string.
+        assert!(props.contains_key("old_string"));
+        assert!(props.contains_key("new_string"));
+        assert!(props.contains_key("line_anchored"));
+        assert!(props.contains_key("block_anchored"));
+        assert!(props.contains_key("pure_edit"));
+    }
+
+    #[test]
+    fn d109_bash_tool_schema_requires_command() {
+        let reg = registry::ToolRegistry::default_tools();
+        let tool = reg.get("Bash").unwrap();
+        let schema = tool.input_schema();
+        let required: Vec<&str> = schema["required"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .map(|v| v.as_str().unwrap())
+            .collect();
+        assert_eq!(required, vec!["command"]);
+        let props = schema["properties"].as_object().unwrap();
+        assert!(props.contains_key("timeout_ms"));
+    }
+
+    #[test]
+    fn d109_glob_tool_schema_requires_pattern() {
+        let reg = registry::ToolRegistry::default_tools();
+        let tool = reg.get("Glob").unwrap();
+        let schema = tool.input_schema();
+        let required: Vec<&str> = schema["required"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .map(|v| v.as_str().unwrap())
+            .collect();
+        assert_eq!(required, vec!["pattern"]);
+    }
+
+    #[test]
+    fn d109_grep_tool_schema_requires_pattern_and_supports_include() {
+        let reg = registry::ToolRegistry::default_tools();
+        let tool = reg.get("Grep").unwrap();
+        let schema = tool.input_schema();
+        let required: Vec<&str> = schema["required"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .map(|v| v.as_str().unwrap())
+            .collect();
+        assert_eq!(required, vec!["pattern"]);
+        let props = schema["properties"].as_object().unwrap();
+        assert!(props.contains_key("include"));
+    }
 }

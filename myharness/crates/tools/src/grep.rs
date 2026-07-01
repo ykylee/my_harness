@@ -16,6 +16,31 @@ impl Tool for GrepTool {
         "Grep"
     }
 
+    fn description(&self) -> &'static str {
+        "Search file contents for a regex pattern. Returns matching lines with          file:line:column prefixes. Optional include glob filters by path."
+    }
+
+    fn input_schema(&self) -> serde_json::Value {
+        serde_json::json!({
+            "type": "object",
+            "properties": {
+                "pattern": {
+                    "type": "string",
+                    "description": "Regex pattern to search for."
+                },
+                "path": {
+                    "type": "string",
+                    "description": "Optional base directory; defaults to working directory."
+                },
+                "include": {
+                    "type": "string",
+                    "description": "Optional glob to filter which files are searched (e.g. '*.rs')."
+                }
+            },
+            "required": ["pattern"]
+        })
+    }
+
     async fn execute(
         &self,
         ctx: &ToolContext,
