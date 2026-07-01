@@ -592,6 +592,13 @@
         "status": "decided",
         "date": "2026-07-01",
         "summary": "feat(llm): client_anthropic.rs 에 Anthropic wire format path 추가. req.tools 비어있지 않으면 hand-rolled POST {base_url}/v1/messages 로 전환 (x-api-key + anthropic-version 헤더, native tools block). response.content[] 중 type:tool_use 를 우리 ToolCall 로 변환. AnthropicProvider 에 api_key/base_url field + with_base_url builder 추가. rig-core native path (AssistantContent::ToolCall) 도 extract_tool_calls helper 로 동일 shape normalize. 1 신규 mock server test (d122_wire_format_parses_tool_use_block — text + tool_use 동시 emit, 우리 파서가 분리 검증). 회귀 0. workspace 512/512 pass + 4 ignored (D-121 511 -> +1). llm crate 128 -> 131."
+      },
+      {
+        "id": "D-123",
+        "title": "pure_edit replace_block op 추가 (옵션 j)",
+        "status": "decided",
+        "date": "2026-07-01",
+        "summary": "feat(tools): edit.rs pure_edit 에 replace_block op 추가. start_line 으로 syntactic block anchor → tree-sitter resolve_block_span 으로 closing line resolve → start..=end span 전체를 content 로 교체. PureInsertion::ReplaceBlock variant + OpKind::Replace variant + priority 0 (Delete 와 동순위). 2 신규 test: d123_replace_block_replaces_entire_fn (fn foo 전체 5줄을 3줄로 교체), d123_replace_block_in_pure_edit_multi_op (replace_block + insert_before 동시, line-descending sort). bug 발견/fix: arm pattern 의 content 가 outer content (file string) 를 가리는 scope shadow — arm field 를 replacement 로 rename. 회귀 0. workspace 514/514 pass + 4 ignored (D-122 512 -> +2). tools 105 -> 107."
       }
     ],
     "deferred": [
@@ -729,7 +736,7 @@
     "path": null,
     "present": false
   },
-  "decision_count": 65,
+  "decision_count": 66,
   "last_updated": "2026-07-01",
   "decided": []
 }

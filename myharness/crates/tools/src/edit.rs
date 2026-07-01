@@ -88,6 +88,12 @@ enum PureInsertion {
     /// resolution — see D-106). Rust only in v1.5.
     #[serde(rename = "insert_after_block")]
     AfterBlock { line: usize, content: String },
+    /// D-123: Replace the entire syntactic block that BEGINS on the
+    /// given 1-indexed line with `content`. tree-sitter resolves the
+    /// closing line (D-106 의 `resolve_block_span` 와 동일 path).
+    /// Rust only in v1.5.
+    #[serde(rename = "replace_block")]
+    ReplaceBlock { line: usize, content: String },
 }
 
 #[derive(Debug, Deserialize)]
@@ -116,6 +122,9 @@ enum OpKind<'a> {
     Before(&'a str),
     After(&'a str),
     Delete { start: usize, end: usize },
+    /// D-123: block-aware replace. `start`..=`end` (1-indexed, inclusive)
+    /// span → `content` 로 교체. `apply_line_replacement` 와 동일 path.
+    Replace { start: usize, end: usize, content: &'a str },
 }
 
 impl<'a> OpKind<'a> {
@@ -124,7 +133,7 @@ impl<'a> OpKind<'a> {
     /// content lands after the (now-shorter) original block.
     fn priority(&self) -> u8 {
         match self {
-            OpKind::Delete { .. } => 0,
+            OpKind::Delete { .. } | OpKind::Replace { .. } => 0,
             OpKind::After(_) => 1,
             OpKind::Before(_) => 2,
             OpKind::Head(_) | OpKind::Tail(_) => 3,
@@ -790,15 +799,19 @@ impl EditTool {
         // line-descending sort below can mix insert/deletion ops
         // uniformly.
         let extension = path.extension().and_then(|e| e.to_str()).unwrap_or("");
-        let block_after_ops: Vec<(usize, &PureInsertion)> = pe
+        // D-123: block-aware ops (AfterBlock, ReplaceBlock) 둘 다 tree-sitter
+        // resolve 가 필요하므로 함께 gather. 둘 다 Rust 한정 (v1.5 grammar).
+        let block_ops: Vec<(usize, &PureInsertion)> = pe
             .insertions
             .iter()
             .enumerate()
-            .filter(|(_, ins)| matches!(ins, PureInsertion::AfterBlock { .. }))
+            .filter(|(_, ins)| {
+                matches!(ins, PureInsertion::AfterBlock { .. } | PureInsertion::ReplaceBlock { .. })
+            })
             .collect();
-        if !block_after_ops.is_empty() && extension != "rs" {
+        if !block_ops.is_empty() && extension != "rs" {
             return Err(ToolError::InvalidInput(format!(
-                "pure_edit.insert_after_block: tree-sitter grammar for extension .{extension} not yet supported; use line_anchored / block_anchored for non-Rust files"
+                "pure_edit.insert_after_block / replace_block: tree-sitter grammar for extension .{extension} not yet supported; use line_anchored / block_anchored for non-Rust files"
             )));
         }
 
@@ -864,6 +877,26 @@ impl EditTool {
                         kind: OpKind::After(content.as_str()),
                     });
                 }
+                // D-123: block-aware replace. tree-sitter 가 block 의
+                // closing line 을 resolve → start..=end span 을
+                // replacement 로 교체. *원본* file content 에서
+                // resolve 해야 함 (replacement 가 아닌) — AfterBlock 의
+                // line 887 호출과 구분.
+                PureInsertion::ReplaceBlock { line, content: replacement } => {
+                    // D-123: arm pattern 의 `content` 를 `replacement` 로 rename 해서
+                    // outer `content` (file string) 와 구분. block END 는 원본 file 에서
+                    // resolve.
+                    let (resolved_end_line, _kind) = resolve_block_span(&content, *line)
+                        .map_err(ToolError::InvalidInput)?;
+                    ops.push(PendingOp {
+                        anchor: resolved_end_line,
+                        kind: OpKind::Replace {
+                            start: *line,
+                            end: resolved_end_line,
+                            content: replacement.as_str(),
+                        },
+                    });
+                }
             }
         }
         for d in &pe.deletions {
@@ -923,6 +956,13 @@ impl EditTool {
                     new_content = apply_line_replacement(&new_content, start, end, "")
                         .map_err(ToolError::InvalidInput)?;
                     applied.push(serde_json::json!({"op": "delete", "start_line": start, "end_line": end, "lines_removed": removed}));
+                }
+                // D-123: block span 을 `content` 로 교체.
+                OpKind::Replace { start, end, content } => {
+                    let replaced = end - start + 1;
+                    new_content = apply_line_replacement(&new_content, start, end, content)
+                        .map_err(ToolError::InvalidInput)?;
+                    applied.push(serde_json::json!({"op": "replace_block", "start_line": start, "end_line": end, "lines_replaced": replaced}));
                 }
             }
         }
@@ -1797,5 +1837,77 @@ mod tests {
         let err = tool.execute(&ctx, input).await.unwrap_err();
         let msg = format!("{err}");
         assert!(msg.contains("expected_hash"), "msg was: {msg}");
+    }
+
+    // --- D-123: pure_edit.replace_block op (옵션 j) ---
+
+    /// D-123: `fn foo` 전체를 새 body 로 교체. tree-sitter 가
+    /// closing brace 까지 resolve → span 전체 replacement.
+    #[tokio::test]
+    async fn d123_replace_block_replaces_entire_fn() {
+        let dir = tempdir().unwrap();
+        let file_path = dir.path().join("lib.rs");
+        let original = "fn foo() -> i32 {\n    let x = 1;\n    let y = 2;\n    x + y\n}\nfn bar() -> i32 {\n    42\n}\n";
+        fs::write(&file_path, original).await.unwrap();
+        let content = fs::read_to_string(&file_path).await.unwrap();
+        let expected_hash = compute_content_hash(&content);
+
+        let tool = make_tool();
+        let ctx = make_pure_ctx();
+        // foo() 의 `fn` 키워드 line (1) 을 anchor 로 → tree-sitter 가
+        // closing `}` (line 5) 까지 resolve.
+        let new_body = "fn foo() -> i32 {\n    100\n}\n";
+        let input = serde_json::json!({
+            "file_path": file_path.to_string_lossy(),
+            "pure_edit": {
+                "expected_hash": expected_hash,
+                "insertions": [{
+                    "op": "replace_block",
+                    "line": 1,
+                    "content": new_body
+                }]
+            }
+        });
+        let result = tool.execute(&ctx, input).await.unwrap();
+        assert!(!result.is_error, "execute failed: {result:?}");
+
+        let read_back = fs::read_to_string(&file_path).await.unwrap();
+        // foo() 전체가 new_body 로 교체, bar() 는 그대로
+        assert_eq!(read_back, format!("{new_body}\nfn bar() -> i32 {{\n    42\n}}\n"));
+    }
+
+    /// D-123: `pure_edit` multi-section atomic context 에서
+    /// `replace_block` + `insert_before` 동시 사용. 다른 op 들과
+    /// line-descending sort 로 충돌 없이 적용되어야 함.
+    #[tokio::test]
+    async fn d123_replace_block_in_pure_edit_multi_op() {
+        let dir = tempdir().unwrap();
+        let file_path = dir.path().join("lib.rs");
+        let original = "use std::io;\n\nfn greet() -> String {\n    \"hello\".to_string()\n}\n";
+        fs::write(&file_path, original).await.unwrap();
+        let content = fs::read_to_string(&file_path).await.unwrap();
+        let expected_hash = compute_content_hash(&content);
+
+        let tool = make_tool();
+        let ctx = make_pure_ctx();
+        // 1) line 1 (use std::io;) 앞에 use std::fmt; 추가
+        // 2) fn greet 전체를 새 body 로 교체
+        let new_greet = "fn greet() -> String {\n    \"hi\".to_string()\n}";
+        let input = serde_json::json!({
+            "file_path": file_path.to_string_lossy(),
+            "pure_edit": {
+                "expected_hash": expected_hash,
+                "insertions": [
+                    {"op": "insert_before", "line": 1, "content": "use std::fmt;\n"},
+                    {"op": "replace_block", "line": 3, "content": new_greet}
+                ]
+            }
+        });
+        let result = tool.execute(&ctx, input).await.unwrap();
+        assert!(!result.is_error, "execute failed: {result:?}");
+
+        let read_back = fs::read_to_string(&file_path).await.unwrap();
+        let expected = "use std::fmt;\nuse std::io;\n\nfn greet() -> String {\n    \"hi\".to_string()\n}\n";
+        assert_eq!(read_back, expected);
     }
 }

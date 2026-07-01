@@ -668,3 +668,28 @@
   - (j) block-aware insert/replace
   - (B-추가) Anthropic streaming / system prompt injection / tool_result tool_use_id 매핑 정확성 추가 test
   - (i) Lark multi-section parser — 의미 정의 후 재개
+
+## 세션 종료 (2026-07-01 19th)
+
+- **상태**: **D-123 pure_edit replace_block op 추가 완료** — 옵션 j.
+- **main**: D-123 commit (코드 + 메모리 단일 push, hash push 후 확정).
+- **누적 결정**: **70 + D-123 = 71** (decision_count handoff SSOT 갱신).
+- **build/test 상태**: `cargo build --workspace` = clean / `cargo clippy --workspace --all-targets -- -D warnings` = **0 warning** / `cargo test --workspace --lib` = **514 pass + 0 fail + 4 ignored** (D-122 512 → +2, 회귀 0) / tools 105 → 107.
+- **구현 요약** (옵션 j, D-123):
+  - `myharness/crates/tools/src/edit.rs`:
+    - `PureInsertion::ReplaceBlock { line, content }` variant 추가 (serde rename: `replace_block`).
+    - `OpKind::Replace { start, end, content: &'a str }` 추가. priority = 0 (Delete 와 동순위).
+    - `pure_edit` dispatch: arm pattern `content` 가 outer `content` (file string) 가리는 scope shadow 발견 → arm field 를 `replacement` 로 rename + `resolve_block_span(&content, *line)` 로 원본 file 에서 block END resolve.
+    - apply: `apply_line_replacement(&new_content, start, end, content)` 호출 + `applied` 에 `replace_block` op 기록.
+    - validation: AfterBlock + ReplaceBlock 둘 다 Rust 한정 (block_ops gather + error message 갱신).
+  - **2 신규 test**:
+    1. `d123_replace_block_replaces_entire_fn` — `fn foo` 전체 5줄을 3줄로 교체 (`let x = 1; let y = 2; x + y }` 제거, `100` 로 body 단일화).
+    2. `d123_replace_block_in_pure_edit_multi_op` — `use std::fmt;` insert_before + `fn greet` 전체 replace_block 동시. multi-section atomic, line-descending sort.
+- **scope 명확화**:
+  - D-123 = `replace_block` 만. `insert_before_block` 는 미수행 (handoff 옵션 A: 1 op 1 commit 으로 결정).
+  - 발견한 `AfterBlock` 의 동일 scope-shadow bug 도 본 D-123 에서 같이 fix (같은 arm pattern 구조, 회귀 0). 원래는 `resolve_block_span(content, *line)` 호출 — file content 가 아닌 replacement 에서 resolve 하려 시도 → 우리 fix 에서 `&content` 로 outer file 전달.
+- **다음 세션 시작 시 yklee 결정 옵션**:
+  - (e) TASK-002 도메인 명령
+  - (j-추가) `insert_before_block` op (mirror of `AfterBlock`)
+  - (B-추가) Anthropic streaming / tool_result 매핑 추가 test
+  - (i) Lark multi-section parser — 의미 정의 후 재개
