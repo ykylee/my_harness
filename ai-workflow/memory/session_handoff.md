@@ -4,7 +4,7 @@
 - Scope: current focus, task status, key changes, next actions, risks
 - Audience: yklee, Mavis orchestrator, .MiniMax 워커 에이전트
 - Status: active
-- Updated: 2026-06-14 (**Sub-task 1 완료 (D-98 + D-99)** — TASK-005-2 v2.0 Plugin 4-계층 의 첫 sub-task. **D-98 (57db117)** Commit A = Auto Memory pure refactor (293 lines → 4 file 모듈 + MemoryStore trait + NdjsonMemoryStore adapter, 7 ndjson_* tests, Cargo.toml 변경 없음) + **D-99 (c64d0ff)** Commit B = SqliteMemoryStore (rusqlite FTS5 + BM25, opt-in via MYHARNESS_MEMORY_BACKEND=sqlite env, default NDJSON, 6 integration tests). main = `c64d0ff`. 이전: 06-13 docs cleanup 3 commit (d1c64e3 + ab3713b + d1f4a39) + 06-12 closeout 5 결정 D-96/D-97/D-75 batch/D-75 batch follow-up/D-82 follow-up)
+- Updated: 2026-07-01 (**D-105 Edit v2 line_anchored mode 완료** — oh-my-pi Hashline 점진 차용 2차 cycle. **D-105 (`5e39f5e`)** = Edit v2 line_anchored mode (`LineAnchoredEdit` struct + `apply_line_replacement` helper + `execute_line_anchored` path + 10 test 추가 (8 line_anchored + 1 unit + 1 old mode regression), tools 62 → 72 / 회귀 0 / clippy clean). **D-104 (`43bc908`)** = Read v2 LINE:TEXT + 4-hex content_hash (이전 세션). main = `5e39f5e`. 이전: 2026-06-30 D-100/D-101/D-102/D-103 (A-min tool dispatch + follow-up polish + prompt 개선 + dedup 안전망 + large file chunked Read) + 2026-06-14 D-98/D-99 (Plugin 4-계층 Sub-task 1 Auto Memory))
 - Related docs: [Project Profile](../../docs/PROJECT_PROFILE.md), [Work Backlog](./work_backlog.md), [State Cache](./state.json), [CONCEPT.md](../../docs/CONCEPT.md) (SSOT)
 
 ## Current Focus
