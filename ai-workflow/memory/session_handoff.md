@@ -291,3 +291,37 @@
   - (h) 추가 안정화 (cargo hygiene)
   - (i) D-109+ Lark multi-section parser (cross-file patch)
   - (j) D-109+ block-aware insert/replace
+
+---
+
+## D-108 follow-up (2026-07-01 추가) — OpenAI-compat wire format
+
+- **OpenAI-compat wire format 직접 구현 (D-108 follow-up)** — rig-core 0.38.1 의 CompletionsClient builder 가 tools field 미노출. reqwest 로 `{base_url}/chat/completions` 직접 호출. MiniMax / DeepSeek / Ollama / llama.cpp 등 OpenAI-compat provider 전부 native tool calling 가능.
+- **구현** (1 file / +396 / -1):
+  - `myharness/crates/llm/src/client_openai_compat.rs` — +api_key field + dispatch (`!req.tools.is_empty()` 이면 `complete_wire_format()` 분기) + `complete_wire_format` inherent method (impl OpenAiCompatProvider) + `build_chat_payload` (OpenAI request shape) + `parse_chat_response` (OpenAI response shape) + 6 private struct (ChatResponse / ChatChoice / ChatMessage / ChatToolCall / ChatToolCallFunction / ChatUsage, forward-compat field 에 `#[allow(dead_code)]`)
+- **dispatch 우선순위**:
+  1. `!req.tools.is_empty()` → wire format path (authoritative)
+  2. rig-core path (plain text, byte-identical 기존 동작)
+- **8 test 추가**: build_chat_payload (3: includes_tools_and_messages / omits_when_empty / tool_message_call_id) + parse_chat_response (5: plain_text / with_tool_calls / invalid_tool_args / no_choices / mixed_text_and_tool_calls)
+- **3-way verify**: build clean / clippy 0 (단 `#[allow(dead_code)]` 3건 forward-compat) / **481/0/2** (D-108 baseline 473 → +8, 회귀 0).
+- **main**: `23a205a` (코드 1 commit) + 메모리 commit 단일 push.
+- **누적 결정**: 55 → **56** (D-108 follow-up 추가).
+- **Follow-up**: (B) Anthropic wire format (content tool_use block) / (C) Tool trait description + input_schema / (D) real MiniMax native E2E (MINIMAX_API_KEY).
+
+## 세션 종료 (2026-07-01 4th)
+
+- **상태**: D-108 follow-up OpenAI-compat wire format 완료 + commit + dual-push 완료.
+- **main**: `23a205a` (코드) + 메모리 commit (단일 push 2 commit).
+- **누적 결정**: **56** (D-22~D-38 + D-42~D-84 + D-96~D-108 follow-up).
+- **build/test 상태**: `cargo test --workspace --lib` = **481 pass + 0 fail + 2 ignored** / `cargo clippy --workspace --all-targets -- -D warnings` = **0 warning** / `cargo build -p myharness-llm` = clean.
+- **다음 세션 시작 시 yklee 결정 옵션**:
+  - (B) D-108 follow-up Anthropic wire format (content tool_use block)
+  - (C) Tool trait description + input_schema method
+  - (D) Real MiniMax native E2E (MINIMAX_API_KEY 주입)
+  - (d) D-100 한계 follow-up
+  - (e) TASK-002 도메인 명령
+  - (f) MiniMax OAuth real flow
+  - (g) TUI shell 검증
+  - (h) 추가 안정화
+  - (i) D-109+ Lark multi-section parser
+  - (j) D-109+ block-aware insert/replace
