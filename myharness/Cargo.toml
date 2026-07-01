@@ -65,3 +65,18 @@ rusqlite = { version = "0.31", features = ["bundled"] }
 lto = "thin"
 codegen-units = 1
 strip = "symbols"
+
+# --- D-119: workspace-level lints baseline ---
+# Cargo 1.74+ [workspace.lints] (workspace.dependencies 와 동일하게 1 곳에서 정책 정의).
+# 모두 `warn` 으로 시작 — 강한 `deny`/`forbid` 는 의도적 opt-in (TASK-005 v2.0 D-119).
+# 8 crate 가 자동으로 상속 (각 crate Cargo.toml 에 [lints] 없을 때).
+# baseline: 안전한 hygiene 가드. 새 warning 이 발견돼도 build/clippy/test 통과에 영향 없음.
+[workspace.lints.rust]
+unsafe_code = "warn"                # 모든 unsafe 사용 시 경고 (현재 다수: env::set_var/remove_var in tests)
+missing_debug_implementations = "warn"  # pub struct 가 Debug 미구현 시 경고
+rust_2018_idioms = "warn"          # `..Default::default()` 등 deprecated 패턴 경고
+
+[workspace.lints.clippy]
+module_name_repetitions = "warn"   # `foo::Foo` 같은 자명한 이름
+needless_pass_by_value = "warn"    # `&T` 로 충분한데 `T` 로 받는 경우
+redundant_closure_for_method_calls = "warn"  # `|x| x.method()` → `Method::method`

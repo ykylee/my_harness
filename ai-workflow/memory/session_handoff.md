@@ -576,3 +576,27 @@
   - (i) Lark multi-section parser
   - (j) block-aware insert/replace
   - (g-추가) TUI 검증 보강 — SubAgent dispatch 통합 test 또는 AppKey 엣지케이스
+
+## 세션 종료 (2026-07-01 15th)
+
+- **상태**: **D-119 workspace-level lints baseline 추가 완료** — 옵션 h-1, cargo hygiene.
+- **main**: D-119 commit (코드 + 메모리 단일 push, hash push 후 확정).
+- **누적 결정**: **66 + D-119 = 67** (decision_count handoff SSOT 갱신).
+- **build/test 상태**: `cargo build --workspace` = clean / `cargo clippy --workspace --all-targets -- -D warnings` = **0 warning** (새 lint 6개로 인한 새 warning 0개) / `cargo test --workspace --lib` = **507 pass + 0 fail + 4 ignored** (D-118 507 → 동, 회귀 0).
+- **구현 요약** (옵션 h-1, D-119):
+  - `myharness/Cargo.toml` 에 `[workspace.lints.rust]` + `[workspace.lints.clippy]` baseline 추가 (Cargo 1.74+ 정식).
+  - 6개 lint 모두 `warn` (강한 deny/forbid 는 의도적 opt-in):
+    - rust: `unsafe_code`, `missing_debug_implementations`, `rust_2018_idioms`
+    - clippy: `module_name_repetitions`, `needless_pass_by_value`, `redundant_closure_for_method_calls`
+  - 8 crate 가 자동 상속 (각 crate Cargo.toml 에 [lints] 없음).
+  - 모든 lint 가 안전한 baseline — 기존 코드에 새 warning 0개. clippy -D warnings 통과.
+- **scope 명확화**:
+  - D-119 = workspace-level lints 추가만. `unsafe_code = "deny"` 같은 강한 정책은 의도적 opt-in (현재 add_local.rs 에 26+ unsafe {env::set_var} 존재, 전부 test code).
+  - h-2 (cargo fmt 일괄 적용) 은 **별도 사이클로 분리** — 현재 511 line drift 존재, large commit (수십 KB), review 부담 큼. D-120+ 로 분리 결정.
+- **다음 세션 시작 시 yklee 결정 옵션**:
+  - (B) Anthropic wire format
+  - (e) TASK-002 도메인 명령
+  - (h-2) cargo fmt 일괄 적용 (511 line diff) — 별도 사이클
+  - (i) Lark multi-section parser
+  - (j) block-aware insert/replace
+  - (g-추가) TUI SubAgent dispatch 또는 AppKey 엣지케이스

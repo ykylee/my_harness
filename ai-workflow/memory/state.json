@@ -564,6 +564,13 @@
         "status": "decided",
         "date": "2026-07-01",
         "summary": "test(tui): app.rs::tests 에 4개 render snapshot-style test 추가. 1) d118_render_renders_all_role_prefixes (5 role prefix), 2) d118_render_header_includes_title_and_mode, 3) d118_render_status_reflects_message_count, 4) d118_draw_and_render_to_buffer_agree_on_text. 회귀 0. workspace 507/507 pass + 4 ignored (D-117 503 -> +4). tui crate 75 -> 79."
+      },
+      {
+        "id": "D-119",
+        "title": "workspace-level lints baseline 추가 (옵션 h-1)",
+        "status": "decided",
+        "date": "2026-07-01",
+        "summary": "chore(cargo): myharness/Cargo.toml 에 [workspace.lints.rust] + [workspace.lints.clippy] baseline 추가 (Cargo 1.74+). 6개 lint 모두 `warn` (강한 deny/forbid 는 opt-in): unsafe_code, missing_debug_implementations, rust_2018_idioms, module_name_repetitions, needless_pass_by_value, redundant_closure_for_method_calls. 8 crate 가 자동 상속. 새 warning 0개. workspace 507/507 pass + 4 ignored. clippy 0 warning. (h-2: cargo fmt 적용은 511 line diff 로 별도 사이클 분리)"
       }
     ],
     "deferred": [
@@ -701,7 +708,7 @@
     "path": null,
     "present": false
   },
-  "decision_count": 61,
+  "decision_count": 62,
   "last_updated": "2026-07-01",
   "decided": []
 }
