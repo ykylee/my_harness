@@ -1,6 +1,6 @@
 {
   "schema_version": "1",
-  "generated_at": "2026-07-01T06:10:00Z",
+  "generated_at": "2026-07-01T06:30:00Z",
   "source_of_truth": {
     "project_profile_path": "docs/PROJECT_PROFILE.md",
     "session_handoff_path": "ai-workflow/memory/session_handoff.md",
@@ -104,9 +104,9 @@
       "Gitea PAT (D-44) — ~/.git-credentials (chmod 600). 회전 권고",
       "GitHub auth via gh CLI (ykylee)"
     ],
-    "last_decision_id": "D-114",
+    "last_decision_id": "D-115",
     "last_session_date": "2026-07-01",
-    "decision_count": 62
+    "decision_count": 63
   },
   "decisions": {
     "decided": [
@@ -515,6 +515,20 @@
         "build_status": "clean",
         "clippy_status": "0 warning",
         "decision_count": 62
+      },
+      {
+        "id": "D-115",
+        "title": "base_resp envelope 처리 (D-114 follow-up, 2026-07-01)",
+        "summary": "D-114 의 deferred list 1순위. Real `MiniMax` API 의 응답 envelope `base_resp.status_code` 분기 추가. **scope**: (1) helper `base_resp_status_code(value) -> Option<i64>` 추가, (2) `request_code` 가 `status.is_success()` 통과 후 `base_resp.status_code != 0` 이면 `DeviceError::Provider` 로 분기, (3) `poll_token` 가 `base_resp.status_code != 0` 이면 `TokenPoll::Error` 로 분기 (legacy `status: \"error\"` 매치 분기는 유지 — 양쪽 envelope 모두 accept), (4) mock server test 응답 4개 (manager.rs) 에 `base_resp` 추가 (D-115 spec 일치), (5) **6 신규 test** (unit 3 + e2e 3). 2 files (`myharness/crates/auth/src/device_flow.rs` + `myharness/crates/auth/src/manager.rs`) / +~210 lines test + ~20 lines production. **검증**: cargo build --workspace clean / cargo clippy --workspace --all-targets -- -D warnings 0 warning (let-chain 으로 collapsible_if 회피) / cargo test --workspace --lib **500 pass + 0 fail + 4 ignored** (D-114 baseline 494 → +6, 회귀 0) / D-113 real network 재실행 PASS (real 응답의 base_resp.status_code=0 분기 그대로 통과).",
+        "type": "feature",
+        "scope": "myharness-auth (request_code + poll_token + manager mock + device_flow tests, +6 신규 test)",
+        "main_hash": "D-115 commit (push 후 확정)",
+        "test_count": 500,
+        "test_delta": 6,
+        "files_changed": 2,
+        "build_status": "clean",
+        "clippy_status": "0 warning",
+        "decision_count": 63
       }
     ],
     "deferred": [

@@ -610,8 +610,9 @@ mod tests {
                             .and_then(|s| s.split('&').next().map(std::string::ToString::to_string))
                             .unwrap_or_else(|| "placeholder".to_string());
                         let now = chrono::Utc::now().timestamp_millis() as u64;
+                        // D-115: real `MiniMax` API envelope — `base_resp.status_code=0` (성공)
                         let body = format!(
-                            r#"{{"user_code":"{}","verification_uri":"https://platform.test/oauth-authorize?user_code={}","interval":1,"expired_in":{},"state":"{}"}}"#,
+                            r#"{{"base_resp":{{"status_code":0,"status_msg":"success"}},"user_code":"{}","verification_uri":"https://platform.test/oauth-authorize?user_code={}","interval":1,"expired_in":{},"state":"{}"}}"#,
                             uc, uc, now + 60, state_param
                         );
                         let resp = format!(
@@ -621,8 +622,9 @@ mod tests {
                         sock.write_all(resp.as_bytes()).await.unwrap();
                     } else if request_line.contains("POST /oauth/token") {
                         let now = chrono::Utc::now().timestamp_millis() as u64;
+                        // D-115: real `MiniMax` API envelope — `base_resp.status_code=0` + legacy `status:success` 동시 emit
                         let body = format!(
-                            r#"{{"status":"success","access_token":"{}","refresh_token":"{}","expired_in":{},"token_type":"Bearer"}}"#,
+                            r#"{{"base_resp":{{"status_code":0,"status_msg":"success"}},"status":"success","access_token":"{}","refresh_token":"{}","expired_in":{},"token_type":"Bearer"}}"#,
                             at, rt, now + 3600
                         );
                         let resp = format!(
@@ -736,8 +738,9 @@ mod tests {
                             .and_then(|s| s.split('&').next().map(std::string::ToString::to_string))
                             .unwrap_or_else(|| "placeholder".to_string());
                         let now = chrono::Utc::now().timestamp_millis() as u64;
+                        // D-115: real `MiniMax` API envelope — `base_resp.status_code=0` (성공)
                         let body = format!(
-                            r#"{{"user_code":"{}","verification_uri":"https://platform.test/oauth-authorize?user_code={}","interval":1,"expired_in":{},"state":"{}"}}"#,
+                            r#"{{"base_resp":{{"status_code":0,"status_msg":"success"}},"user_code":"{}","verification_uri":"https://platform.test/oauth-authorize?user_code={}","interval":1,"expired_in":{},"state":"{}"}}"#,
                             uc, uc, now + 60, state_param
                         );
                         let resp = format!(
@@ -749,8 +752,9 @@ mod tests {
                     } else if request_line.contains("POST /oauth/token") {
                         // status: success + access_token + refresh_token + expired_in
                         let now = chrono::Utc::now().timestamp_millis() as u64;
+                        // D-115: real `MiniMax` API envelope — `base_resp.status_code=0` + legacy `status:success` 동시 emit
                         let body = format!(
-                            r#"{{"status":"success","access_token":"{}","refresh_token":"{}","expired_in":{},"token_type":"Bearer"}}"#,
+                            r#"{{"base_resp":{{"status_code":0,"status_msg":"success"}},"status":"success","access_token":"{}","refresh_token":"{}","expired_in":{},"token_type":"Bearer"}}"#,
                             at, rt, now + 3600
                         );
                         let resp = format!(

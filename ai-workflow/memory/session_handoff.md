@@ -473,3 +473,31 @@
   - (h) 추가 안정화
   - (i) Lark multi-section parser
   - (j) block-aware insert/replace
+
+## 세션 종료 (2026-07-01 11th)
+
+- **상태**: **D-115 base_resp envelope 처리 완료** — 옵션 f-2, D-114 의 deferred 1순위. `request_code` + `poll_token` 의 응답 envelope 분기 + mock spec 일치 + 6 신규 test.
+- **main**: D-115 commit (코드 + 메모리 단일 push 2 commit, hash push 후 확정).
+- **누적 결정**: **63** (D-22~D-38 + D-42~D-84 + D-96~D-115).
+- **build/test 상태**: `cargo build --workspace` = clean / `cargo clippy --workspace --all-targets -- -D warnings` = **0 warning** (let-chain 으로 collapsible_if 회피) / `cargo test --workspace --lib` = **500 pass + 0 fail + 4 ignored** (D-114 baseline 494 → +6, 회귀 0) / D-113 real network 재실행 **PASS** (real 응답의 `base_resp.status_code=0` 분기 그대로 통과).
+- **구현 요약** (옵션 f-2, D-115):
+  - `myharness/crates/auth/src/device_flow.rs`:
+    - helper `base_resp_status_code(value) -> Option<i64>` 추가 (`{base_resp: {status_code: N}}` → `Some(N)`, 부재 시 `None`).
+    - `request_code`: HTTP 200 + `base_resp.status_code != 0` → `DeviceError::Provider(format!("oauth/code base_resp status_code={code} status_msg={msg}"))`. legacy `status: "error"` 분기는 유지.
+    - `poll_token`: HTTP 200 + `base_resp.status_code != 0` → `TokenPoll::Error(format!("oauth/token base_resp status_code={code} status_msg={msg}"))`. legacy `status: "error"` 분기는 유지. **양쪽 envelope 모두 accept** (mock test 의 `{base_resp:0, status:success}` 동시 emit 도 정상).
+    - **6 신규 test**: 3 unit (`d115_base_resp_status_code_zero` / `_nonzero` / `_absent`) + 3 e2e (`d115_request_code_base_resp_zero_succeeds` / `_nonzero_errors` / `d115_poll_token_base_resp_nonzero_errors`).
+  - `myharness/crates/auth/src/manager.rs`:
+    - mock server test 응답 4개 (2개 test × 2 endpoint: code + token) 에 `base_resp.status_code=0` + `status_msg="success"` envelope 추가. legacy `status:"success"` 동시 emit (양쪽 envelope accept 회귀 0).
+- **효과**:
+  - real `MiniMax` API 의 `base_resp.status_code != 0` 실패 시나리오 즉시 분기 (legacy `status:"error"` 가 없는 real 응답도 처리).
+  - token 단계 (`poll_token`) 의 real polling 도 정상 — `40001 invalid_client` / `40004 invalid_grant` 등 `base_resp.status_code` 로 emit 된 실패를 즉시 `TokenPoll::Error` 로 surface.
+  - D-115 spec 과 mock server 일치 (production spec = mock spec = 1:1).
+  - D-113 real test 그대로 PASS (real `MiniMax` 응답의 `base_resp.status_code=0` 분기 통과).
+- **다음 세션 시작 시 yklee 결정 옵션**:
+  - (f-3) **D-116 ms/초 통일** — real API 의 `expired_in` / `interval` 이 epoch ms 인데 우리 `DeviceAuthorization` / `manager.rs` 는 초 가정. real token expire check 1000배 영향 fix.
+  - (B) Anthropic wire format
+  - (e) TASK-002 도메인 명령
+  - (g) TUI shell 검증
+  - (h) 추가 안정화
+  - (i) Lark multi-section parser
+  - (j) block-aware insert/replace

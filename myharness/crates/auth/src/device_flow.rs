@@ -65,6 +65,16 @@ fn default_interval() -> u64 {
     2
 }
 
+/// D-115: real `MiniMax` API 의 응답 envelope.
+/// 성공: `{"base_resp": {"status_code": 0, "status_msg": "success"}, ...페이로드}`
+/// 실패: `{"base_resp": {"status_code": <non-zero>, "status_msg": "<msg>"}, ...}`
+/// `base_resp` 가 부재하면 `None` 반환 (legacy 응답 / 다른 provider). 호출 측에서
+/// `Some(code != 0)` 만 분기.
+fn base_resp_status_code(value: &serde_json::Value) -> Option<i64> {
+    let br = value.get("base_resp")?;
+    br.get("status_code").and_then(serde_json::Value::as_i64)
+}
+
 /// POST /oauth/token polling 응답.
 #[derive(Debug, Clone)]
 pub enum TokenPoll {
@@ -162,6 +172,20 @@ pub async fn request_code(
             .unwrap_or(&text);
         return Err(DeviceError::Provider(format!("oauth/code {status}: {msg}")));
     }
+    // D-115: real `MiniMax` API 는 HTTP 200 + `base_resp.status_code != 0` 으로
+    // 실패 시나리오를 구분. `base_resp` 가 명시적으로 non-zero 면 `DeviceError::Provider`.
+    if let Some(code) = base_resp_status_code(&value)
+        && code != 0
+    {
+        let msg = value
+            .get("base_resp")
+            .and_then(|b| b.get("status_msg"))
+            .and_then(|v| v.as_str())
+            .unwrap_or("<missing>");
+        return Err(DeviceError::Provider(format!(
+            "oauth/code base_resp status_code={code} status_msg={msg}"
+        )));
+    }
     let auth: DeviceAuthorization = serde_json::from_value(value)
         .map_err(|e| DeviceError::Provider(format!("oauth/code body decode: {e}")))?;
     if auth.state != state {
@@ -208,6 +232,21 @@ pub async fn poll_token(
         serde_json::from_str(&text)
             .map_err(|e| DeviceError::Provider(format!("json decode: {e} body={text}")))?
     };
+    // D-115: real `MiniMax` API 는 HTTP 200 + `base_resp.status_code != 0` 으로
+    // 실패 시그널. `base_resp` 가 non-zero 면 즉시 `TokenPoll::Error` 로 분기.
+    // legacy `status: "error"` 응답은 기존 match 분기에서 계속 처리.
+    if let Some(code) = base_resp_status_code(&value)
+        && code != 0
+    {
+        let msg = value
+            .get("base_resp")
+            .and_then(|b| b.get("status_msg"))
+            .and_then(|v| v.as_str())
+            .unwrap_or("unknown");
+        return Ok(TokenPoll::Error(format!(
+            "oauth/token base_resp status_code={code} status_msg={msg}"
+        )));
+    }
     let st = value.get("status").and_then(|v| v.as_str()).unwrap_or("");
     match st {
         "success" => {
@@ -312,6 +351,7 @@ pub async fn poll_until_success(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use tokio::io::{AsyncReadExt, AsyncWriteExt};
 
     struct FakeDeviceProvider;
     #[async_trait]
@@ -432,5 +472,184 @@ mod tests {
             "expired_in suspiciously far in future: {}",
             req.authorization.expired_in
         );
+    }
+
+    // --- D-115: base_resp envelope helper + e2e branches ---
+
+    #[test]
+    fn d115_base_resp_status_code_zero() {
+        let v: serde_json::Value = serde_json::from_str(
+            r#"{"base_resp":{"status_code":0,"status_msg":"success"},"user_code":"X"}"#,
+        )
+        .unwrap();
+        assert_eq!(base_resp_status_code(&v), Some(0));
+    }
+
+    #[test]
+    fn d115_base_resp_status_code_nonzero() {
+        let v: serde_json::Value = serde_json::from_str(
+            r#"{"base_resp":{"status_code":40004,"status_msg":"invalid_grant"}}"#,
+        )
+        .unwrap();
+        assert_eq!(base_resp_status_code(&v), Some(40004));
+    }
+
+    #[test]
+    fn d115_base_resp_status_code_absent() {
+        let v: serde_json::Value =
+            serde_json::from_str(r#"{"status":"success","access_token":"x"}"#).unwrap();
+        assert_eq!(base_resp_status_code(&v), None);
+    }
+
+    /// D-115: mock provider 가 `base_resp.status_code=0` 응답을 emit 할 때
+    /// `request_code` 가 정상 경로 (DeviceAuthorization decode) 로 도달.
+    #[tokio::test]
+    async fn d115_request_code_base_resp_zero_succeeds() {
+        struct MockProvider {
+            code_ep: String,
+        }
+        #[async_trait]
+        impl DeviceCodeProvider for MockProvider {
+            fn id(&self) -> &'static str { "d115-zero" }
+            fn display_name(&self) -> &str { "D115 base_resp=0" }
+            fn code_endpoint(&self) -> &str { &self.code_ep }
+            fn token_endpoint(&self) -> &str { "https://mock/oauth2/token" }
+            fn client_id(&self) -> &'static str { "mock-client" }
+            fn scope(&self) -> &'static str { "group_id profile model.completion" }
+            fn region(&self) -> &'static str { "global" }
+        }
+        let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let addr = listener.local_addr().unwrap();
+        let url = format!("http://{addr}/oauth2/device/code");
+        let server = tokio::spawn(async move {
+            if let Ok((mut sock, _)) = listener.accept().await {
+                let mut buf = vec![0u8; 8192];
+                let n = sock.read(&mut buf).await.unwrap();
+                let req = String::from_utf8_lossy(&buf[..n]).to_string();
+                let state_param = req
+                    .split("state=")
+                    .nth(1)
+                    .and_then(|s| s.split('&').next().map(std::string::ToString::to_string))
+                    .unwrap_or_else(|| "placeholder".to_string());
+                let now = chrono::Utc::now().timestamp_millis() as u64;
+                let body = format!(
+                    r#"{{"base_resp":{{"status_code":0,"status_msg":"success"}},"user_code":"D115-X1","verification_uri":"https://platform.test/oauth-authorize?user_code=D115-X1","interval":1,"expired_in":{},"state":"{}"}}"#,
+                    now + 60, state_param
+                );
+                let resp = format!(
+                    "HTTP/1.1 200 OK
+Content-Type: application/json
+Content-Length: {}
+Connection: close
+
+{}",
+                    body.len(), body
+                );
+                sock.write_all(resp.as_bytes()).await.unwrap();
+                sock.shutdown().await.ok();
+            }
+        });
+        let p = MockProvider { code_ep: url };
+        let req = request_code(&p).await.expect("request_code failed");
+        assert_eq!(req.authorization.user_code, "D115-X1");
+        drop(server);
+    }
+
+    /// D-115: mock provider 가 `base_resp.status_code != 0` 응답을 emit 할 때
+    /// `request_code` 가 `DeviceError::Provider` 로 분기.
+    #[tokio::test]
+    async fn d115_request_code_base_resp_nonzero_errors() {
+        struct MockProvider {
+            code_ep: String,
+        }
+        #[async_trait]
+        impl DeviceCodeProvider for MockProvider {
+            fn id(&self) -> &'static str { "d115-nonzero" }
+            fn display_name(&self) -> &str { "D115 base_resp!=0" }
+            fn code_endpoint(&self) -> &str { &self.code_ep }
+            fn token_endpoint(&self) -> &str { "https://mock/oauth2/token" }
+            fn client_id(&self) -> &'static str { "mock-client" }
+            fn scope(&self) -> &'static str { "group_id profile model.completion" }
+            fn region(&self) -> &'static str { "global" }
+        }
+        let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let addr = listener.local_addr().unwrap();
+        let url = format!("http://{addr}/oauth2/device/code");
+        let server = tokio::spawn(async move {
+            if let Ok((mut sock, _)) = listener.accept().await {
+                let mut buf = vec![0u8; 8192];
+                let _ = sock.read(&mut buf).await.unwrap();
+                let body = r#"{"base_resp":{"status_code":40001,"status_msg":"invalid_client"}}"#;
+                let resp = format!(
+                    "HTTP/1.1 200 OK
+Content-Type: application/json
+Content-Length: {}
+Connection: close
+
+{}",
+                    body.len(), body
+                );
+                sock.write_all(resp.as_bytes()).await.unwrap();
+                sock.shutdown().await.ok();
+            }
+        });
+        let p = MockProvider { code_ep: url };
+        let err = request_code(&p).await.expect_err("request_code should fail on base_resp!=0");
+        let msg = format!("{err}");
+        assert!(msg.contains("base_resp"), "error should mention base_resp, got: {msg}");
+        assert!(msg.contains("40001"), "error should contain status_code, got: {msg}");
+        drop(server);
+    }
+
+    /// D-115: mock provider 가 `base_resp.status_code != 0` 응답을 emit 할 때
+    /// `poll_token` 가 `TokenPoll::Error` 로 분기.
+    #[tokio::test]
+    async fn d115_poll_token_base_resp_nonzero_errors() {
+        struct MockProvider {
+            token_ep: String,
+        }
+        #[async_trait]
+        impl DeviceCodeProvider for MockProvider {
+            fn id(&self) -> &'static str { "d115-poll-err" }
+            fn display_name(&self) -> &str { "D115 poll err" }
+            fn code_endpoint(&self) -> &str { "https://mock/oauth2/device/code" }
+            fn token_endpoint(&self) -> &str { &self.token_ep }
+            fn client_id(&self) -> &'static str { "mock-client" }
+            fn scope(&self) -> &'static str { "group_id profile model.completion" }
+            fn region(&self) -> &'static str { "global" }
+        }
+        let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let addr = listener.local_addr().unwrap();
+        let url = format!("http://{addr}/oauth2/token");
+        let server = tokio::spawn(async move {
+            if let Ok((mut sock, _)) = listener.accept().await {
+                let mut buf = vec![0u8; 8192];
+                let _ = sock.read(&mut buf).await.unwrap();
+                let body = r#"{"base_resp":{"status_code":40004,"status_msg":"invalid_grant: device_code expired or already used"}}"#;
+                let resp = format!(
+                    "HTTP/1.1 200 OK
+Content-Type: application/json
+Content-Length: {}
+Connection: close
+
+{}",
+                    body.len(), body
+                );
+                sock.write_all(resp.as_bytes()).await.unwrap();
+                sock.shutdown().await.ok();
+            }
+        });
+        let p = MockProvider { token_ep: url };
+        let poll = poll_token(&p, "UC-FAKE", "VERIFIER-FAKE")
+            .await
+            .expect("poll_token network ok");
+        match poll {
+            TokenPoll::Error(msg) => {
+                assert!(msg.contains("base_resp"), "error should mention base_resp, got: {msg}");
+                assert!(msg.contains("40004"), "error should contain status_code, got: {msg}");
+            }
+            other => panic!("expected TokenPoll::Error, got: {other:?}"),
+        }
+        drop(server);
     }
 }
