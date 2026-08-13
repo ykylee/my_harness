@@ -725,3 +725,78 @@
 - **검증 (3-way)**: cargo build --workspace ✅ / cargo clippy -D warnings ✅ 0 warning / cargo test --workspace --lib ✅ 516 pass + 0 fail + 4 ignored (회귀 0) / release binary --version ✅ / `ask "ping"` ✅ MiniMax 응답 / `--mode=orchestrator|single` (비-TTY) ✅ TtyGuard ENXIO 정상 실패 (`unknown mode` 메시지 사라짐).
 - **결정 ID**: **D-125** (누적 73). main = D-125 commit (메모리+코드 단일 push).
 - **다음 (yklee 결정 시)**: 동일 1순위 후보 유지 — (a) D-106+ tree-sitter / (b) D-106+ pure insert/delete / (c) A-proper native tool calling OpenAI·Anthropic wire / (d) D-100 chunked Read follow-up / (e) TASK-002 도메인 명령 / (f) MiniMax OAuth real flow / (g) TUI shell + interactive mode 검증 / (h) cargo hygiene / (i) Lark multi-section parser / (j) D-109+ block-aware insert/replace.
+
+---
+
+## TASK-004 재방문 (D-127~D-133, 2026-08-14) — 7 reference v2 영향 분석
+
+### 1. 환경
+
+- **worktree**: main (clean, after 14 commit push — 7 reference commit + 7 merge commit)
+- **시작**: 사용자 "세월이 많이 지나서 레퍼런스들이 발전을 많이 했어. 다시 조사하자"
+- **선택된 옵션 (yklee)**: (1) 전체 7-doc 재조사 + 결론 갱신
+
+### 2. 작업 D-127~D-133
+
+#### 2.1 06-09 이후 발전량 (실측)
+
+| reference | 새 commit 수 (06-09~08-14, 66일) | default branch | 최신 release/tag | 비고 |
+|---|---|---|---|---|
+| opencode | 1,457 | `dev` | v1.18.18 | TUI 안정화 + 모델 cache fix |
+| aider | 0 | `main` | v0.86.3.dev | 안정 (정직) |
+| codex | 1,996 | `main` | - | app-server + Guardian V2 + Skill validation + Luna sampler + interrupted turn recovery |
+| **headroom** | **106 (실측, prompt 의 1085 = hallucination)** | `main` | v0.23.0 (06-04) + Unreleased | RTK=v0.22.4 (v0.23.0 link hallucination), D-66/D-67/D-68 tract 재평가 REJECT |
+| goose | 661 | `main` | - | ACP provider 다수 + 보안 강화 + Recipe/Slash + 8 provider 추가 |
+| gemini-cli | 130 | `main` | v0.55.1 | TOML extensions + MCP OAuth refresh + Capacity Exhaustion terminal + caretaker agent |
+| claude-code | 594 (실측, prompt 의 66 = 자동화 commit 만) | `main` | - | 자동화 commit 다수, **D-34/D-40 §11.2 잠금 정합 검증** |
+
+#### 2.2 워커 운영 (D-16/D-73 lesson 적용)
+
+- **D-16 chunked write**: 1 plan = 1 reference. 7 worktree (`analysis/<name>-v2` branch) 격리.
+- **D-73 prompt lesson**: Worker prompt 머리에 cross-session grep 1-liner.
+- **D-73 §3 hallucination 회귀**: headroom D-130 prompt 의 "RTK=v0.23.0" 가 hallucination — 실측 = v0.22.4 변경. 워커가 §16.14 에 정직 명시. **lesson**: commit ref / module name 은 upstream source 에서 직접 확인 필수.
+- **워커 출력**: 모두 1 commit + 7 reference 영향 분석 (+1,987 lines total). 메모리 sync 별도 task.
+- **순차 실행 (rate limit 회피)**: 첫 병렬 spawn = 4 fail (rate limit 2062 + serialization error). 순차 재시도 = 7/7 완료. aider / claude-code / codex / goose / headroom / gemini-cli / opencode 순서로 진행.
+
+#### 2.3 D-130 (headroom v2) 의 핵심 결과
+
+- **D-66/D-67/D-68 tract 재평가**: REJECT. Rust 측 안정성 ↑ = RTK (Rust observability, **v0.22.4 변경**) + Rust proxy metrics (headroom 자체 안정화, ONNX 무관). **v2.0 ONNX 백로그 = OOS 유지** (D-66/D-68 abort 결정 유지).
+- **CCR workspace scope** (D-130 §16.2) → §5.6 Layer2 CCR. **즉시 follow-up 2 commit**: (a) SqliteMemoryStore FTS5 schema 에 `workspace_path` 컬럼 추가 (D-99 의 6 integration test + 1 신규 test, ~150 lines). (b) Memory fail-closed — `MemoryStore::open()` 의 `~/.myharness/memory/` 부재 시 명확한 에러 + 안내 (D-98 의 7 ndjson_* test 회귀 0, ~80 lines).
+- **cli wrap-subcommand** (D-130 §16.3) → §5.10 sub-agent dispatch. TASK-005-2 v1.5+ Sub-task 2 (provider-auto-config Skill) 와 동시 차용 권장.
+
+#### 2.4 D-133 (claude-code v2) 의 핵심 결과
+
+- **66 commit 명세 오류 정직 검증**: prompt 의 "66 commit" ≠ 실제 594 commit (자동화 commit 525 + 실질 ~68). 워커가 §18.2 에 정직 명시.
+- **D-34/D-40 §11.2 잠금 정합**: 06-09 이후 claude-code 변경 = 우리 §5.6/§5.14/§5.4/§5.5 영향 0. D-40 의 §11.2 완전 제거 결정이 정합이었음 사후 확인. 결정 변경 불요.
+- **PR #79898** (Royarsan/anthropics): AWS gateway example deployment assets — 우리 §5.5 OAuth 패턴 참고 가치 (low priority, v2+).
+
+#### 2.5 코드 영향 (다음 1순위 후보, yklee 결정 시)
+
+| 결정 ID | 출처 | 내용 | 우선순위 |
+|---|---|---|---|
+| **D-130 즉시** | headroom §16.2 | SqliteMemoryStore FTS5 schema + `workspace_path` 컬럼 | 즉시 |
+| **D-130 즉시** | headroom §16.4 | Memory fail-closed (`~/.myharness/memory/` 부재 시 에러) | 즉시 |
+| **D-130 백로그** | headroom §16.6 | Learned Plugin 4-layer fix (TASK-005-2 v1.5+ Sub-task 5) | v1.5+ |
+| **D-130 §16.3** | headroom §16.3 | cli wrap-subcommand (TASK-005-2 Sub-task 2 와 동시 차용) | v1.5+ |
+| D-131 (goose) §16.1 | goose | ACP SDK 0.12 추가 (feature `acp`) | v2+ |
+| D-131 §16.4 | goose | provider 50 → 58 (8종 추가) | v1.5+ |
+| D-132 §16.7 (gemini-cli) | gemini-cli | TOML extensions 표준 | v1.5+ |
+| D-129 §16.2 (codex) | codex | effective permission 우선 → §5.4 v0 회귀 차단 | v1 즉시 |
+| D-129 §16.3 | codex | Skill validation → §5.14 skill system 1차 cycle | v1.5+ |
+| D-127 §16.a | opencode | reasoning effort 표준화 → §5.5 LLM wire format | v1.5+ |
+| D-127 §16.b | opencode | compaction → §5.6 Layer2 | v2+ |
+| D-127 §16.c | opencode | session retry jitter cap → §5.5 router | v1 즉시 |
+| D-127 §16.e | opencode | Copilot PDF detect → §5.5 multimodal | v2+ |
+| D-127 §16.f | opencode | R2 data catalog → §5.13 observability | v2+ |
+
+### 3. 다음 1순위 (yklee 결정 시)
+
+- (a) **D-130 즉시 follow-up 2 commit** — CCR + Memory fail-closed (즉시)
+- (b) **D-130 §16.3 cli wrap** → TASK-005-2 v1.5+ Sub-task 2 와 동시 차용
+- (c) **D-127 §16.c session retry jitter cap** — §5.5 router 에 즉시 적용 (opencode 의 5-tuple 기반, ~50 lines)
+- (d) **D-129 §16.2 effective permission** — §5.4 permission mode 의 v0 회귀 차단 (~100 lines)
+- (e) TASK-002 도메인 명령 / OAuth real flow / TUI shell / cargo hygiene / Lark parser / block-aware insert/replace (이전 9 옵션)
+
+### 4. 누적 결정
+
+- 69 → **76** (D-127~D-133, 7 신규). main = `8782abf`. 결정 log 후속 (D-104 메모리 sync 직후).

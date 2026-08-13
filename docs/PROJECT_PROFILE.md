@@ -4,7 +4,7 @@
 - 범위: 하네스 개요, 문서 구조, 기본 명령, 검증 포인트, 예외 규칙
 - 대상 독자: yklee (single user / 프로젝트 오너), my_harness 개발 시 사용하는 Mavis / Mavis 워커 (이 저장소 개발 workflow 한정)
 - 상태: active
-- 최종 수정일: 2026-07-01 (D-100~D-104 결정 log 후속 — development_log.md 정정 + D-104 oh-my-pi Hybrid Read v2 반영)
+- 최종 수정일: 2026-08-14 (TASK-004 재방문 — D-127~D-133 결정 log + 7 reference v2 영향 분석)
 - 관련 문서: [공통 표준](../ai-workflow/core/global_workflow_standard.md) (Mavis 워크플로우 표준 — 이 저장소 개발 workflow 한정), [MiniMax 진입점](../MiniMax.md) (Mavis 진입점 — 이 저장소 개발 workflow 한정), **[CONCEPT.md](./CONCEPT.md) ← my_harness v1 컨셉 SSOT (Mavis zero coupling)**, [development_log.md](./development_log.md), [REFERENCES.md](./REFERENCES.md)
   - CONCEPT.md §5.10 Agent 모드 (orchestrator/single/loop)
   - CONCEPT.md §5.11 Built-in sub-agents (15개, 3-도메인)
