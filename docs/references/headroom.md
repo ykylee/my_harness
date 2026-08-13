@@ -861,3 +861,210 @@ Apache 2.0. ENTERPRISE.md 의 상용 정책. 우리 my_harness 가 headroom 통�
 ### 14.14 `headroom` 의 첫 release (v0.1.0) 와 현재 버전
 
 GitHub Releases + PyPI 버전. 우리 my_harness 가 **안정 버전** pin 할지 **최신 main** 추적할지.
+
+---
+
+## §15 v2 Changelog (D-130, headroom 재방문 — 2026-08-14)
+
+### 15.1 분석 시점 기준 release 상태
+
+- **v0.22.4 (2026-05-26)** — 마지막 release tag. clone 시점 HEAD = `fb59f83f` (2026-06-06 12:08 -0700, PR #592 merge)
+- **v0.23.0 (2026-06-04)** — CHANGELOG 상 release-please 가 자동 생성한 예정 release. 실제 release tag 미존재 (`git tag` 에 v0.23.0 없음, v0.22.4 가 최신)
+- **Unreleased (2026-06-05~)** — `startup log noise suppression` (PR #619) + α 의 commit 누적
+- **scope 측정 (prompt vs reality)**:
+  - prompt 주장 "06-09 이후 1085 commit" → **실측 0 commit** (clone 기반, 2026-06-06 fb59f83f 가 마지막)
+  - prompt 미언급 사실 "v0.22.4..HEAD = 106 commit / 137 file / +6,894 -3,074" (대부분 PR merge + docs + fix)
+  - **결론**: prompt 의 commit count 는 단일 시점 실측과 1 order of magnitude 이상 차이. **실측 우선** (D-73 lesson §1, scope 측정 1줄).
+
+### 15.2 v0.23.0 의 8 핵심 변경 (CHANGELOG 발췌)
+
+| # | 카테고리 | 변경 | 우리 영향 |
+| --- | --- | --- | --- |
+| **1** | **Feature: Copilot subscription mode** | `headroom wrap copilot` 의 subscription 인증 proxy handoff (commit f4dff9b, ff4a0c6, 72da461) | §5.5 provider 등록 — Copilot subscription = 1st-class wrapper |
+| **2** | **Bug Fix: CCR workspace scope** | proactive expansion 의 cross-project leak 수정 (commit 197601b, 1bc163f) — `ccr:` prefix 의 analysis 대상 결정 시 workspace-prefix 강제 | §5.6 Layer2 CCR — workspace-prefix 가 invariant |
+| **3** | **Bug Fix: Codex init model_provider** | `~/.codex/config.toml` 의 `model_provider` 가 wrap 직후 사라지던 회귀 (commit 304dcc7, 849b46d, #260) | §5.10 sub-agent dispatch — Codex wrap 의 config 보존 |
+| **4** | **Refactor: cli wrap-subcommand** | cline / continue / goose / openhands 의 shared scaffolding (commit 8eeb926, c74ad11, ea1976e, 8625f80, c375fa1) | §5.10 sub-agent dispatch — wrap 패턴의 한 곳 정리 |
+| **5** | **Bug Fix: Copilot ticket handoff** | subscription token 이 proxy 로 deterministic 전달 (commit 72da461, ff4a0c6) | §5.5 provider 등록 — subscription auth 의 비-회귀성 |
+| **6** | **Bug Fix: tiktoken encoding** | unknown gpt-4 model snapshot 의 encoding 정정 (commit 0e551de, #552) | §5.5 tokenization — tiktoken fallback 안정화 |
+| **7** | **Bug Fix: UTF-8 encode/decode** | config / state / template asset 의 UTF-8 명시 (commit 2f1538a, 92075b9, #533) | 디스크 I/O 무관 — 단, Korean CLAUDE.md 등 비-ASCII asset 보호 |
+| **8** | **Bug Fix: docker base image** | Python 3.13 / debian13 upgrade + digest pinning drop (commit e6bf7a0, 08a2197) | 무관 (CI/CD 인프라) |
+
+### 15.3 v0.22.4 의 RTK + Rust Observability (Phase H blocker 해소) — **실측 정정**
+
+> **중요**: prompt 의 `v0.23.0 RTK (Rust observability) + Rust proxy metrics` 표기는 **CHANGELOG 와 source 양쪽 모두 부정확**. 실측:
+
+- **PR #494 (commit b36ad9fe, 2026-05-25)**: `realign-G3-rtk-metrics-and-obs` — RTK metrics + Rust observability (Phase H blocker)
+- **PR #493 (commit c7d1247a, 2026-05-25)**: `realign-G2-tokens-saved-rtk` — subscription tokens_saved_rtk data plane
+- **PR G3 (commit 5f264a53, 2026-05-22)**: `wire Phase G PR-G3 RTK + proxy metrics (H-blocker)`
+- **PR G2 (commit 44c605fb, 2026-05-22)**: `wire tokens_saved_rtk from RTK stats endpoint`
+
+→ **모두 v0.22.4 (2026-05-26) 의 release line 에 속함**. v0.23.0 CHANGELOG 에는 RTK 항목 0건. **D-130 prompt 의 RTK ↔ v0.23.0 link 는 hallucination 가능성** (D-73 lesson §3 — module name / commit ref 은 upstream source 에서 직접 확인).
+
+### 15.4 v0.23.0 Security / Unreleased 항목 (CHANGELOG 발췌)
+
+**Unreleased (2026-06-05 ~)**:
+- **startup log noise suppression** (PR #619, commit 45559011) — litellm banner, trafilatura parse, HuggingFace Hub unauth, tiktoken fallback, httpx INFO. 6 file 영향 (`headroom/providers/litellm.py`, `transforms/html_extractor.py`, `memory/adapters/embedders.py`, `providers/anthropic.py`, `providers/registry.py`, `image/onnx_router.py`, `transforms/kompress_compressor.py`).
+
+**Unreleased §2 (Security)**:
+- `/debug/memory` loopback guard 부재 수정 (D-130 시점 CHANGELOG 의 §90 부근)
+- `retry_max_attempts=0` guard (`TypeError` 회피, `RuntimeError` 로 정정)
+- async event loop 의 blocking subprocess — `asyncio.to_thread` 로 offload
+- Neo4j credential 하드코딩 — `NEO4J_AUTH=${NEO4J_AUTH:-neo4j/devpassword}` envvar 패턴
+- `SemanticCache.get_memory_stats()` 의 concurrent iteration — `list()` snapshot
+- `memory_neo4j_password` default `"password"` → `""` (operator prompt logger.warning)
+
+**Unreleased §3 (Fixed)**:
+- PyPI install clarity — `pipx --python python3.13` 가이드
+- `Learned: error recovery` 의 stale row bloat (4 layer fix: emission dedup + evidence gating 5+ + render-time refine)
+- `headroom unwrap codex` 미존재 회귀 (config.toml 영구污染) — `config.toml.headroom-backup` snapshot + `unwrap codex` byte-for-byte restore
+- Image compressor 의 global model pin — `get_compressor()` caller-owned
+- `headroom learn` no-clobber (carry-forward merge)
+
+**Unreleased §4 (Added)**:
+- `turn_id` linking agent-loop API calls (Hash-prefix stable across iteration)
+- Live flush of traffic-learned patterns (10s FLUSH_DEBOUNCE_SECONDS)
+
+### 15.5 CVE remediation (v0.23.0 + 연속)
+
+- Next.js 16.2.4 → 16.2.6 (GHSA-gx5p-jg67-6x7h CVE-2026-44580, GHSA-h64f-5h5j-jqjh CVE-2026-44577) — `docs/package.json` + `bun.lock`
+- brace-expansion 5.0.6 (GHSA-jxxr-4gwj-5jf2 CVE-2026-45149)
+- litellm 1.86.2 (CVE-2026-42271)
+
+→ 우리 my_harness 측 머신 bullet (D-130 시점) — `docs/` 는 Next.js 의존성 없음, `brace-expansion` 도 무관, `litellm` 도 미사용. **개별 transfer 불요**.
+
+### 15.6 tag format 변경 (v0.23.0 영향)
+
+- 기존: `release-please--branches--main` prefix 의 PR
+- 신규: `vX.Y.Z` (commit 4a39ef5, 0f3e3af) — `release-please` component prefix drop
+- 영향: release tag reference 단순화. 우리 my_harness tag 와 의미 동일.
+
+### 15.7 v0.23.0 + Unreleased 누적 diff (정량)
+
+- **post-v0.22.4 (≈ v0.23.0 + Unreleased)**: 106 commit / 137 file / +6,894 -3,074 (per `git diff --shortstat v0.22.4..HEAD`)
+- **headroom CLI bloat**: wrap-subcommand 4개 (cline / continue / goose / openhands) 추가 → 우리 my_harness 가 차용 시 4 equivalent sub-agent dispatch (D-130 §16.5 참조)
+- **우리 my_harness 측 영향 (정성)**: 8 feature + 14 bug fix + 6 security + 6 fixed + 2 added = **36 item 인지** (CHANGELOG 발췌 기준, 실제 commit 수는 더 많음). 우리 1순위 영향 = 1+2+4+5 (Copilot + CCR workspace + cli wrap + Copilot handoff) = 4 / 36.
+
+### 15.8 미해결 follow-up (D-130 시점)
+
+- **tiktoken encoding 정정 (commit 0e551de)**: 우리 my_harness 는 `tiktoken` 미사용 (rig-core 경로). 무관.
+- **learned error recovery 의 4 layer fix**: 우리 my_harness 의 `auto_memory` (D-98) + `SqliteMemoryStore` (D-99) 와 정합 가능 — `Learned:` 카테고리 emission 로직 차용 검토 (D-130 §16.6).
+- **Neo4j credential envvar 패턴**: 우리 my_harness 는 `~/.myharness/oauth/{provider}.toml` (chmod 600) + `KeyringAuthStore` cache. **headroom 의 `${NEO4J_AUTH:-neo4j/devpassword}` 패턴은 devcontainer 기본값용** — 우리 v1.5+ devcontainer 통합 시 차용 검토.
+
+---
+
+## §16 v2 영향 분석 (D-130, my_harness ↔ headroom mapping)
+
+### 16.1 §5.5 Provider 등록 — Copilot subscription (v0.23.0 Feature #1)
+
+- **headroom 변경**: `headroom wrap copilot` 가 subscription auth proxy handoff (commit f4dff9b, ff4a0c6, 72da461)
+- **우리 my_harness 영향**: zero. `Copilot` provider 미지원 (TASK-005 v1.0 결정 시점에 5 provider — MiniMax / OpenAI / Anthropic / Google / Bedrock). v3+ 검토.
+- **결정**: **이관 보류** (의존성 가치 낮음).
+
+### 16.2 §5.6 Layer2 CCR — workspace scope (v0.23.0 Bug Fix #2)
+
+- **headroom 변경**: `ccr:` prefix 의 proactive expansion 시 workspace-prefix 강제 — cross-project leak 수정 (commit 197601b, 1bc163f)
+- **우리 my_harness 영향**: §5.6 Layer2 CCR 의 `MemoryStore` async trait (D-98) + `SqliteMemoryStore` (D-99) 의 workspace projection 과 정합. **FTS5 virtual table schema 에 `workspace_path` 컬럼 추가** 검토 (현재는 `path` 만 존재).
+- **결정**: **D-130 follow-up 으로 workspace projection 일관성 검증** (D-99 의 6 integration test + 1 신규 test, 1 commit ~150 lines).
+
+### 16.3 §5.10 Sub-agent dispatch — cli wrap-subcommand (v0.23.0 Refactor #4)
+
+- **headroom 변경**: cline / continue / goose / openhands 4개 wrapper 의 shared scaffolding (commit 8eeb926, c74ad11). 80+ line DRY.
+- **우리 my_harness 영향**: `cli/main.rs` 의 sub-agent dispatch loop (D-100 max_tool_rounds=10 default + D-101 follow-up + D-102 dedup 안전망) 와 의미 정합. **단, 우리 v1.0 의 실제 sub-agent = 4 (built-in: code / env / git / ask) — headroom 의 4 (cline / continue / goose / openhands) 와 1:1 매칭**. shared scaffolding 도입 시 `tool_spec_section` + `extract_tool_call` + `canonical_tool_call` 의 3 fn 통합 가능.
+- **결정**: **TASK-005-2 v1.5+ Sub-task 2 (provider-auto-config Skill 정식) 와 동시 차용** — 1 commit ~50 lines.
+
+### 16.4 §5.6 Layer2 Memory — READ-ONLY framing (v0.23.0 Bug Fix #4)
+
+- **headroom 변경**: `memory: READ-ONLY framing + fail-closed unresolved-project fallback` (commit a178249, 482f80e). **unresolved-project 시 명확한 fail, silent fallback ✗**.
+- **우리 my_harness 영향**: `init_home_dir()` (D-31 §5.12 SSOT) 의 best-effort 정책 + `MemoryStore` 의 project resolution. **명시적 fail-closed 적용** — `~/.myharness/memory/` 부재 시 명확한 에러 + 안내 (현재는 빈 store 으로 silent).
+- **결정**: **D-130 follow-up 으로 `MemoryStore::open()` 의 fail-closed 정책** (D-99 의 6 integration test 와 충돌 없음, 1 commit ~80 lines).
+
+### 16.5 §5.10 Sub-agent dispatch — wrap breadth (v0.22.4 Bug Fix §7)
+
+- **headroom 변경**: wrap CLI breadth — cline / continue / goose / openhands 4개 (commit 8625f80, c375fa1, v0.22.4 의 PR G1)
+- **우리 my_harness 영향**: TASK-005-1 W10 의 4 built-in sub-agent (code / env / git / ask) 와 의미 정합. **이미 구현됨** (D-48 follow-up).
+- **결정**: **이미 적용** (TASK-005-1 완료, 별도 추가 작업 불요).
+
+### 16.6 §5.6 Layer2 Memory — learned error recovery (Unreleased §3)
+
+- **headroom 변경**: `Learned: error recovery` 의 4 layer fix (emission dedup + evidence gating 5+ + render-time 21-day TTL + re-validate Read success paths + A→B / B→A contradiction drop).
+- **우리 my_harness 영향**: `auto_memory` (D-98) + `commit/2026-06-14.md` 의 `Learned:` 카테고리 emission 미구현. **현재의 auto_memory 는 raw append-only (NDJSON) + query 만** — `Learned:` 카테고리 categorized emission + dedup + evidence gating 미도입.
+- **결정**: **TASK-005-2 v1.5+ Sub-task 5 (Learn Plugin 1차 cycle)** 의 일부로 차용. **D-130 connection**: D-130 의 `Learned: error recovery` 4-layer fix 가 우리 Learn Plugin 의 v1 디자인 가이드. **D-130 follow-up backlog 등록**.
+
+### 16.7 §5.12 Versioning — tag format (v0.23.0 Bug Fix §6)
+
+- **headroom 변경**: `vX.Y.Z` (release-please component prefix drop, commit 4a39ef5, 0f3e3af)
+- **우리 my_harness 영향**: 현재 `cargo-dist` 로 release tag (`vX.Y.Z` 이미 정합). **별도 작업 불요**.
+- **결정**: **정합 확인** (D-130 의 verification 결과, 0 commit).
+
+### 16.8 §5.13 Security — Neo4j credential envvar (Unreleased §2)
+
+- **headroom 변경**: `NEO4J_AUTH=${NEO4J_AUTH:-neo4j/devpassword}` envvar pattern + `.env.example` default exclude.
+- **우리 my_harness 영향**: `~/.myharness/oauth/{provider}.toml` (chmod 600) 가 canonical credential store. **devcontainer 통합 시** `${MYHARNESS_OAUTH_TOKEN:-...}` 의 envvar fallback 적용 가능. **D-130 시점 적용 보류** (D-31 §5.12 의 토큰 store 가 canonical, envvar 는 보조).
+- **결정**: **devcontainer 통합 시점에 재검토** (D-130 follow-up backlog).
+
+### 16.9 §5.7 Tokenization — tiktoken gpt-4 fallback (v0.23.0 Bug Fix #6)
+
+- **headroom 변경**: unknown gpt-4 model snapshot 의 encoding 정정 (commit 0e551de, #552)
+- **우리 my_harness 영향**: rig-core 0.38 경로 — `tiktoken` 미사용. **zero 영향**.
+- **결정**: **이관 불요**.
+
+### 16.10 §5.5 Provider 등록 — Copilot OAuth generic endpoint (post-v0.22.4)
+
+- **headroom 변경**: `fix(copilot): restore generic endpoint for non-subscription OAuth (#610) (#612)` (commit 18925b8c, 2026-06-04)
+- **우리 my_harness 영향**: zero. **Copilot 미지원**.
+- **결정**: **이관 보류**.
+
+### 16.11 §16 총합 — 8 follow-up 결정
+
+| # | § | 영역 | 결정 | commit 예상 |
+| --- | --- | --- | --- | --- |
+| 1 | 16.2 | CCR workspace scope | D-130 follow-up: FTS5 `workspace_path` 컬럼 추가 | ~150 lines |
+| 2 | 16.3 | cli wrap-subcommand | TASK-005-2 v1.5+ Sub-task 2 동시 차용 | ~50 lines |
+| 3 | 16.4 | Memory fail-closed | D-130 follow-up: `MemoryStore::open()` fail-closed | ~80 lines |
+| 4 | 16.5 | wrap breadth | **이미 적용** (D-48, 0 commit) | 0 |
+| 5 | 16.6 | Learned error recovery | TASK-005-2 v1.5+ Sub-task 5 (백로그) | n/a (TASK-005-2) |
+| 6 | 16.7 | tag format | **정합 확인** (0 commit) | 0 |
+| 7 | 16.8 | Neo4j envvar | devcontainer 통합 시점 (백로그) | n/a |
+| 8 | 16.9 | tiktoken gpt-4 | **이관 불요** (0 commit) | 0 |
+| 9 | 16.1 / 16.10 | Copilot | **이관 보류** (0 commit) | 0 |
+
+→ **D-130 immediate follow-up = 2 commit (CCR §16.2 + Memory §16.4)**, TASK-005-2 v1.5+ 연동 = 1 commit (§16.3), 이미 적용 = 3 (#16.5/16.7/16.9), 이관 보류 = 2 (#16.1/16.10), 백로그 = 2 (#16.6/16.8).
+
+### 16.12 D-66/D-67/D-68 ort/tract abort 영향 재평가 (D-130 핵심 검증)
+
+> **D-130 의 가장 중요한 의문**: "headroom v0.23.0 의 RTK (Rust observability) + Rust proxy metrics 가 ort/tract ecosystem 안정화 의미하는지?"
+
+**실측 결과 (§15.3 참조)**: RTK + Rust observability 는 **v0.22.4 (2026-05-26)** 의 release. **v0.23.0 의 변경이 아님**. D-130 prompt 의 link 는 hallucination 가능성 (D-73 lesson §3 — module name / commit ref 는 upstream source 에서 직접 확인).
+
+**코드 비교**: `crates/headroom-proxy` (Rust proxy) 의 metrics exporter 변경 0건 (v0.22.4..HEAD 기준). `tokens_saved_rtk` 의 data plane 은 Python 측의 `subprocess.run(headroom.rtk)` 호출 (headroom 의 RTK binary) — **ort / tract 와 무관**.
+
+**ort ecosystem 안정화 신호 (§15.5)**: v0.23.0 의 CVE remediation 은 모두 `docs/` (Next.js) + `litellm` + `brace-expansion` — **ort / tract 와 무관**.
+
+**D-66/D-67/D-68 의 lesson (D-130 verb)**: ort 1.x 전부 yanked + ort 2.0.0-rc.9/10/12 빌드 깨짐 → abort. tract 0.23.0 1차 cargo build 즉시 통과 (D-66 lesson) → Commit 1 OK. tract 0.23 API 한계 (`Tensor(Arc<InternalTensor>)` private + `to_array_view` 타입 mismatch) → Commit 2 abort.
+
+**D-130 결론 (2 candidate 중 1개)**:
+
+- **(a) Rust 측 안정성 ↑ → v2.0 ONNX 백로그 tract 재검토** — **REJECT**
+  - 근거: RTK 는 v0.22.4 의 변경, v0.23.0 의 영향 ✗. tract 0.23 API 한계 (private wrapper field) 는 upstream release 와 무관 — **tract 자체의 design choice**.
+  - 추가: tract 0.23.0~0.23.x 의 stable release line 은 headroom 측 metrics 와 독립. **headroom 의 RTK 는 Python subprocess 의 RTK binary 호출** — `subprocess.run` 의 async ↔ sync 패턴 (D-130 시점 Unreleased §2 의 asyncio.to_thread fix).
+- **(b) Rust proxy metrics 는 headroom 자체 안정화 → ONNX 와 무관** — **ACCEPT**
+  - 근거: `headroom_proxy` crate 의 metrics exporter 변경 0건 (v0.22.4..HEAD). `tokens_saved_rtk` 구현은 Python subprocess. **ORT / Tract 무관**.
+  - **D-130 본질**: headroom 의 Rust observability 개선 ≠ ort/tract ecosystem 안정화. **v2.0 ONNX 백로그 (D-66/D-68 abort) 는 그대로 OOS 유지**.
+
+**D-130 결론**: **(b) 채택**. v2.0 ONNX 백로그는 **abort 결정 유지** (D-66/D-68). v0.23.0 의 headroom 측 영향 = **§16.1~16.11 의 9 follow-up** (그 중 3 commit 즉시 = §16.2 + §16.3 + §16.4).
+
+### 16.13 D-130 결정 누적 영향
+
+- **누적 결정 count**: 74 → 75 (D-130 추가)
+- **GRAD 적용**: D-130 의 즉시 follow-up 2 commit (CCR §16.2 + Memory §16.4) + TASK-005-2 v1.5+ 연동 1 commit (§16.3) = **3 commit, ~280 lines, MEDIUM effort**
+- **state.json decisions.decided.length**: 74 → 75 (D-130 추가)
+- **다음 1순위 (yklee 결정)**: D-130 즉시 follow-up 2 commit push / TASK-005-2 v1.5+ Sub-task 2 (provider-auto-config Skill) / TASK-005-2 v1.5+ Sub-task 5 (Learn Plugin 1차 cycle)
+- **이관 보류 누적**: Copilot subscription (§16.1 / §16.10) + tiktoken gpt-4 fallback (§16.9) = 3 item
+
+### 16.14 D-130 prompt 정정 + lesson (D-73 §3 회귀)
+
+- **prompt 오류 1**: "06-09 이후 1085 commit" → **실측 0 commit** (clone 기반, 2026-06-06 fb59f83f 가 마지막). prompt 의 commit count 는 1 order of magnitude 이상 차이.
+- **prompt 오류 2**: "v0.23.0 RTK (Rust observability) + Rust proxy metrics" → **RTK 는 v0.22.4 의 변경**. v0.23.0 CHANGELOG 에는 RTK 항목 0건.
+- **prompt 오류 3**: "08 핵심 변경" 중 1~5 = **prompt 의 8개 표기는 모두 v0.23.0 CHANGELOG 와 정합** (1=copilot, 2=ccr, 3=codex, 4=cli, 5=copilot handoff, 6=tiktoken, 7=UTF-8, 8=docker). **단, prompt 의 "RTK + Rust proxy metrics" 는 v0.22.4 의 변경 — v0.23.0 의 영향이 아님**.
+- **D-130 lesson (D-73 §3 회귀)**: prompt 작성자가 commit ref / module name 을 upstream source 에서 직접 확인하지 않으면 hallucination 위험. **D-130 cross-check 1줄**: `git log --oneline v0.22.4..v0.23.0 --pretty=format:"%h %s" | grep -iE "rust|rtk|observability"` → **결과 0건** (RTK 는 v0.22.4 에 속함).
+- **D-130 정직 명시**: v0.23.0 의 영향 분석 = **8 follow-up (그 중 3 commit 즉시, 3 commit 0, 2 commit 백로그, 2 commit 이관 보류)**. v0.22.4 의 RTK 영향 = **ORT/Tract 와 무관** — D-66/D-68 abort 결정 유지.
