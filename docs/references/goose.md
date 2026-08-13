@@ -1108,3 +1108,176 @@ AAIF governance 로 이전 후 첫 큰 release 의 출시 일정. **큰 변화**
 ### 14.10 `goose` 와 `my_harness` 의 포지셔닝
 
 goose 는 "general purpose agent", 우리는 "personal coding agent". **시장 겹침** vs **차별화** — 우리 my_harness 의 unique value proposition 명확화. (TASK-005 결정 시사점)
+
+---
+
+## 15. v2 Changelog (2026-06-09 이후)
+
+**분석 시점**: 2026-08-14. `aaif-goose/goose` HEAD = `2f9966422` (workspace v1.37.0). v1 doc(2026-06-06 작성) 이후 약 **887 commit** 추가. 본 섹션은 **§5~§14 결정에 직접 영향** 주는 핵심 변경만 추린다.
+
+### 15.1 ACP 프로토콜 확장 (가장 큰 변화)
+
+| Commit | 핵심 | my_harness 영향 |
+| --- | --- | --- |
+| `2f9966422` **#9581** | `acp methods for config extensions` — extensions config 노출용 custom JSON-RPC 메서드 추가 (acp-schema.json +443줄, extensions.rs +736줄) | §5.5 LLM client 가 ACP gateway 노출 시 config 조회 메서드 패턴 |
+| `ec519eeaa` **#9596** | 클라이언트가 초기화 시 capability 선언한 경우에만 custom notification 전송 | §5.14 Skill/MCP first-class — capability negotiation 표준 |
+| `dc59e4194` **#9488** | `acp session setup refactor` — session 생성 단계 분리 | §5.10 LoopRunner 의 session lifecycle 정합 |
+| `13f7be2ed` **#9496** | `replay acp images on session load` — 멀티모달 컨텍스트 복원 | §5.10 mode=single 세션 재개 |
+| `25ff54748` **#9475** | `Expose raw provider supported models over ACP` | §5.5 provider registry 가 ACP 로 노출되는 표준 경로 |
+| `a3bdb918e` **#9455** | `forward ACP server context window size to clients` | §5.13 LLM Wiki memory — context budget 동적 협상 |
+| `104cc1775` **#9478** | `ACP session system prompt setter` | §5.10 orchestrator system prompt 분리 |
+
+### 15.2 TUI 정식 통합 (5번째 인터페이스 → 1급)
+
+| Commit | 핵심 | my_harness 영향 |
+| --- | --- | --- |
+| `48d20e72d` **#9385** | `tui command on goose-cli` — `goose tui` 신규 subcommand (tui.rs 99줄) | §5.6 TUI 결정 검증 — ratatui 단일 vs Ink 분리 |
+| `2116f8890` **#9428** | `tui feature flag to gate the tui command` — Cargo.toml `tui` feature 분리 | 빌드 시간 단축, optionality 확보 |
+
+**관찰**: goose 가 결국 Ink(React) 풀스크린 TUI 를 정식 진입점으로 채택. v1 doc 의 "TUI 부재" 가설 → **폐기**. v1 doc 의 "goose 가 cliclack → ratatui/ink 통합 가설" 이 **실제화**.
+
+### 15.3 보안 강화 (4개 영역)
+
+| Commit | 핵심 | my_harness 영향 |
+| --- | --- | --- |
+| `030dbb0c5` **#9546** | `egress logging directionality` — egress inspector 에 송신 방향성 추가 (egress_inspector.rs +139줄) | §5.4 permission 의 egress 정책 — outbound URL allowlist 정밀화 |
+| `759c6a9da` **#9340** | `remove unused fetch-metadata IPC handler (SSRF)` — Electron preload 에서 SSRF 표면 제거 | §5.4 sanitize — SSRF 공격면 식별 절차 |
+| `586bb15d4` **#9388** | `forward custom headers through OAuth connect path` — OAuth 헤더 누락 수정 | §5.4 permission store 와 OAuth 통합 |
+| `d625e5821` **#9381** | `bump agent-client-protocol from 0.11.1 to 0.12.1` | ACP SDK 최신 유지 |
+
+### 15.4 Provider 확장 (6 신규 + 1 OAuth 강화)
+
+| Commit | 핵심 | my_harness 영향 |
+| --- | --- | --- |
+| `8af2f7609` **#9420** | `xAI SuperGrok OAuth subscription provider` (xai_oauth.rs +879줄) | §5.5 OAuth provider 패턴 — Device Flow |
+| `e9b0d9247` **#9324** | `Perplexity as declarative OpenAI-compatible` | §5.5 declarative provider DSL — config-only 추가 |
+| `4c88f4b91` **#9443** | `Alibaba (Qwen via DashScope) declarative` | 동일 |
+| `7dc904e1e` **#9274** | `databricks ai gateway provider` | §5.5 enterprise gateway |
+| `c434c84d2` **#9352** | `NEAR AI Cloud provider` | 신규 벤더 |
+| `cd68f068f` **#9254** | `Scaleway provider` (doc +27d68ba63) | EU 클라우드 |
+| `93e6f8d52` **#8466** | `Kimi Code provider with OAuth device flow` (kimicode.rs +881줄) + `afcdf2cab` **#8588** (model 정합) | §5.5 — kimi_code 매핑, OAuth device flow 표준 |
+| `30034b9b3` **#9552** | `Hugging Face OAuth support + auth tab in settings` | §5.4 permission — HF OAuth credential 저장 |
+
+### 15.5 Loop / Subprocess / 도구 안정화
+
+| Commit | 핵심 | my_harness 영향 |
+| --- | --- | --- |
+| `9626b4c3c` **#9571** | `Replace review subprocess timeout with turn limits` | §5.10 LoopRunner — wall-clock timeout → turn-count 기반 |
+| `5e160e51e` **#9468** | `Honor blocking Stop hook decisions` — hook 이 blocking stop 결정 시 즉시 종료 | §5.14 hook 시스템 — cancellation propagation |
+| `ce004f747` **#9357** | `serialize per-session agent creation` — 중복 MCP init 방지 | §5.10 session-scoped mutex 표준 |
+| `10ac6b18c` **#9256** | `GOOSE_MAX_TOOL_RESPONSE_SIZE configurable` (large_response_handler.rs +16줄) | §5.10 큰 응답 처리 — env var 표준 |
+| `f3260f4e2` **#9301** | `MAX_CODE_BLOCK_LINES configurable via env vars` | 동일 |
+| `08e748051` **#9586** | `LRU cache for token counting` | §5.13 memory 캐싱 패턴 |
+
+### 15.6 Recipe / Slash / 스킬 통합
+
+| Commit | 핵심 | my_harness 영향 |
+| --- | --- | --- |
+| `3631e3cbf` **#9238** | `slash commands (built-in, skill, recipe) in acp server` | §5.14 Skill/MCP first-class — slash command 통합 |
+| `69f591322` **#8925** | `recipe discovery / execution to ACP server` | §5.14 ACP 통한 recipe 실행 |
+| `394abea75` **#9233** | `include full recipe parameter details in load/discovery output` | §5.14 recipe schema 노출 표준 |
+| `d10d009b9` **#9326** | `CLI to list skills with token counts` | §5.14 skill catalog CLI |
+
+### 15.7 의존성 / 빌드 / 호환성
+
+| Commit | 핵심 | my_harness 영향 |
+| --- | --- | --- |
+| `d625e5821` **#9381** | `agent-client-protocol 0.11.1 → 0.12.1` | ACP SDK 트래킹 |
+| `0e4a367db` **#9587** | cargo-minor-and-patch 10 updates 일괄 | Renovate 스타일 bulk-update |
+| `794402d93` **#9415** | `linux x86_64 manylinux_2_28 for glibc 2.28+` | §5.12 배포 매트릭스 |
+| `f288290fc` **#9361** | `Revert Split code signing from build` | §5.2 빌드 파이프라인 단순화 |
+| `b0cd61aa4` **#9417** | `release version 1.36.0` | 마이너 릴리즈 cadence |
+
+### 15.8 UI / UX / Desktop
+
+| Commit | 핵심 | my_harness 영향 |
+| --- | --- | --- |
+| `798208689` **#9568** | `Pick the last canonical model` — 기본 모델 결정성 개선 | §5.5 default model fallback |
+| `a18b92e62` **#9408** | `refresh provider list in Switch Models picker` | §5.5 provider hot-reload UI |
+| `35d1fc7c5` **#9422** | `start new chat in current window from recipe param modal` | §5.10 윈도우 lifecycle |
+| `dcdc7f645` **#9409** | `stop the main window growing taller on every launch` | Electron 윈도우 state 영속화 |
+| `c4d64d1a8` **#9366** | `Fix desktop chat search session limiting` | §5.13 LLM Wiki memory 검색 페이지네이션 |
+| `b332f509b` **#9406** | `Russian language support` + `6d544e7b5` **#9392** Turkish | i18n 확장 cadence |
+
+### 15.9 기타 관찰
+
+- **Desktop → ACP+ 마이그레이션** (`9c403b156` **#9448**) 후 **revert** (`942a4564e` **#9564**) — 큰 리팩토링의 리스크 직접 사례. 우리 my_harness 도 마이그레이션 시도 시 revert 가능한 단계적 접근 필요.
+- **CLI UX 강화**: `--parameters` to scheduled recipe (`ba60b597f` **#8741**), `/model` slash command (`d90b349a6` **#8747**), `--tui` feature gate.
+- **LiteLLM 호환** (`612cd89d5` **#9303**): `/model/info` context limit 사용. 우리 my_harness 도 OpenAI-compatible 통합 시 동일 패턴.
+
+---
+
+## 16. v2 영향 분석 (my_harness 결정 매트릭스)
+
+v2 의 887 commit 을 6 개 영향 축으로 분류하고, 기존 my_harness 결정(D-29, D-36, D-100~D-131) 에 어떻게 연결되는지 매핑.
+
+### 16.1 ACP provider 확장 → §5.5 LLM client
+
+**관찰**: goose v2 는 ACP 를 단순 "transport" 가 아닌 **확장 가능한 메서드 컨테이너** 로 발전시킴. `acp-schema.json` 이 +443 줄, `extensions.rs` 가 +736 줄 확장. config 조회, supported models 노출, context window 협상, system prompt 주입까지 **모두 ACP 표준 메서드** 로 제공.
+
+**my_harness 영향**:
+- §5.5 LLM client 를 처음부터 **provider 호출 인터페이스 + ACP 메서드 노출 인터페이스** 2단 설계. v1 은 전자가 중심이었는데, v2 의 추세는 후자가 동등한 1급.
+- TASK-005/D-36 (rig-core 1안) 그대로 유효. ACP SDK `agent-client-protocol = "0.11"` 의존성 추가 후보. v2 는 `0.12.1` 까지 올라갔으므로 `0.12` 채택 권장.
+- 신규 결정 **D-131**: ACP SDK 의존성 추가 + LLM client 가 ACP gateway 노출을 **선택적** 으로 (feature flag `acp`).
+
+### 16.2 보안 강화 → §5.4 permission + sanitize
+
+**관찰**: v2 의 보안 강화는 (1) egress 방향성 로깅, (2) SSRF 표면 제거, (3) OAuth 헤더 누락 수정, (4) LRU 캐시 도입 4가지. **각각은 단발성 픽스** 지만 **공통 방향**: "기본값을 안전한 쪽으로".
+
+**my_harness 영향**:
+- §5.4 permission store: outbound URL allowlist + directionality log 표준 도입. 우리도 `egress_inspector.rs` 패턴 차용 — 송신 (outbound) vs 수신 (inbound) 분리 로깅.
+- §5.4 sanitize: SSRF 공격면 식별 절차 (deprecated IPC handler 제거 패턴). Electron preload 검토 시 동일 checklist 적용.
+- OAuth provider 추가 시 (§5.5 kimi_code, xAI SuperGrok, HF) **헤더 forwarding 회귀 테스트** 필수 — `586bb15d4` 가 회귀 픽스였음.
+
+### 16.3 Recipe / Slash → §5.14 Skill/MCP first-class
+
+**관찰**: goose v2 의 슬래시 커맨드는 3 출처 (`built-in`, `skill`, `recipe`) 를 ACP 서버에서 통합. CLI 에서도 동일 (`d10d009b9` **#9326** skill list, `394abea75` **#9233** recipe params).
+
+**my_harness 영향**:
+- §5.14 Skill/MCP first-class 결정(2026-06-07) 그대로 유효. v2 가 보여준 패턴: **3 source 통합 + ACP 노출 + CLI catalog** 3 단계 모두 1급.
+- 우리도 my_harness v1+ 에서 `skill list --token-counts`, `recipe show --params` 동등 CLI 권장.
+
+### 16.4 신규 provider → §5.5 LLM client provider 매핑
+
+**관찰**: v2 의 신규 provider 8종 (xAI SuperGrok, Perplexity, Alibaba/Qwen, Databricks Gateway, NEAR AI Cloud, Scaleway, Kimi Code, HF OAuth) 중 **declarative 패턴 (config-only)** 과 **OAuth device flow 패턴** 2가지 표준화.
+
+**my_harness 영향**:
+- §5.5 provider 추가 시 **2-tier 분류**: (1) declarative (OpenAI-compatible config JSON), (2) OAuth device flow (별도 provider 모듈).
+- kimi_code 매핑은 우리 my_harness 의 CONCEPT.md §5.5 영향. v1 의 50+ provider 표에 v2 신규 8종 추가.
+- 신규 결정 **D-131 (TASK-004 재방문, goose v2)**: provider 카탈로그 업데이트.
+
+### 16.5 의존성 / 빌드 → Cargo workspace + 배포
+
+**관찰**: v2 의 의존성 업데이트는 (1) `agent-client-protocol 0.12.1`, (2) bulk cargo-minor-and-patch (10 deps 일괄), (3) manylinux_2_28 glibc 호환, (4) code signing revert 의 단순화.
+
+**my_harness 영향**:
+- §5.2 빌드/배포 매트릭스에 **manylinux_2_28** 추가 (우리 myharness 의 cargo-dist 가 자동 생성하지만 검증 필요).
+- §5.12 `~/.myharness/` 디렉토리에서 **OAuth credential 저장** 표준 — v2 의 HF OAuth (`30034b9b3`) 와 동일하게 keyring 3.x 의 secure store 사용 (이미 v1 결정).
+- bulk-update 패턴은 cargo-edit / Renovate 가 자동화. 우리도 `Renovate config` 검토.
+
+### 16.6 Loop / Subprocess 안정화 → §5.10 LoopRunner / Agent 모드
+
+**관찰**: v2 의 loop 안정화 6 commit: wall-clock timeout → **turn-count 기반**, hook blocking stop 정직한 propagation, per-session agent 직렬화, env-tunable large response, env-tunable code block, LRU token cache.
+
+**my_harness 영향**:
+- §5.10 LoopRunner 의 **timeout 정책 결정**: 우리도 wall-clock 외 turn-count 필수. `GOOSE_MAX_TURNS` 패턴 (env var prefix 통일 권장 — `MYHARNESS_MAX_TURNS`).
+- §5.10 mode=loop 에서 **session-scoped mutex** 표준 — 중복 MCP init 방지 패턴 (`ce004f747`).
+- §5.13 LLM Wiki memory 의 토큰 카운팅 캐싱: 우리도 LRU 도입 후보.
+
+### 16.7 누적 결정 카운트 갱신
+
+- **결정 누적**: 73 (D-130, `2026-08-13` `feat(pure_edit) replace_block`) → **74** (D-131, `2026-08-14` TASK-004 재방문, goose v2, 본 문서 §15/§16).
+- v2 가 my_harness 기존 결정에 **모두 정합**. 신규 결정 없음. 단, **선택적 후보 2건**:
+  - **D-132 후보**: ACP SDK 의존성 추가 (`agent-client-protocol = "0.12"`) — 별도 PR 시점.
+  - **D-133 후보**: `tui` feature flag 분리 — 빌드 시간 단축용 (우리 my_harness 에는 적용 불필요할 수 있음, 단일 TUI).
+
+### 16.8 TASK-004 재방문 결론
+
+`docs/REFERENCES.md` 1차 비교표 (2026-06-06) 와 본 v2 doc (2026-08-14) 의 갭:
+
+1. **TUI 부재 가설 폐기**: goose v2 가 Ink 풀스크린 TUI 를 정식 진입점으로 채택. 우리 my_harness 의 ratatui 결정(2026-06-07, D-36 정합) 과 비교 시 — goose 는 **CLI subcommand** + Electron Embed, 우리는 **단일 ratatui TUI**. **우리가 더 단순**.
+2. **5중 인터페이스** 가설은 v2 에서 **4중으로 수렴** (Desktop + goosed + CLI + ACP; Ink TUI 는 CLI 의 subcommand 로 통합).
+3. **Provider 카탈로그** 가 v2 에서 50 → 58 종 확장. declarative/OpenAI-compatible 패턴이 사실상 표준.
+4. **보안 egress log 방향성** 이 v2 의 신 표준. 우리도 §5.4 permission 에 반영 후보.
+
+**참고**: TASK-004 의 follow-up 으로 **3개월 단위 reference 갱신** cadence 제안. 다음 갱신 시점: 2026-11 (v1.40.x release window 예상).
