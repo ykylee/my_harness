@@ -800,3 +800,69 @@
 ### 4. 누적 결정
 
 - 69 → **76** (D-127~D-133, 7 신규). main = `8782abf`. 결정 log 후속 (D-104 메모리 sync 직후).
+
+---
+
+## 세션 종료 (2026-08-14) — v3 reset 방향 보류
+
+### 1. 사용자 메시지 이력
+
+- "여기 작업 내역 확인하자 뭐 하던 곳인가" → 세션 시작 + D-104 메모리 sync (commit `ac69733`)
+- "세월이 많이 지나서 레퍼런스들이 발전을 많이 했어. 다시 조사하자" → TASK-004 재방문 (D-127~D-133, 7 reference v2, commit `4d031ff`)
+- "우리 하네스가 디자인도 영 별로고 동작도 이상한데 레퍼런스 하나 잡고 뼈대로 삼아서 커스터마이징 하는 방향으로 가는건 어떨까?" → v3 reset 방향 제안 (사용자 결정 보류)
+- "일단 정리하고 종료" → 세션 종료
+
+### 2. v0 디자인/동작 진단 (7건 발견)
+
+| # | 문제 | 심각도 |
+|---|---|---|
+| 1 | sub-agent 15개 vs cli 7개 갭 (CONCEPT §5.11 vs 실제) | HIGH |
+| 2 | Orchestrator prefix 매칭 (확장 어려움) | HIGH |
+| 3 | SubAgentKind 4-5개 vs §5.11 15개 갭 | HIGH |
+| 4 | resolve_llm_client() inline (테스트 어려움, MiniMax 우선순위 모순) | MEDIUM |
+| 5 | Text-based dispatch 만 노출 (D-108 native tool calling 미사용) | MEDIUM |
+| 6 | mode 3개 미사용 (orchestrator default, ENXIO 가드만) | LOW |
+| 7 | credential chain 우선순위 + 5 단계 inline 의 복잡성 | MEDIUM |
+
+### 3. v0 LOC 매트릭스 (23,697 lines)
+
+- llm (6155) + tools (4887) + auth (3229) + context (2661) + tui (2579) = **19,511 lines / 82%** (핵심 5 crate)
+- core (1335) + cli (1364) + compression (1487) = **4,186 lines / 18%** (thin shell)
+
+### 4. 뼈대 후보 비교 (실측 데이터)
+
+| reference | stars | stack | 우리 정합 | multi-provider | Recipe/Skill | 활발성 (06-09~) |
+|---|---|---|---|---|---|---|
+| **goose** (추천) | 52,758 | Rust + TS | **100%** | ✅ 50→58 | ✅ Recipe | 661 commit |
+| codex | 105,715 | Rust | 100% | ❌ (OpenAI only) | Skill validation 만 | 1,996 |
+| oh-my-pi | ~26k | TypeScript/Bun | ❌ | ✅ | Skill/Extension | 활발 |
+| opencode | 196,998 | TypeScript/Bun | ❌ | ✅ | extensions | 1,457 |
+
+### 5. 3-way reset 옵션 (사용자 결정 보류)
+
+| 옵션 | trade-off | 작업량 |
+|---|---|---|
+| **A: goose fork + 커스터마이징** | v0 의 60% 폐기 (cli/llm/auth 보존, core/tui/tools 재구축) | 1~2개월 |
+| B: goose module 1~3개 adopt + 점진 재구축 | v0 보존, Recipe + ACP 만 차용 | 2~4주 |
+| C: goose skeleton (v0 일부만 재구축) | tui + tools crate 만 goose 스타일로 재구축 | 2~3주 |
+| D: v0 그대로 + 디자인/동작 7건 만 수정 | 차용 없음, v0 유지 | 1~2주 |
+
+### 6. 추천: 옵션 A (goose fork)
+
+- goose 의 Recipe/Slash + ACP + multi-provider 8종 (xAI SuperGrok OAuth / Kimi Code DF / Perplexity / Qwen DashScope / Databricks GW / NEAR AI / Scaleway / HF OAuth) 차용
+- 우리 v0 의 cli/llm/auth crate 보존 (Multi-provider 우선, Hybrid 안, MiniMax 우선)
+- Recipe 시스템 = 우리 §5.14 Skill/MCP first-class 의 직접 차용
+- ACP = pluggable protocol (v3 의 app-server 같은 plug-in)
+- Loop 안정화 6 commit (turn-count timeout / blocking Stop hook / session mutex / LRU token cache) = §5.10 LoopRunner 차용
+
+### 7. 다음 세션 진입점 (yklee 결정 시)
+
+- (a) **v3 reset 옵션 선택** — A/B/C/D
+- (b) **v0 디자인/동작 7건 수정** (옵션 D 선택 시)
+- (c) **D-130 즉시 follow-up 2 commit** — CCR + Memory fail-closed (옵션 무관하게 유효)
+- (d) TASK-002 도메인 명령 / OAuth real flow / TUI shell / Lark parser (이전 9 옵션)
+
+### 8. 누적 결정
+
+- 76 → **76** (v3 reset 결정 보류 = 결정 추가 불요, 사용자 결정 대기)
+- main = `4d031ff`. 7 reference 재방문 (D-127~D-133) 완료. 다음 세션 시작점 = v3 reset 옵션 결정 (yklee).
