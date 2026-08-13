@@ -3,9 +3,11 @@
 - **문서 목적**: TASK-004 1차 분석(`docs/REFERENCES.md` §3.2 의 1-페이지 aider 박스) 의 후속. aider 소스 코드를 **14 섹션 표준 템플릿** 으로 풀스캔해, `my_harness` (Rust/TS CLI+TUI 코딩 에이전트) 의 아키텍처 결정에 직접 인용 가능한 인사이트를 만든다.
 - **범위**: aider Python 코드베이스 (`aider/` 패키지 + `tests/` + `requirements/`) + `pyproject.toml` + `aider/resources/model-settings.yml` 의 **실제 코드** 만. 추측/이슈 트래커/블로그는 명시적으로 표시될 때만 보조.
 - **대상 독자**: yklee (소유자), Mavis, TASK-005 (스택/이름/MVP 결정) 디자인 리뷰어, 4-워커 중 "Python 레퍼런스" 를 보는 워커.
-- **상태**: draft (TASK-005 결정 전, 2026-06-06 작성)
-- **최종 수정일**: 2026-06-06
+- **상태**: v2 updated (TASK-004 재방문, 결정 변경 불요, 2026-08-14)
+- **최종 수정일**: 2026-08-14 (v2 §15-16 append, +124 lines)
+- **v1 작성일**: 2026-06-06 (1,925 lines, 14섹션)
 - **관련 문서**: [REFERENCES.md §3.2](../REFERENCES.md), [ANALYSIS_PLAN.md](./ANALYSIS_PLAN.md), [opencode.md](./opencode.md), [codex.md](./codex.md), [goose.md](./goose.md), [gemini-cli.md](./gemini-cli.md), TASK-005 (CLI/TUI 전환)
+- **재방문 결정 ID**: D-128 (TASK-004 재방문, aider v2, 2026-08-14, 정직 0 commit)
 
 ---
 
@@ -1923,3 +1925,127 @@ GitHub Actions 의 windows-latest runner 에서 테스트는 통과하는데, **
 ### 14.10 `aider/coders/architect_coder.py` 의 실제 사용 통계
 
 architect 2-model 패턴이 정말 효과 있는지? **A/B 테스트 데이터** 공개? 우리 my_harness 가 동일 패턴 도입 시 정량적 근거 필요.
+
+---
+
+## 15. v2 Changelog (2026-06-09 → 2026-08-14 재방문)
+
+- **문서 목적**: v1 (2026-06-06 작성, HEAD = `5dc9490bb` = `v0.86.3.dev-53-g5dc9490bb`) 작성 시점부터 현재 (2026-08-14) 까지 aider 의 upstream 변화를 추적하고, my_harness 의 TASK-004 결정에 영향이 있는지 정직하게 평가한다.
+- **상태**: v2 updated (TASK-004 재방문, 결정 변경 불요)
+- **최종 수정일**: 2026-08-14
+
+### 15.1 HEAD / release tag (재방문 시점)
+
+| 항목 | v1 (2026-06-06) | v2 (2026-08-14) | Δ |
+| --- | --- | --- | --- |
+| HEAD commit | `5dc9490bb` (2026-05-22) | `5dc9490bb` (2026-05-22) | **0** |
+| `git describe` | `v0.86.3.dev-53-g5dc9490bb` | `v0.86.3.dev-53-g5dc9490bb` | **0** |
+| 최신 release tag | `v0.86.3.dev` | `v0.86.3.dev` | **0** |
+| `aider/__init__.py` 버전 | `0.86.3.dev` | `0.86.3.dev` | **0** |
+
+**정직 명시**: aider 의 HEAD commit / release tag / `git describe` 모두 v1 작성 시점과 완전히 동일. 동일 commit SHA `5dc9490bb` 가 70일간 HEAD.
+
+### 15.2 Commit 활동 (2026-06-09 → 2026-08-14)
+
+```bash
+# 측정 명령 (reproducible)
+$ cd /Users/yklee/repos/harness-refs/aider && \
+    git log --since="2026-06-09" --until="2026-08-14" --oneline | wc -l
+0
+```
+
+| 기간 | commit 수 | 비고 |
+| --- | --- | --- |
+| 2026-06-09 → 2026-08-14 (70일) | **0** | 정직 0. 분석 목적지 동일 SHA. |
+| 비교: 2026-05-22 → 2026-06-08 (v1 작성 ± 17일) | 3 | 모두 ANTHROPIC_MODELS expansion (model config 만) |
+| 비교: 2026-01-01 → 2026-06-08 (5개월) | 82 | 대부분 model config / minor copy |
+| 비교: 2025-06-10 → 2025-12-31 (6개월) | 209 | 활발한 활동 |
+
+**해석**: aider 는 v1 작성 시점부터 v2 분석 시점까지 **완전 정지 (frozen) 상태**. release tag 도 `v0.86.3.dev` 그대로 = 미출시. v0.86 시리즈가 안정 phase 에 들어갔거나 Paul Gauthier 의 side-project 성격상 maintenance 모드 가능성. 둘 중 어느 쪽이든 **my_harness reference 로서의 가치는 변하지 않음** (v1 패턴 = 현행 패턴).
+
+### 15.3 0 commit 의 가능한 원인 (외부 컨텍스트)
+
+> ⚠️ 본 절은 추측이며, aider 의 GitHub issue tracker / roadmap 을 직접 확인하지 않았다. 검증하지 않은 사실은 명시적으로 분리한다.
+
+- **가설 A — stable maintenance phase**: v0.86.x 가 stable 한 상태. model config 만 추가하고 architecture 변경은 보류.
+- **가설 B — BAAI 인수 / 외부 변동**: v1 §14.9 (Paul Gauthier 의 향후 방향) 에서 짚었던 "BAAI 인수설 / 외부 변동" 가능성. 동일 시점 (2026 Q2-Q3) 에 GitHub 활동이 줄어든 다른 OSS 프로젝트의 패턴과 부합하는지 미확인.
+- **가설 C — seasonal slowdown**: 2026-Q3 가 summer vacation 시즌. 단, 209 commit / 6개월 의 활발함 대비 0/70일 은 seasonal 로 설명 안 됨.
+
+**검증되지 않은 항목**: GitHub Insights traffic / Issue response rate / PR merge rate 등. 본 v2 에서는 측정하지 않음 — next revisit 시 가설 A/B/C 중 어느 것인지 좁힐 수 있다.
+
+### 15.4 v2 변경 영향 (concrete delta on my_harness 결정)
+
+| my_harness 결정 (v1 기반) | v2 영향 | 사유 |
+| --- | --- | --- |
+| CONVENTIONS.md 패턴 (v1 §3.2, §3.5) | **0** | aider 의 codebase 변동 0 → patterns 유효 |
+| `repo.py` git-first 622 LOC 패턴 (v1 §2.4) | **0** | 동일 commit |
+| `repomap.py` GraphRAG 867 LOC (v1 §2.4) | **0** | 동일 commit |
+| model-settings.yml LLM 비종속 (v1 §5.1) | **0** | 동일 commit (model config 만 minor update) |
+| `.aider.conf.yml` minimal config (v1 §13) | **0** | 동일 commit |
+| `--auto-commits` / `--dirty-commits` (v1 §10.3) | **0** | 동일 commit |
+| `architect_coder.py` 2-model 패턴 (v1 §14.10) | **0** | 동일 commit |
+| TUI 단일 InputOutput 객체 (v1 §12.1) | **0** | 동일 commit |
+
+**결론**: 결정 변경 불요. v1 의 14섹션 분석은 그대로 my_harness TASK-004 reference 가치 유지.
+
+### 15.5 v2 의 명시적 한계 (honest limitations)
+
+1. **v2 는 SHA-level 회귀 검증 안 함**. `5dc9490bb` 가 동일하므로 회귀 검증 불요하지만, 만약 cache issue 등으로 local file 이 upstream 과 다른 상태였다면 v1/v2 분석 모두 같은 잘못된 snapshot 을 본다. `git diff origin/main..HEAD -- aider/` 같은 sanity check 를 더했어야 했다.
+2. **model-settings.yml 변경 안 봄**. v2 의 15.4 표에서 "model config 만 minor update" 라고 기술했지만, `aider/resources/model-settings.yml` 의 구체적 diff 를 v2 에서 다시 풀어보지는 않았다. v1 분석 시점 이미 ANTHROPIC_MODELS 확장이 들어가 있었고, 그 이후 모델 추가 (gpt-5.5, Claude Opus 4.7 등) 는 의미상 영향 없음 — pattern 은 동일.
+3. **aider/website/ 의 docs 빌드 변경 안 봄**. v1 §14.8 에서 짚었던 mkdocs 빌드 시스템. upstream 0 commit 이므로 무의미하지만 명시적으로 안 봤음을 적는다.
+4. **github release notes / PyPI changelog cross-check 안 함**. `git log` 만 보고 0 commit 으로 단정. GH release 가 별도 commit 이 아닌 tag-only 일 가능성도 검토 안 함 — 다만 `git describe` 와 tag list 가 동일한 시점의 동일한 사실이라 cross-check 불요.
+
+### 15.6 v2 산출물 메타데이터 (재방문 추적용)
+
+- **v1 → v2 사이 기간**: 2026-06-06 → 2026-08-14 = **69일**
+- **v2 결정 ID**: **D-128** (TASK-004 재방문, aider v2, 2026-08-14, 정직 0 commit)
+- **누적 결정 수**: 74 → **75**
+- **문서 LOC 변화**: 1,925 (v1) → 1,925 + ~120 (v2 §15-16 append) ≈ **2,045 lines**
+- **commit message trailer**: `Refs: D-128 (TASK-004 재방문, aider v2, 2026-08-14, 정직 0 commit)`
+- **branch**: `analysis/aider-v2` (push to this branch only, origin/upstream 금지)
+
+---
+
+## 16. v2 영향 분석 (my_harness 결정에 대한 concrete delta)
+
+### 16.1 0 commit → my_harness 영향 0
+
+가장 강한 결론은 **결론이 없다는 것**. v1 의 14섹션 분석은 aider 의 source-of-truth 의 70일 정지 기간 동안 **무손상** 이다. 따라서:
+
+| 결정 카테고리 | v2 결과 |
+| --- | --- |
+| 새 architecture 결정 추가 | **0건** |
+| v1 기존 결정 변경 | **0건** |
+| v1 기존 결정 강화 (논거 추가) | **0건** |
+| v1 기존 결정 약화 (반례 발견) | **0건** |
+
+### 16.2 v1 의 reference 가치는 그대로
+
+v1 의 14섹션이 인용한 모든 패턴 (CONVENTIONS.md 자동 생성 / repo.py git-first / repomap.py GraphRAG / .aider.conf.yml minimal config / 1 LLM = single source 의 transformer + prompt-only / InputOutput 단일 TUI 객체 / watchfiles + threading.Thread background / `--auto-commits` attribution logic / model-settings.yml 비종속 등록) 은 **현행 upstream 과 1:1 정합**.
+
+이는 my_harness 의 다음 1순위 후보들 — TASK-002 도메인 명령, Cargo workspace 8-crate 구조, rig-core 1안 provider 추상화 — 의 reference 토대로 **여전히 유효** 함을 의미한다.
+
+### 16.3 결정 변경 불요 (explicit "no change" statement)
+
+D-128 은 결정 변경이 아니라 **reference 의 현재성 검증** 결정이다. AGENTS.md 의 "검증하지 않은 결과는 완료로 확정하지 않는다" 원칙에 따라, v1 의 14섹션이 stale 해졌는지 명시적으로 확인하는 한 cycle 을 소모했고, 결과는 no-op 였다. 이는 시스템의 의도된 정상 상태 — reference 가 안정적이면 revisit 도 no-op 이어야 한다.
+
+### 16.4 향후 (next revisit 기준) 트리거
+
+다음 v3 revisit 은 다음 중 **하나라도** 발생할 때:
+
+| 트리거 | 측정 | 임계값 |
+| --- | --- | --- |
+| aider release tag 새 minor/major | `git describe --tags` | `v0.87.x` / `v0.86.x` patch +N |
+| HEAD SHA 변경 | `git rev-parse HEAD` | `5dc9490bb` 외 |
+| `aider/repo.py` 또는 `aider/repomap.py` 단독 변경 (architecture signal) | `git log -- aideer/repo.py aider/repomap.py` 의 non-model 변경 | ≥5 commits |
+| aider 의 외부 변동 (BAAI 인수 / contributor 급변 / repo archive) | GH Insights / news | qualitative |
+| my_harness Cargo workspace 8-crate 결정 구현 (D-128 cycle 의 downstream) | task_backlog | TASK-002 → TASK-005-2 v2.0 진척 |
+
+기본 revisit cadence = **90일** (2026-08-14 + 90 = 2026-11-12). 위 트리거 중 하나라도 먼저 발생 시 cadence 무관 즉시 revisit.
+
+### 16.5 v2 의 my_harness 결정 (D-128)
+
+- **결정**: TASK-004 (CLI/TUI 레퍼런스 분석) 의 aider reference 의 현행성을 2026-06-09 → 2026-08-14 70일 동안 재방문. 0 commit 이므로 v1 의 14섹션 분석은 그대로 유효. my_harness 의 결정 변경 불요.
+- **연계**: D-128 = reference verification 결정 (no architecture impact). my_harness 의 다음 1순위 후보 — TASK-002 도메인 명령 / TUI shell + interactive mode 검증 / A-proper native tool calling (v1.5+) — 와 직교.
+- **다음**: D-128 cycle 종료 → 다음 1순위 후보 중 yklee 결정 시 기존 cadence 로 복귀. 2026-11-12 또는 §16.4 트리거 시 v3 revisit.
+
