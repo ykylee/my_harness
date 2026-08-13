@@ -584,3 +584,394 @@ Anthropic / OpenAI MCP 사양과 정합? Google 확장? 우리 my_harness 가 MC
 ### 14.14 컨텍스트 윈도우 1M 토큰의 실제 사용
 
 Gemini 2.5 Pro 의 1M token context — **모두 활용** vs **truncate** vs **partial read**? gemini-cli 의 실제 정책.
+
+---
+
+## §15 v2 갱신 — 06-09 이후 119 commit 종합 (TASK-004 재방문, D-132)
+
+> **갱신 사유**: 기존 v1 분석 (2026-06-07, gemini-cli v0.45.0-nightly.20260602) 이후 upstream `main` 브랜치에 **130 commit** (v0.45.0 → v0.55.1, 10 minor) 반영. TASK-004 1차 재방문 (D-132, 2026-08-14). 본 섹션은 v1 의 14섹션 (586 lines) 을 **append-only** 로 보존하고, §15 (v2 changelog) + §16 (v2 영향 분석) 만 추가.
+>
+> **시점**: 분석 시점 upstream = `v0.55.1` (2026-08-11 release commit `41327e407`). 우리 v1 분석 시점 = v0.45.0-nightly.20260602. 차이 = 10 minor (v0.45.0 → v0.55.1).
+>
+> **선정 기준**: 130 commit 전체를 grep 분류한 결과 핵심 영역 = **(a) evals 7 commit** (tool formatter + local report + golden issue + triage eval), **(b) core 안정화 60+ commit** (OAuth, capacity, MCP, quota, ReAct), **(c) caretaker agent 신규 14 commit** (Pub/Sub, Firestore, GCP 배포, triage 워크플로우), **(d) ingestion 3 commit** (issue comment + re-triage), **(e) 기타 46 commit** (a2a, hooks, ide, sanitizers). 본 §15.1 은 **우리 §5.5/§5.10/§5.13/§5.14 에 직접 영향** 10 commit 의 짧은 changelog excerpt 포함.
+
+### §15.1 핵심 10 commit (v0.45.0 → v0.55.1, 영향도순)
+
+> 형식: `<sha> <subject> (#<PR>)` + 1-2줄 excerpt. sha 7자리 prefix.
+
+#### 1. tool call formatter — `4238b0b2` feat(evals): add tool call formatter and integrate failure summaries (#28305)
+- **영향 영역**: evals / tool call 가시화
+- **핵심**: `evals/tool-log-formatter` 추가 — 도구 호출/응답을 사람이 읽기 좋은 형식으로 변환. **failure summary 와 통합** (review feedback + edge case fix 후속 commit `7f9b99bb6` 포함).
+- **관련 파일**: `evals/tool-log-formatter.ts` (신규), `scripts/eval-report-cli.ts` 와 통합.
+- **우리 영향**: §5.5 wire format (D-108) tool_calls 가시화 디버깅, §16 (a) 항목.
+
+#### 2. IDE connections — `5024443c` fix(core): resolve swallowed directory mismatch in IDE connections (#28729)
+- **영향 영역**: IDE 통합
+- **핵심**: `packages/core/src/ide/ide-connection-utils.ts` (+73/-). VS Code / JetBrains IDE companion 연결 시 **directory mismatch silent fail** (error swallow) 수정. 150줄 신규 테스트.
+- **우회**: stderr / log 로도 안 나오던 silent fail → 예외 propagation.
+- **우리 영향**: §5.10 orchestrator sub-agent (에러 propagation 정확성), §16 (b) 의 variant.
+
+#### 3. Cloud Workstations OAuth redirect — `58ba19945` fix(core): dynamically resolve Cloud Workstations proxy redirect URI for OAuth flows (#28688)
+- **영향 영역**: OAuth / Cloud Workstations
+- **핵심**: `packages/core/src/mcp/oauth-provider.ts` (+5/-). Cloud Workstations 환경의 proxy redirect URI 를 **dynamic resolve** (정적 fallback 폐기). 95줄 신규 테스트.
+- **배경**: Cloud Workstations 사용자 = container 안의 proxy 가 redirect URI rewrite → 기존 정적 URI 매칭 실패.
+- **우리 영향**: §5.5 D-51 OAuth (W15 의 PKCE redirect URI 처리), §16 (b) 항목.
+
+#### 4. local report command — `659c7aacd` feat(evals): add local report command and developer documentation (#28369)
+- **영향 영역**: evals / reporter
+- **핵심**: `scripts/eval-report-cli.ts` (신규 81 lines) + `docs/behavioral-evals.md` (신규 185 lines). CI 없이 **로컬에서 evals 결과 리포트** 생성.
+- **우리 영향**: §5.13 LLM Wiki ingest 자동화 (장기 retest), §16 (g) 항목.
+
+#### 5. model capacity fix — `188e255bf` fix(core,cli): resolve false model capacity exhaustion and fix core quota lookup model mapping (#28730)
+- **영향 영역**: router / quota
+- **핵심**: `core` quota lookup 의 model mapping 버그 — **false capacity exhaustion** (실제 quota 남아있는데 exhausted 표시). patch v0.55.0-preview.2 의 cherry-pick (`da3710eb9`).
+- **우리 영향**: §5.5 fallback router (D-38), §16 (e) 항목.
+
+#### 6. MCP OAuth token refresh — `eef19f25c` fix(core): refresh MCP OAuth tokens with the stored client ID (#28481)
+- **영향 영역**: MCP / OAuth
+- **핵심**: `mcp/oauth-provider.ts` 의 refresh 시 **stored client ID** 사용 (이전 = 환경변수 또는 hardcoded). MCP server 인증의 자동 refresh 안정화.
+- **우리 영향**: §5.5 W15.b OAuth 자동 refresh (D-58), §16 (c) 항목.
+
+#### 7. NEEDS_HUMAN lock — `cf22ac7e8` fix(caretaker): clear lock on NEEDS_HUMAN transition (#28601)
+- **영향 영역**: caretaker agent (Google internal)
+- **핵심**: caretaker 가 issue triage 결과 NEEDS_HUMAN 표시 시 **lock clear** 누락 → 같은 issue 재처리 불가. lock state machine 에 transition 추가.
+- **우리 영향**: §5.10 sub-agent state machine (orchestrator 의 NEEDS_HUMAN propagation), §16 (d) 항목.
+
+#### 8. ingestion issue comment — `493113457` feat(ingestion): add issue comment handling and re-triage workflow (#28690)
+- **영향 영역**: ingestion (issue → triage workflow)
+- **핵심**: GitHub issue comment 발생 시 자동 triage + **re-triage workflow** (사용자 follow-up 응답 시 재평가). Pub/Sub topic 발행 → caretaker 가 consume.
+- **우리 영향**: §5.13 LLM Wiki 자동 ingest (외부 signal → 메모리 갱신), §16 (g) 항목.
+
+#### 9. Capacity Exhaustion → Terminal Error — `2139b121b` Reclassifying Capacity Exhaustion as Terminal Error (#28716)
+- **영향 영역**: error class / retry logic
+- **핵심**: **retry 가능한 transient error** 로 분류되던 capacity exhaustion 을 **terminal error** 로 재분류. patch v0.55.0-preview.1 cherry-pick (`b39816c87`).
+- **이유**: capacity exhaustion = retry 안 됨 (계속 같은 결과) → 자동 retry 의 hang 방지. 사용자 명시적 액션 필요.
+- **우리 영향**: §5.5 fallback router 의 retry policy (D-38), §16 (e) 항목.
+
+#### 10. (보너스) v0.55.1 release — `41327e407` chore(release): v0.55.1
+- **영향 영역**: 메타
+- **핵심**: 9 package.json version bump. 8 packages (`a2a-server`, `cli`, `core`, `devtools`, `sdk`, `test-utils`, `vscode-ide-companion`) + `package.json` (root) + `package-lock.json`.
+- **우리 영향**: §15.0 inventory version 업데이트.
+
+### §15.2 caretaker agent 신규 (Google internal, §16 분석용 4 commit)
+
+> 우리 my_harness 와 직접 통합되지는 않지만, **Google 의 caretaker 아키텍처** = sub-agent + GCP + state machine + eval framework 통합 사례. 설계 참고용.
+
+- **`1b53dfea2`** feat(caretaker): add GCP deployment script for caretaker agent services (#28529) — Cloud Run 배포
+- **`d419cb6b6`** feat(caretaker): publish workable spec event to ready-for-code Pub/Sub topic (#28588) — Pub/Sub 기반 비동기 fan-out
+- **`afebb8702`** feat(caretaker-evals): add local golden issue collection and firestore sync tools (#28532) — 평가 dataset + Firestore 동기화
+- **`6cb9f2e06`** feat(caretaker-evals): add triage evaluation framework and judge runner (#28530) — LLM-as-judge eval framework
+
+### §15.3 우리 영향 1줄 매트릭스 (10 commit × 7 영향 영역)
+
+| # | commit | (a) §5.5 wire | (b) §5.5 OAuth | (c) §5.5 MCP refresh | (d) §5.10 sub-agent | (e) §5.5 router | (f) §5.14 plugin | (g) §5.13 wiki |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| 1 | tool call formatter (#28305) | **강** | — | — | weak | — | — | — |
+| 2 | IDE connections (#28729) | — | — | — | **강** | — | — | — |
+| 3 | CW OAuth redirect (#28688) | — | **강** | weak | — | — | — | — |
+| 4 | local report (#28369) | — | — | — | — | — | — | **강** |
+| 5 | model capacity (#28730) | — | — | — | — | **강** | — | — |
+| 6 | MCP OAuth refresh (#28481) | — | weak | **강** | — | — | weak | — |
+| 7 | NEEDS_HUMAN lock (#28601) | — | — | — | **강** | — | — | — |
+| 8 | ingestion issue comment (#28690) | — | — | — | weak | — | — | **강** |
+| 9 | Capacity → Terminal (#28716) | — | — | — | — | **강** | — | — |
+| 10 | v0.55.1 release | — | — | — | — | — | — | — |
+
+→ §16 영향 분석에서 7 영역별 1-2 commit deep dive.
+
+### §15.4 v1 → v2 인벤토리 갱신 (README.md §1 동기화 필요)
+
+| 필드 | v1 (2026-06-07) | v2 (2026-08-14) |
+| --- | --- | --- |
+| **version** | 0.45.0-nightly.20260602 | **0.55.1** (2026-08-11) |
+| **release cadence** | nightly only | nightly + preview + stable (3 채널) |
+| **release channels** | 1 (nightly) | 3 (nightly, preview, stable) — `docs/changelogs/index.md` 명시 |
+| **active PR count** | ~3,000 | ~3,100 (정확 미공개, 추정) |
+| **commits since 06-09** | 0 | **130** (v0.45.0..v0.55.1) |
+| **caretaker agent** | 미존재 | **14 commit** (신규, GCP/Pub/Sub/Firestore 통합) |
+| **ingestion workflow** | 단발 triage | **issue comment + re-triage** (Pub/Sub driven) |
+| **error taxonomy** | transient/permanent | **transient/permanent + terminal** (3-tier) |
+| **OAuth** | 정적 redirect URI | **dynamic redirect URI** (proxy 환경 지원) |
+| **MCP** | OAuth + manual refresh | **OAuth + 자동 refresh (stored client ID)** |
+| **evals** | CI-only | **CI + local report CLI** (`scripts/eval-report-cli.ts`) |
+| **triage** | 없음 | **LLM-as-judge eval framework** (caretaker-evals) |
+
+→ 본 표는 `docs/references/README.md` §1 인벤토리 + §3 영향 분석 동기화 입력.
+
+---
+
+## §16 v2 영향 분석 — 우리 my_harness §5.x 별 직접 매핑 (D-132)
+
+> §15 changelog 의 10 commit 을 **우리 my_harness 7 영역** (a~g) 으로 재그룹. 각 항목 = (영향 §, gemini-cli 근거, 우리 action item, 우선순위).
+>
+> **우선순위**: 🔴 v1 spec 갱신 필요 (현재 활성 작업) · 🟡 v1.5 백로그 입력 · 🟢 v2+ 참고 (의사결정 시 활용).
+
+### (a) tool call formatter → 우리 §5.5 wire format (D-108) 🔴
+
+**문제**: 우리 my_harness v1.5+ 의 `CompletionRequest::tools: Vec<ToolSpec>` + `CompletionResponse::tool_calls: Vec<ToolCall>` (D-108) LLM structured output. 디버깅 시 tool call 의 **가시화** 가 중요. 현재 = 내부 log 에 JSON dump 만 가능.
+
+**gemini-cli 솔루션**: `evals/tool-log-formatter` (PR #28305) — tool call name + args + result 를 **human-readable** 형식으로 변환. failure summary 와 통합 (review feedback 후속).
+
+**우리 action**:
+- `myharness/crates/llm/src/format/` (v1.5+) 신규 모듈: `ToolCallFormatter` trait + `DefaultFormatter` (human-readable) + `JsonFormatter` (현재).
+- `Orchestrator::dispatch_tool_call` 의 stderr log 에 `DefaultFormatter` 사용 (D-100/D-101 의 `[tool_call] X → ok` 마커 강화).
+- 평가 framework (§5.13 LLM Wiki eval) 의 failure case 에 자동 통합.
+
+**선정 근거**: D-100 follow-up 의 실제 pain point (현재 log 가 LLM message 와 tool call 의 매칭 어려움) + gemini-cli 의 검증된 패턴.
+
+### (b) Cloud Workstations OAuth redirect → 우리 §5.5 D-51 OAuth (W15, W15.b) 🟡
+
+**문제**: 우리 `myharness auth <provider> login` (W15, D-51) 의 OAuth loopback HTTP server 는 **정적 redirect URI** (`http://localhost:8085/callback` 등). Cloud Workstations / GitHub Codespaces / Docker container 같은 **proxy 환경** 에서 redirect URI 가 rewrite 되어 실패.
+
+**gemini-cli 솔루션**: `mcp/oauth-provider.ts` 의 `proxy redirect URI` dynamic resolve (PR #28688). 환경 / host header 기반 URI 재구성.
+
+**우리 action**:
+- `myharness/crates/auth/src/oauth/callback.rs` (v1.5+) 에 `redirect_uri_resolver` 모듈 추가.
+- 3 fallback: (1) 환경변수 `MYHARNESS_OAUTH_REDIRECT_URI` 명시 (2) request host header 기반 (3) 기본 loopback URI.
+- 테스트: Cloud Workstations emulation (header injection test) + GitHub Codespaces 환경변수 패턴.
+
+**선정 근거**: 우리 v1 OAuth 가 local-only 가정. proxy 환경 (Codespaces 등) 사용 시 silence fail 가능. v1.5 부터 안전장치.
+
+### (c) MCP OAuth token refresh → 우리 §5.5 W15.b 자동 refresh (D-58) 🔴
+
+**문제**: 우리 myharness-auth 의 OAuth token refresh (W15.b, D-58) 는 **client_id 를 어디서 가져올지** 미정. 현재 = refresh 요청에 client_id 미포함 또는 placeholder.
+
+**gemini-cli 솔루션**: PR #28481 — MCP OAuth token refresh 가 **stored client ID** 를 token store 에서 read. client_id 별도 저장 (token 과 함께).
+
+**우리 action**:
+- `myharness/crates/auth/src/store.rs` (v1.5+) — `~/.myharness/oauth/{provider}.toml` schema 갱신: `client_id` + `client_secret` (optional) 필드 추가. 기존 token-only entry 와 호환 (lazy load).
+- `PkceProvider` 의 `refresh()` 가 client_id 를 store 에서 read.
+- mini migration: 기존 v1 token entry 에 placeholder client_id 자동 주입 (interactive prompt 또는 `auth login` 재실행 안내).
+
+**선정 근거**: W15.b 의 미해결 결정 (D-58 후속). gemini-cli 의 동일 문제 해결이 SSOT 패턴.
+
+### (d) NEEDS_HUMAN lock → 우리 §5.10 sub-agent (orchestrator) 🟡
+
+**문제**: 우리 §5.10 의 3-tier orchestrator (D-100) + sub-agent (W10, D-48) 는 **NEEDS_HUMAN** (= 사용자에게 결정 위임) 케이스 어떻게 처리? 현재 = 단순 prompt 출력 후 idle. **state machine** 없음.
+
+**gemini-cli 솔루션**: PR #28601 (caretaker) — NEEDS_HUMAN transition 시 **lock clear**. lock state machine: `idle → processing → needs_human → idle` (전환 시 lock release).
+
+**우리 action**:
+- `myharness/crates/tui/src/orchestrator.rs` (v1.5+) — `AgentState` enum 추가: `Idle/Processing/NeedsHuman/Error`. `NeedsHuman` 진입 시 sub-agent task lock 해제 + user prompt 즉시 표시.
+- `LoopRunner` (W10) 의 interrupt 와 통합 — `NeedsHuman` 도 interrupt 의 한 형태.
+
+**선정 근거**: W10 의 LoopRunner 가 현재 `--max-iterations` 외 종료 조건 미지원. NEEDS_HUMAN = 명시적 종료 조건. gemini-cli 의 state machine 차용.
+
+### (e) Capacity Exhaustion → Terminal Error → 우리 §5.5 router (D-38) 🔴
+
+**문제**: 우리 `FallbackRouter` (W7, D-38) 의 retry policy. capacity exhaustion (rate limit / quota) 발생 시 자동 retry vs fallback provider 전환. 현재 = **단순 transient error** 로 retry → 무한 retry 가능.
+
+**gemini-cli 솔루션**: PR #28716 (release v0.55.0-preview.2) — capacity exhaustion → **terminal error** 분류. + PR #28730 false capacity exhaustion 버그 수정.
+
+**우리 action**:
+- `myharness/crates/llm/src/error.rs` (v1.5+) — `LlmError::CapacityExhaustion` variant 추가. `is_terminal()` method.
+- `FallbackRouter::handle_error()` — terminal error 시 retry 대신 **fallback provider cascade** (다음 provider).
+- false positive 방지: per-provider quota lookup 의 model mapping 정확성 (PR #28730 패치 lesson).
+
+**선정 근거**: D-38 fallback router 의 핵심 결정. transient vs terminal 분류가 retry 전략 직결. gemini-cli 의 3-tier (transient/permanent/terminal) 분류가 우리 router spec 정합.
+
+### (f) TOML extensions 표준 → 우리 §5.14 (D-33) 🟢
+
+**문제**: 우리 §5.4 plugin 시스템 (D-33) 의 manifest format. 현재 결정 보류 (TASK-007). 후보: claude-code `plugin.json` / gemini-cli TOML extensions / goose recipe yaml.
+
+**gemini-cli v2 동향**: extensions 시스템 v0.45.0 → v0.55.1 사이 **TOML extensions** 가 지속 확장 (tools/core 양쪽). MCP server manifest 도 TOML 위주. 우리 §5.14 영향은 **v2+** 의사결정 시 활용.
+
+**우리 action**:
+- TASK-007 (`docs/decision_log.md` §11) 에 **TOML extensions** 옵션 추가 검토.
+- 비교 매트릭스: JSON (claude-code) vs TOML (gemini-cli) vs YAML (goose) 의 (가독성, schema validation, Rust serde 호환, ecosystem).
+- 결론 보류 — v1.5 plugin 시스템 구현 시 3-way 비교 후 결정.
+
+**선정 근거**: gemini-cli 가 TOML 채택이 강제적이진 않지만, **wire format 의 통일성** (settings.toml + extensions.toml + oauth.toml) 이 우리 `~/.myharness/config.toml` 채택과 정합.
+
+### (g) ingestion workflow → 우리 §5.13 LLM Wiki 자동 ingest 🟡
+
+**문제**: 우리 §5.13 LLM Wiki memory (D-32, D-74) 의 자동 ingest. 현재 = 수동 (`wiki-lint` + 수동 commit). **외부 signal → 자동 update** 메커니즘 부재.
+
+**gemini-cli 솔루션**: PR #28690 (ingestion) — GitHub issue comment = 외부 signal → Pub/Sub 발행 → **re-triage workflow** 자동 trigger. (gemini-cli caretakers 의 eval framework PR #28530 도 같은 패턴).
+
+**우리 action**:
+- `myharness/crates/llm-wiki/src/ingest/` (v1.5+) — 외부 source adapter: GitHub issue comment / GitHub PR comment / Obsidian second-brain update webhook (D-74).
+- workflow: `signal → classify (LLM-as-judge) → update wiki node → emit event (Pub/Sub-like in-process bus)`.
+- 평가: re-triage 정확도 (의미 있는 update vs 잡음) — LLM-as-judge framework (PR #28530 차용).
+
+**선정 근거**: D-74 LLM Wiki 의 1차 구현 (manual + lint). v1.5 에서 외부 signal 자동 ingest 가 핵심 가치. gemini-cli 의 Pub/Sub + re-triage pattern.
+
+---
+
+## §17 결정 / 후속 (Decisions & Follow-ups)
+
+### §17.1 결정 (D-132, 2026-08-14)
+
+- **D-132** — TASK-004 재방문, gemini-cli v2 영향 분석 (06-09 이후 130 commit, v0.45.0 → v0.55.1).
+- **누적 결정 74 → 75** (D-126 → D-132).
+- 본 v2 분석 (`docs/references/gemini-cli.md` §15/§16) = **SSOT 입력**.
+
+### §17.2 v1 → v1.5 백로그 입력 (6 action item)
+
+| # | 영역 | 우선순위 | v1.5 sprint 후보 |
+| --- | --- | --- | --- |
+| (a) | §5.5 wire format — `ToolCallFormatter` 신규 | 🔴 | W19 (TBD) |
+| (b) | §5.5 OAuth — `redirect_uri_resolver` | 🟡 | W20 (TBD) |
+| (c) | §5.5 MCP OAuth — `client_id` store schema | 🔴 | W19 (W15.b 후속) |
+| (d) | §5.10 sub-agent — `AgentState` state machine | 🟡 | W21 (TBD) |
+| (e) | §5.5 router — `CapacityExhaustion::is_terminal()` | 🔴 | W19 (D-38 후속) |
+| (g) | §5.13 wiki — 외부 signal ingest adapter | 🟡 | W22 (D-74 후속) |
+
+→ (f) = TASK-007 plugin 결정 시 입력 (TBD).
+
+### §17.3 상호 참조 (Cross-References)
+
+- **본 v2 입력**: `docs/references/README.md` §1 (inventory v2 version 갱신) + §3 (my_harness 영향 분석 동기화)
+- **본 v2 후속**: `docs/CONCEPT.md` §5.5 (action a, b, c) / §5.10 (action d) / §5.13 (action g)
+- **본 v2 결정**: D-132 (`docs/decision_log.md` §D-132 entry 추가, TBD)
+- **본 v2 메모리**: `ai-workflow/memory/backlog/2026-08-14.md` (TBD, 메모리 sync commit)
+- **본 v2 후속 reference**: gemini-cli v0.55.1 → v0.56.0 (nightly) 동향 추적 (다음 TASK-004 재방문 시점, 추정 2026-09)
+
+### §17.4 한계 / 리스크
+
+- **130 commit 중 10 commit 만 deep dive** — 나머지 120 commit (a2a-server, hooks, sanitizers, ReAct mitigation, file keychain, OAuth credentials 등) 는 v1 spec 영향 없음 / v2+ 참고 한정. 필요 시 후속 TASK-004 재방문에서 다룸.
+- **업스트림 PR # 미공개** — PR 번호는 `#28305` ~ `#28771` 범위이지만 (2026-08 시점), 일부 PR 의 본문 description 은 미수집 (commit message + 변경 파일만 분석).
+- **gemini-cli = Google internal** — caretaker agent 영역 (Pub/Sub, Firestore, GCP deployment) 은 직접 차용 불가하나 **아키텍처 패턴** (state machine + LLM-as-judge + Pub/Sub fan-out) 은 차용 가능.
+- **§15/§16 의 7 action item 중 🔴 3개** (a/c/e) 는 v1.5 진입 시 우선 처리 대상. W19 sprint planning 시 본 §17.2 백로그 확인.
+
+
+---
+
+## §18 부록 — 10 commit 의 추가 컨텍스트 (deep dive)
+
+> §15.1 의 10 commit 을 **우리 my_harness 적용 관점** 으로 1-2 추가 문단씩. v1.5 sprint planning 시 본 §18 + §17.2 함께 활용.
+
+### §18.1 tool call formatter (#28305) — 우리 dispatch log
+
+**v1 현재**: `myharness/crates/tui/src/orchestrator.rs` 의 `dispatch_tool_call` 은 `[tool_call] {name} → ok` stderr 마커만 emit. LLM response 와 tool call 의 **상호 연관** 파악 어려움. D-100 테스트 suite (18 tests) 가 `truncate_output` 2000자 truncation 으로 부분 가시화하지만, **failure case** (tool error / timeout) 가 무지성으로 `[tool_call] X → err: ...` 만 출력.
+
+**v2 (gemini-cli)** 적용 후: `ToolCallFormatter::format(call: &ToolCall, result: &ToolResult) -> String` 가
+- 입력: tool name + args (BTreeMap) + result status + output
+- 출력: `◆ tool_name(args["key1"]="value1", args["key2"]=42) → success (12ms, 1.2KB)` 형식
+- failure: `✗ tool_name(args) → error: <message> (kind: Timeout)` 형식
+- summary: 동일 form 5회 반복 시 1회 summary 로 collapse (review feedback commit `7f9b99bb6` 의 "edge case fix" 차용)
+
+**구현 위치**: `myharness/crates/llm/src/format/tool_call_formatter.rs` (v1.5+, 신규 ~150 lines + 30 tests).
+
+### §18.2 IDE connections (#28729) — 우리 propagator
+
+**v1 현재**: 우리 TUI 와 외부 환경 (process spawn, IDE) 사이의 error propagation 은 `Box<dyn Error>` 위주. **directory mismatch** (working directory 불일치) 가 silent fail 가능.
+
+**v2 (gemini-cli)** 적용 후: `MyharnessError::IdeConnection { kind: DirectoryMismatch | HostUnreachable | AuthMissing, source: Box<dyn Error> }` 명시적 variant. `?` operator 가 propagation 시 error chain 보존.
+
+**구현 위치**: `myharness/crates/tui/src/error.rs` (v1.5+, `MyharnessError` enum 확장 + `From<io::Error>` 등 변환).
+
+### §18.3 Cloud Workstations OAuth redirect (#28688) — 우리 redirect URI
+
+**v1 현재**: `myharness/crates/auth/src/oauth/callback.rs` 의 `redirect_uri` = `http://127.0.0.1:8085/callback` 고정. `auth login --no-browser` 의 `--redirect-uri` 플래그 없음.
+
+**v2 (gemini-cli)** 적용 후: `redirect_uri_resolver` 우선순위:
+1. `MYHARNESS_OAUTH_REDIRECT_URI` 환경변수 (explicit)
+2. `request.host_header` 기반 (proxy 환경, Cloud Workstations / Codespaces)
+3. loopback default (`http://127.0.0.1:8085/callback`)
+
+**테스트**: `tests/oauth_redirect_uri.rs` — header injection 으로 3가지 fallback 검증.
+
+### §18.4 MCP OAuth token refresh (#28481) — 우리 client_id persistence
+
+**v1 현재**: `~/.myharness/oauth/{provider}.toml` 의 schema 가 `{access_token, refresh_token, expires_at, scope}` 4 필드. `client_id` 없음.
+
+**v2 (gemini-cli)** 적용 후: schema 확장:
+```toml
+[google]
+client_id = "1234567890.apps.googleusercontent.com"
+client_secret = ""  # optional, public client 는 빈 문자열
+access_token = "ya29..."
+refresh_token = "1//0g..."
+expires_at = 2026-08-14T12:34:56Z
+scope = "https://www.googleapis.com/auth/userinfo.email"
+```
+
+**migration**: 기존 v1 entry 에 `client_id = ""` placeholder 자동 주입. `auth login --refresh` 시 prompt 로 client_id 입력.
+
+**구현 위치**: `myharness/crates/auth/src/store.rs` (serde schema 확장 + migration).
+
+### §18.5 NEEDS_HUMAN lock (#28601) — 우리 AgentState
+
+**v1 현재**: `LoopRunner` (W10, D-48) 의 상태 = `{Idle, Running, Completed, Failed}` 4가지. NEEDS_HUMAN 별도 상태 없음 — 단순 stderr 출력 후 idle 복귀.
+
+**v2 (gemini-cli)** 적용 후: `AgentState` 6-state:
+```rust
+enum AgentState {
+    Idle,
+    Running { task_id: Uuid, started_at: DateTime },
+    NeedsHuman { question: String, context: serde_json::Value },
+    Error { last_error: MyharnessError, retry_count: u8 },
+    Completed { artifacts: Vec<PathBuf> },
+    Cancelled { reason: String },
+}
+```
+
+**전이**: `Running → NeedsHuman` 시 sub-agent task lock 즉시 release + user prompt 표시. `LoopRunner::tick()` 가 `NeedsHuman` 감지 시 interrupt.
+
+### §18.6 Capacity Exhaustion terminal (#28716) — 우리 is_terminal()
+
+**v1 현재**: `FallbackRouter::handle_error()` 의 retry 결정 = 단순 `error.is_retryable()` bool. retry 가능 = 동일 provider 재시도, retry 불가 = fallback provider cascade.
+
+**v2 (gemini-cli)** 적용 후: 3-tier 분류:
+```rust
+impl LlmError {
+    pub fn is_terminal(&self) -> bool {
+        matches!(self, LlmError::CapacityExhaustion(_) | LlmError::AuthMissing(_) | LlmError::ModelDeprecated(_))
+    }
+    pub fn is_transient(&self) -> bool {
+        matches!(self, LlmError::NetworkTimeout(_) | LlmError::RateLimitLimited { .. })
+    }
+    pub fn should_cascade(&self) -> bool {
+        self.is_terminal() || matches!(self, LlmError::QuotaExceeded { .. })
+    }
+}
+```
+
+**router 결정 트리**: `terminal → fallback cascade` / `transient → retry same provider` / `permanent → fallback cascade + log`.
+
+**false positive 방지** (PR #28730 lesson): per-provider quota lookup 의 model mapping 정확성. 우리 `myharness-llm/src/quota.rs` 의 `model_mapping` table 의 unit test 강화.
+
+### §18.7 ingestion issue comment (#28690) — 우리 wiki ingest
+
+**v1 현재**: §5.13 LLM Wiki (D-32, D-74) 의 update = 수동. `wiki-lint` + 수동 commit + 수동 cron 없음.
+
+**v2 (gemini-cli)** 적용 후: 외부 signal adapter (v1.5+ `myharness/crates/llm-wiki/src/ingest/`):
+- **source 1**: GitHub issue comment (`gh api` polling or webhook)
+- **source 2**: GitHub PR comment (review follow-up)
+- **source 3**: Obsidian vault update (D-74 second-brain)
+- **workflow**: signal → `WikiIngestor::classify()` (LLM-as-judge) → `WikiNode::update()` → `EventBus::emit()` (in-process Pub/Sub)
+- **re-triage**: 동일 signal 의 follow-up 발생 시 `WikiNode::re_evaluate()` 호출 (PR #28530 의 LLM-as-judge framework 차용)
+
+**평가**: re-triage 정확도 (precision/recall) — `caretaker-evals` PR #28530 의 judge runner 패턴 (golden dataset + LLM judge).
+
+### §18.8 model capacity fix (#28730) — 우리 quota lookup
+
+**v1 현재**: 우리 `myharness-llm/src/quota.rs` 의 `model_mapping: HashMap<String, Provider>` 가 정적. model ID 변경 시 silent fail 가능.
+
+**v2 (gemini-cli)** 적용 후: `quota.rs` 의 `model_mapping` Table 에 **fallback chain** 추가:
+```rust
+fn resolve_quota_model(requested: &str) -> Option<&'static str> {
+    MODEL_MAPPING.get(requested)
+        .or_else(|| MODEL_ALIAS.get(requested))
+        .copied()
+}
+```
+
+**테스트**: 50+ model ID enum (anthropic: claude-3-5-sonnet-*, openai: gpt-4o-*, gemini: gemini-2.5-*) 에 대해 lookup 정확성 검증.
+
+### §18.9 local report command (#28369) — 우리 eval CLI
+
+**v1 현재**: 우리 `myharness eval` subcommand 없음. evaluation = 수동 (Claude Code review 시에만).
+
+**v2 (gemini-cli)** 적용 후: `myharness eval <set> --format=local` subcommand (v1.5+):
+- `myharness/crates/cli/src/eval.rs` 신규
+- `scripts/eval-report-cli.ts` (TS, gemini-cli 와 같은) 또는 `myharness eval --output=md` (Rust native)
+- 평가 dataset: `tests/eval/{coding,review,fix}_dataset.json` (golden examples)
+
+**연계**: §18.7 의 wiki ingest 의 judge runner 와 동일 dataset 공유.
+
+### §18.10 v0.55.1 release (#41327e407) — 인벤토리 갱신 트리거
+
+본 v2 분석의 **trigger commit**. `docs/references/README.md` §1 인벤토리 표의 `LOC` 는 v1 (2026-06-07) 시점 21,074 lines 였으나, v0.55.1 시점 ≈ ~24,000+ lines (추정, 미확정). 정확한 LOC 는 `cloc upstream/main` 명령 필요 (TBD, v1.5+ 검증).
+
