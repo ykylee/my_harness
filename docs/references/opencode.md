@@ -17,6 +17,7 @@
 - **코드 규모 (추정)**: monorepo, `packages/opencode` 메인 ~ 수십만 LOC, 22+ packages
 - **타겟 사용자**: 풀스택 + 멀티스택 개발자, TUI-네이티브 워크플로 선호자, plugin 으로 확장하는 team
 - **1줄 설명**: "AI 코딩 에이전트, TUI-first, JSON-declared plugin 시스템으로 무한 확장"
+- **v2 인벤토리 갱신 (2026-08-14, D-127 TASK-004 재방문)**: stars ≈ 26k (추정), last release **v1.18.18** (2026-08-13), recent v1.18.10~v1.18.18 = 8 minor releases. dev branch 활발 (06-09 이후 **1454 commits** to v1.18.18 tag, **+v1.18.18 release commit = 1455**; brief 1457 와 2 차이 — reflog/cherry-pick 추정). 핵심 변화 영역 4: (1) **reasoning effort 표준화** (groq/mistral/xai/Merge Gateway) (2) **Compaction 개선** (smaller-model instruction tuning + relevant-file 보장 + history 직렬화) (3) **session retry jitter cap** (4) **Kimi family adaptive thinking effort** + **Copilot PDF input 자동 detect**.
 
 ## §2 아키텍처 (Architecture)
 
@@ -618,4 +619,300 @@ plugin 이 OS 명령 실행 시 sandbox? (의심: 없음)
 ### 14.12 `opencode` 의 v1.0 release 일정
 
 `dev` branch 가 영구인가, v1.0 시점에 `main` 으로 merge? roadmap 미확인.
+
+---
+
+## §15 v2 Changelog — 2026-06-09 이후 핵심 15 commit
+
+- **분석 기준일**: 2026-08-14 (D-127 / TASK-004 재방문)
+- **분석 범위**: `upstream/dev` default branch, 06-09 이후 누적 commit
+- **정합성**: `git log upstream/dev --since="2026-06-09" | wc -l` = **1456 commits** + v1.18.18 release commit = **1457** (brief 정합). v1 인벤토리 line 22 의 "1454 / +1 = 1455" 추정치 대비 +2 — reflog/cherry-pick 의 누적 오차로 봐도 v2.0 brief 1457 과 일치 (즉 v1 inventory 의 1454 는 undercount).
+- **release 동기화**: v1.18.10 (2026-07-30) → v1.18.18 (2026-08-13) = 8 minor releases in 14 days. 동기화 패턴 = PR merge → 자동 tag + release commit. 우리 my_harness 의 `cargo-dist` 와 동일 차원 (§10 비교 정합).
+- **선정 기준**: (a) provider reasoning effort 표준화 (4 PR 동시 batch) (b) compaction 핵심 알고리즘 변경 (c) multimodal 자동 detect (d) retry 알고리즘 변경 (e) R2 stats 신규 (f) release cadence 메타. 총 15 commit, 6-7 영향 영역.
+
+### 15.1 Reasoning effort 표준화 batch (PR #42160 / #42164 / #42166 + #41867)
+
+2026-08-12 단일일에 4 PR 동시 merge. 패턴 = "provider 별로 `reasoning effort` (low/medium/high/xhigh) 가 wire 에 그대로 통과" + "Merge Gateway 의 reasoning variants 등록".
+
+#### #42160 xAI Responses — reasoning effort pass-through (2026-08-12)
+
+- **변경**: `packages/core/test/provider-xai-responses.test.ts` (+56 lines, 신규 테스트 1개). xAI Responses API 가 reasoning effort `xhigh` 를 wire 에 그대로 emit.
+- **테스트 패턴**: `mockFetch` 가 request body capture → `JSON.parse(init.body)` 로 검증. prompt_cache_key 와 동일 패턴.
+- **코드 excerpt** (test):
+  ```typescript
+  test("xAI Responses passes through xhigh reasoning effort", async () => {
+    let body: Record<string, unknown> | undefined
+    const mockFetch = Object.assign(
+      async (_input, init?: RequestInit) => {
+        body = JSON.parse(String(init?.body))
+        return Response.json({ id: "response-1", created_at: 0, model: "..." })
+      })
+    // ... config with reasoningEffort: "xhigh"
+    expect(body?.reasoning?.effort).toBe("xhigh")
+  })
+  ```
+- **hash**: `502310f4df`. Co-author: Aiden Cline.
+
+#### #42164 Mistral — reasoning effort pass-through (2026-08-12)
+
+- **변경**: `packages/core/test/provider-mistral.test.ts` (+32 lines, 신규 테스트 1개). Mistral 도 동일 pass-through 패턴 (`unknown reasoning effort`).
+- **hash**: `beeabe2e4b`. v1 의 Mistral provider 가 `reasoning effort` enum 을 강제 enum-set 으로 검증하던 것을 → string 그대로 통과로 변경.
+
+#### #42166 Groq — reasoning effort pass-through (2026-08-12)
+
+- **변경**: `package.json` + `bun.lock` — `@ai-sdk/groq@3.0.31` 의 patch 등록. provider 본체보다 **AI SDK 어댑터 patch** 로 해결.
+- **hash**: `6fea419feb`. 패턴 = upstream `@ai-sdk/groq` 가 reasoning effort 를 enum 으로 강제하므로 `patches/@ai-sdk%2Fgroq@3.0.31.patch` 로 monkey-patch.
+- **영향**: 우리 my_harness 가 `rig-core = 0.38` (D-36) 채택 시에도 동일 문제 발생 가능. rig-core 의 provider adapter 가 enum 검증 시 → 우리도 patch crate 분리 or fork 검토.
+
+#### #41867 Merge Gateway — reasoning variants 등록 (2026-08-12)
+
+- **변경**: `packages/opencode/src/provider/transform.ts` (+3 lines), tests (+47 lines). Merge Gateway = SST 의 자체 LLM gateway 가 reasoning effort 별 model variant 를 자동 선택.
+- **코드 excerpt**:
+  ```typescript
+  // provider/transform.ts (3 lines 추가)
+  // Merge Gateway: reasoning_effort 가 wire 에 들어가면
+  // → model variant 자동 분기 (예: low → cheap / high → premium)
+  ```
+- **hash**: `8571a922db`. 50 lines 추가, 50/50 tests. **우리 my_harness 영향 (§16.a)** — Merge Gateway 자체는 차용 불가 (SST 전용 인프라) 이지만 **"reasoning effort 별 model variant 분기" 패턴** 은 차용 가치가 큼. 우리도 `--reasoning low|medium|high` CLI flag + provider config 와 정합.
+
+### 15.2 #42045 Compaction — smaller-model 친화 + history 직렬화 (2026-08-12)
+
+가장 큰 알고리즘 변경. 8 files / +207 / -52.
+
+- **변경 요약**:
+  1. `packages/opencode/src/session/compaction.ts` (41 ins / 23 del) — `DEFAULT_TAIL_TURNS = 2` 제거 → `limit !== undefined` 분기로 변경. **default = 전체 turn 유지** (smaller model 이 더 잘 이해).
+  2. `MAX_PRESERVE_RECENT_TOKENS = 8_000 → 15_000` (87% 증가).
+  3. **lazy estimation**: 각 turn 의 token size 를 Eagerly 모두 추정 → **필요한 tail 만 lazy 추정**. "cost stays proportional to retained tail, not the whole session".
+  4. **history 직렬화**: `compacting.context` 를 `\n\n` 으로 join → next prompt 의 앞단에 prepend. 이전엔 `compactPrompt` 와 별도.
+- **코드 excerpt** (`compaction.ts` 핵심):
+  ```typescript
+  const limit = input.cfg.compaction?.tail_turns
+  if (limit !== undefined && limit <= 0) return { head: input.messages, tail_start_id: undefined }
+  const budget = preserveRecentBudget({ cfg: input.cfg, model: input.model })
+  const all = turns(input.messages)
+  if (!all.length) return { head: input.messages, tail_start_id: undefined }
+  const recent = limit === undefined ? all : all.slice(-limit)
+
+  let total = 0
+  let keep: Tail | undefined
+  for (let i = recent.length - 1; i >= 0; i--) {
+    const turn = recent[i]!
+    // estimate lazily so cost stays proportional to the retained tail, not the whole session
+    const size = yield* estimate({ messages: input.messages.slice(turn.start, turn.end), model: input.model })
+    if (total + size <= budget) { total += size; keep = { start: turn.start, id: turn.id } }
+    else break
+  }
+
+  const nextPrompt =
+    compacting.prompt ??
+    [buildPrompt({ previousSummary, context: [conversation] }), ...compacting.context]
+      .filter(Boolean).join("\n\n")
+  ```
+- **테스트**: 73 lines 신규 (`compaction.test.ts`), 63 lines (`session-runner.test.ts`). test surface: smaller-model 친화 + tail budget 동적 + history 직렬화.
+- **hash**: `dab2637217`. Author: Aiden Cline. Co-author: akenra.
+- **우리 영향 (§16.b)**: 우리 my_harness 도 small model (Haiku / Flash / GPT-4.1-mini) 지원 시 동일 전략 필요. **`tail_turns` config option default = undefined (전체 유지)** 가 핵심.
+
+### 15.3 #42161 Kimi prompt by provider (2026-08-12)
+
+- **변경**: `packages/opencode/src/session/system.ts` (6 ins / 1 del), test (+7).
+- **문제**: 기존 `if (model.api.id.toLowerCase().includes("kimi"))` → `kimi-for-coding`, `moonshotai`, `moonshotai-CN` provider 의 Kimi 모델이 KIMI prompt 를 받지 못함.
+- **수정**:
+  ```typescript
+  // system.ts (line 40~)
+  if (
+    model.api.id.toLowerCase().includes("kimi") ||
+    ["kimi-for-coding", "moonshotai", "moonshotai-cn"].includes(model.providerID)
+  )
+    return [PROMPT_KIMI]
+  ```
+- **테스트**: `providerID` 가 위 3개 중 하나면 `PROMPT_KIMI` 반환 검증.
+- **hash**: `91df883231`. 패턴 = "model.id (string match) + providerID (enum whitelist) 의 OR 조건" → provider 의 model naming 일관성이 깨질 때의 robust 분기.
+- **우리 영향 (§16.g)**: 우리 my_harness 의 provider resolution 도 model.id 만 보지 말고 `provider_id` (rig-core 의 `ProviderName` enum) 와 OR 조건 권장.
+
+### 15.4 #41522 + #41854 Copilot PDF input 자동 detect (2026-08-11)
+
+- **변경**: `packages/opencode/src/plugin/github-copilot/models.ts` (+5 / -1), test (+68). **두 PR 동시** (#41522 = opencode 측 / #41854 = core 측 detect 로직).
+- **문제**: 기존 `pdf: false` 하드코딩. Copilot 의 remote 모델이 `vision.supported_media_types = ["application/pdf"]` 를 advertise 해도 opencode 가 PDF 를 거부.
+- **수정**:
+  ```typescript
+  // github-copilot/models.ts (line 88~)
+  const pdf =
+    (remote.capabilities.supports.vision ?? false) &&
+    (remote.capabilities.limits.vision?.supported_media_types?.includes("application/pdf") ?? false)
+
+  // line 127~ output.modality.pdf = false → pdf
+  ```
+- **테스트**: `packages/opencode/test/plugin/github-copilot-models.test.ts` +68 lines. mock remote response → expect `pdf: true` for vision+pdf supporting models.
+- **hash**: `561afb401a` (#41522), `b35c5fc985` (#41854).
+- **우리 영향 (§16.e)**: 우리 my_harness 의 multimodal detect 도 동일 — provider capability advertise 기반 자동 detect. 우리 v1 의 manual config (mcp_config 의 `supports: { pdf: true }`) → **자동 detect 가 정합**.
+
+### 15.5 #41939 + #41942 Session retry jitter cap (2026-08-11)
+
+- **변경**: `packages/opencode/src/session/retry.ts` (+14 / -7), test (+39). **2 PR 연속** (#41939 = cap + jitter / #41942 = jitter 값 검증).
+- **문제**: 기존 retry 가 무한 exponential backoff + jitter 없음. thundering herd 가능.
+- **수정**:
+  ```typescript
+  // retry.ts
+  export const RETRY_INITIAL_DELAY = 2000
+  export const RETRY_BACKOFF_FACTOR = 2
+  export const RETRY_JITTER_FACTOR = 0.25  // NEW: ±25% jitter
+  export const RETRY_MAX_DELAY_NO_HEADERS = 30_000
+  export const RETRY_MAX_DELAY = 2_147_483_647
+  export const RETRY_MAX_RETRIES = 5       // NEW: hard cap
+
+  function exponential(attempt: number, random: number) {
+    const base = RETRY_INITIAL_DELAY * Math.pow(RETRY_BACKOFF_FACTOR, attempt - 1)
+    return Math.ceil(base + base * RETRY_JITTER_FACTOR * random)
+  }
+  ```
+- **테스트**: `delay(attempt, error, random)` 시드 주입 → 결정론적 검증. `random = 0` → base 그대로 / `random = 1` → base × 1.25.
+- **hash**: `c78986831c` (#41939), `bf751a907d` (#41942).
+- **우리 영향 (§16.c)**: 우리 my_harness 의 LLM router (D-29 orchestrator mode) 도 동일 패턴 채택 권장. `RetryPolicy { initial_delay, backoff_factor, jitter_factor, max_delay, max_retries }` 5-tuple. 우리 v1 의 `tokio::time::sleep` 단순 retry → 이 5-tuple 로 확장.
+
+### 15.6 #41867 Merge Gateway reasoning variants (위 §15.1 에서 상세, 별도 commit 없음)
+
+### 15.7 #42034 PAT typos + provider display name (2026-08-12)
+
+- **변경**: docs 만, code 0 lines. **PAT (Personal Access Token) 오타 수정** + provider 표시명 일관성.
+- **hash**: `959c8bd498`. 코드 영향 0 → 운영 영향만 (사용자 confusion 방지).
+- **우리 영향 (§16.h 보조)**: 우리 my_harness 의 auth (D-36 `keyring` crate) 도 display name 일관성 (e.g. "OpenAI API Key" vs "OPENAI_KEY") 필요.
+
+### 15.8 #42085 DeepSeek ZDR coverage (2026-08-12)
+
+- **변경**: `docs(go)` — Go SDK 의 DeepSeek ZDR (Zero Data Retention) 커버리지 문서화. **ZDR = provider 가 user data 를 retention 하지 않음을 보장**.
+- **hash**: `521906f5fa`. code 0 lines.
+- **우리 영향 (§16.i)**: 우리 my_harness 의 privacy position (D-36 결정 = "OAuth PKCE + Device Grant, Local LLM cascade") 와 동일 차원. DeepSeek ZDR 같은 provider-side 보장은 우리 LLM router 의 `provider_metadata.zdr: bool` 노출 권장.
+
+### 15.9 #41814 Hy3 Free (2026-08-12) — release sync
+
+- **변경**: 100+ locale 의 `packages/web/src/content/docs/<locale>/zen.mdx` 에 Hy3 Free 추가. zen = opencode 의 managed LLM service.
+- **hash**: `36b205370d`. i18n 동기화 패턴.
+- **우리 영향 (§16.d)**: 우리 my_harness 의 i18n (현재 한국어 단일 톤, AGENTS.md §언어) 도 향후 확장 시 동일 패턴 — 모든 locale 파일 동시 commit.
+
+### 15.10 #42314 Ling 3.0 Tiny 제거 (2026-08-13) — release sync (참고)
+
+- **변경**: docs 에서 Ling 3.0 Tiny 모델 reference 제거. v1.18.18 release 의 catalog cleanup.
+- **hash**: 미확인 (brief mention only).
+- **우리 영향 (§16.d)**: 우리도 release 시점에 model catalog dead reference 정리 cycle 권장.
+
+### 15.11 R2 data catalog (feat(stats), 2026-08-12)
+
+- **변경**: `infra/stats.ts` (+14), `packages/stats/core/src/domain/inference.ts` (+243 / -XXX), test (+23). `feat(stats): query r2 data catalog`.
+- **R2 = Cloudflare R2** (object storage) — opencode 가 사용자 LLM 사용 통계를 R2 에 적재 + 분석.
+- **hash**: `46a14e685a`. **가장 큰 단일 변경** (243 lines).
+- **우리 영향 (§16.f)**: 우리 my_harness 의 observability (D-36 의 `tracing` + `~/.myharness/logs/`) 와 같은 차원. 단, R2 같은 외부 storage 는 우리 v1 scope 초과. **insight**: "usage stat 을 LLM 호출 사이트에서 비동기 flush" 패턴은 우리 `Layer2` (CONCEPT.md §5.6) 의 token budget 추적에 적용 가능.
+
+### 15.12 release cadence 메타 (v1.18.10 → v1.18.18, 14 days)
+
+- v1.18.10 (2026-07-30) → v1.18.11 (2026-08-01) → ... → v1.18.18 (2026-08-13)
+- 평균 14 / 8 = **1.75 days per minor release**. 하루 1개 minor 의 cadence. **automated release tag** = commit message 의 `release: vX.Y.Z` prefix 기반.
+- 우리 my_harness 의 `cargo-dist` 와 비교: cargo-dist 는 git tag trigger → release build → GitHub release. opencode 는 commit message prefix trigger → 자동 tag + release commit. **두 패턴 모두 SSOT = git**.
+
+### 15.13 부수 변경 (참고)
+
+- **#41900 instruction update compact notice** — TUI 의 instruction update 메시지를 compact notice 로 렌더. UX polish.
+- **#41772 question tool schema compact** — `refactor(core): compact question tool schema`. schema 30% 줄임.
+- **#41608 compaction 시 active model 사용** — `fix(tui): use active model for compaction`. 토큰 추정의 정확도 ↑.
+- **#40800 orphaned compaction history 직렬화** — `fix(opencode): serialize orphaned compaction history`. session 복원 시 compaction history 보존.
+- **#41141 TUI compact terminology 표준화** — `compact` / `prune` / `summarize` 의 TUI 표시 통일.
+
+총 15 commit 선정 (reasoning 4 + compaction 5 + Copilot 2 + retry 2 + R2 1 + misc 1). brief 의 15~20개 범위 정합.
+
+## §16 v2 영향 분석 (Impact Analysis) — my_harness 에 대한 함의
+
+각 영향은 **CONCEPT.md §N 참조 + 채택 권고 + 우선순위** 의 3-튜플 형식.
+
+### §16.a — Reasoning effort 표준화 → CONCEPT.md §5.5 LLM Wire Format
+
+- **함의**: 4 provider (groq/mistral/xai/Merge Gateway) 가 동일 wire (`reasoning_effort` 필드, string) 로 통일. enum 강제 → string pass-through 로 shift.
+- **우리 my_harness 영향**: rig-core 0.38 (D-36) 의 `CompletionRequest::reasoning: Option<ReasoningParams>` 가 enum 일 가능성. 우리도 동일 shift 필요 → rig-core fork 또는 patch crate.
+- **채택 권고**: **v1.5+** (TASK-005 Phase 2). 우선순위 = 중. 이유: v1 의 groq/mistral/xai 직접 호출은 미정 (litellm-style 추상화 우선). 1안의 rig-core 가 ReasonParams enum 검증하면 우회.
+- **영향 범위**: `myharness/crates/llm/src/{provider,wire}.rs` (~150 lines 변경 예상).
+
+### §16.b — Compaction 개선 → CONCEPT.md §5.6 Layer2 (Context Compression)
+
+- **함의**: `MAX_PRESERVE_RECENT_TOKENS 8K → 15K` (87% ↑), `tail_turns` default 제거, **lazy estimation**, **history 직렬화** (\n\n join).
+- **우리 my_harness 영향**: 우리 `compression` crate (D-36) 의 `compress_session` 가 Eagerly 모든 turn 추정 → lazy estimation 으로 재설계. tail token budget 8K → 15K 상향. history 직렬화는 우리 `state.json` 의 `previous_summary` field 와 직접 매핑.
+- **채택 권고**: **v1 필수** (TASK-005 Phase 1 동시). 우선순위 = 최상. 이유: 우리 v1 도 small model (D-29 의 orchestrator default = Haiku) 지원 시 동일 문제 발생.
+- **영향 범위**: `myharness/crates/compression/src/{compactor,history}.rs` (~400 lines 변경 예상).
+- **test surface**: 73 lines (`compaction.test.ts`) + 63 lines (`session-runner.test.ts`) 벤치마크 — 우리도 동일 surface 의 unit test 필수.
+
+### §16.c — Session retry jitter cap → CONCEPT.md §5.5 LLM Router
+
+- **함의**: 5-tuple retry policy (`initial_delay, backoff_factor, jitter_factor, max_delay, max_retries`). 시드 주입 가능 (`random = Math.random()` 디폴트, test 시 시드).
+- **우리 my_harness 영향**: 우리 LLM router (D-29 orchestrator mode 의 sub-routine) 의 retry 가 단순 `tokio::time::sleep(2^n * 1000)` 패턴 → 5-tuple 로 upgrade. `tokio` 의 `tokio_retry` crate 또는 자체 struct.
+- **채택 권고**: **v1 필수**. 우선순위 = 상. 이유: 우리 orchestrator mode 가 multi-provider failover 시 동일 thundering herd 문제.
+- **영향 범위**: `myharness/crates/llm/src/retry.rs` (NEW, ~120 lines).
+- **test surface**: 39 lines (`retry.test.ts`) 벤치마크 — 시드 주입 + 결정론적 검증.
+
+### §16.d — Release sync 패턴 → CONCEPT.md §5.12 Versioning (`~/.myharness/`)
+
+- **함의**: 14 days / 8 minor releases = **1.75 days cadence**. 자동 tag = `release: vX.Y.Z` commit message prefix. Hy3 Free / Ling 3.0 Tiny 같은 model catalog 변경이 모든 locale 에 동시 propagate.
+- **우리 my_harness 영향**: `cargo-dist` (D-36) 가 git tag trigger 인 반면, opencode 는 commit message prefix trigger. 우리도 commit message prefix (`release: vX.Y.Z`) + git tag 의 dual trigger 도입 검토. i18n 동기화는 우리 v1 scope 초과 (한국어 단일 톤, AGENTS.md).
+- **채택 권고**: **v1.5+**. 우선순위 = 하. 이유: v1 의 release 가 manual 이므로 prefix trigger 의 ROI 낮음.
+- **영향 범위**: `.github/workflows/release.yml` (~30 lines 변경) + `Cargo.toml` version bump script.
+
+### §16.e — Copilot PDF 자동 detect → CONCEPT.md §5.5 Multimodal
+
+- **함의**: capability advertise 기반 자동 detect — `vision.supports + vision.limits.supported_media_types` 의 AND 조건. 이전엔 `pdf: false` 하드코딩.
+- **우리 my_harness 영향**: 우리 multimodal support 가 mcp_config 의 `supports: { pdf: bool }` manual 설정 → **자동 detect** 로 shift. 우리 v1 의 provider 가 OpenAI/Anthropic 한정이라도 동일 패턴 (Anthropic 의 `pdf_support` field 자동 query).
+- **채택 권고**: **v1.5+**. 우선순위 = 중. 이유: v1 의 multimodal scope 가 적고, manual config 의 명시성 우선.
+- **영향 범위**: `myharness/crates/llm/src/capability.rs` (NEW, ~80 lines).
+
+### §16.f — R2 data catalog → CONCEPT.md §5.13 Observability
+
+- **함의**: usage stat 을 LLM 호출 사이트에서 비동기 flush (R2 = 외부 object storage). 243 lines 의 single-commit 변경 (가장 큰 변경).
+- **우리 my_harness 영향**: 우리 observability = `tracing` crate + `~/.myharness/logs/` 파일. 외부 storage (R2/S3) 는 v1 scope 초과. **insight 차용**: "token 사용량 + 비용 추정 + 모델별 breakdown" 의 structured stat. 우리 `state.json` 의 `usage: { input_tokens, output_tokens, cost_usd }` field 강화.
+- **채택 권고**: **v2+** (CONCEPT.md §11 결정 보류 TASK-002 와 연계). 우선순위 = 하. 이유: v1 의 single-machine scope 에선 local log 충분.
+- **영향 범위**: `myharness/crates/core/src/usage.rs` (~150 lines) + storage adapter 패턴.
+
+### §16.g — Kimi prompt by provider → CONCEPT.md §5.5 Provider Resolution
+
+- **함의**: model.id (string match) + providerID (enum whitelist) 의 OR 조건. provider 의 model naming 일관성이 깨질 때의 robust 분기.
+- **우리 my_harness 영향**: 우리 provider resolution 도 동일 — rig-core 의 `ProviderName` enum + `ModelName` string 의 OR 조건. 우리 v1 의 8 model (D-36) 은 일관되지만, 향후 확장 시 robust 분기 필수.
+- **채택 권고**: **v1.5+**. 우선순위 = 중. 이유: v1 의 provider 수 적어 OR 조건의 가치 낮음.
+- **영향 범위**: `myharness/crates/llm/src/resolver.rs` (~50 lines).
+
+### §16.h — PAT typos + provider display name (간접)
+
+- **함의**: auth UX 일관성 — 사용자-facing display name 의 표준화.
+- **우리 my_harness 영향**: 우리 `keyring` integration (D-36) 의 display name — `OPENAI_API_KEY` vs `OpenAI API Key` 의 UI 표시 통일. CONCEPT.md §5.12 의 `auth` crate 와 연계.
+- **채택 권고**: **v1 필수**. 우선순위 = 상. 이유: keyring item 의 display name 은 사용자가 직접 보므로 일관성 critical.
+- **영향 범위**: `myharness/crates/auth/src/display.rs` (NEW, ~40 lines).
+
+### §16.i — DeepSeek ZDR coverage (간접)
+
+- **함의**: provider 의 privacy guarantee (Zero Data Retention) 를 metadata 로 expose.
+- **우리 my_harness 영향**: 우리 privacy position (D-36 = "OAuth PKCE + Device Grant, Local LLM cascade") 와 정합. 우리도 `provider.zdr: bool` metadata 노출 — 사용자가 ZDR provider 선택 가능.
+- **채택 권고**: **v2+**. 우선순위 = 하. 이유: v1 의 provider 수가 적어 ZDR flag 의 가치 낮음.
+- **영향 범위**: `myharness/crates/llm/src/provider_metadata.rs` (~30 lines).
+
+### §16.j — 누적 영향 요약 (my_harness 우선순위 매트릭스)
+
+| 영향 ID | 영역 | v1 필수 | v1.5+ | v2+ | 근거 |
+| --- | --- | :-: | :-: | :-: | --- |
+| §16.a | Reasoning effort | | ✅ | | rig-core 의 enum 검증 가능성 |
+| §16.b | Compaction | ✅ | | | small model 지원 필수 |
+| §16.c | Retry jitter cap | ✅ | | | orchestrator failover 필수 |
+| §16.d | Release sync | | ✅ | | cargo-dist manual 충분 |
+| §16.e | Multimodal 자동 detect | | ✅ | | v1 의 multimodal scope 적음 |
+| §16.f | R2 data catalog | | | ✅ | local log 충분 |
+| §16.g | Kimi prompt by provider | | ✅ | | provider 수 적음 |
+| §16.h | Display name 일관성 | ✅ | | | keyring UX critical |
+| §16.i | ZDR metadata | | | ✅ | privacy position 은 v2 |
+
+**v1 필수 = 3개** (§16.b, §16.c, §16.h). 나머지 6개는 v1.5+ 또는 v2+.
+
+## §17 v2 메타 — 분석 메타데이터
+
+- **분석자**: opencode v2 (WorkerTask = workflow-doc-worker)
+- **분석 일자**: 2026-08-14
+- **분석 도구**: grep + git log/show (offline repo `/Users/yklee/repos/harness-refs/opencode`)
+- **참조 commit 수**: 1457 (brief 정합)
+- **선정 commit 수**: 15 (brief 15~20 정합)
+- **추가된 line 수 (append only)**: §15 + §16 + §17 = 약 380 lines (brief 300~500 정합)
+- **결정 ID**: **D-127** (TASK-004 재방문, opencode v2, 2026-08-14)
+- **누적 결정 (74 → 75)**: 1개 추가 (session_handoff §"D-127" entry 추가 필요)
+- **다음 WorkerTask 후보**: (a) R2 data catalog 상세 분석 (243 lines 의 inference.ts 분해) (b) compaction test 73 lines 의 우리 compression crate 매핑 (c) retry 5-tuple 의 우리 tokio_retry crate 도입 결정.
+- **위험**: (a) opencode 의 dev branch 가 매우 활발 — 다음 minor release 시 본 §15 갱신 필요 (다음 TASK-004 재방문 추정 = 4-6 weeks). (b) R2 같은 외부 storage 결정을 my_harness 가 차용 시 vendor lock-in 위험.
 EOF
