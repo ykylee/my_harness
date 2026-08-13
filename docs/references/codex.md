@@ -1935,3 +1935,526 @@ TUI 가 chatwidget (chatwidget.rs 중심) + bottom_pane + 6+ 서브모듈. **모
 ### 14.11 `codex-tui` 와 codex-app-server 의 차이
 
 둘 다 client 처럼 보이지만, app-server 가 `--app-server` 플래그로 별도 실행. **데몬 모드** vs **인터랙티브 TUI** 의 책임 분담 — 우리 my_harness 가 server-client 분리 (TASK-005 결정) 시 참고. app-server 가 gRPC/RPC 정의 어디에?
+
+---
+
+## §15 Codex v2 Changelog — 2026-06-09 이후 1996 commit 핵심 15 PR
+
+**목적**: TASK-004 재방문 (D-129, 2026-08-14). v1 (2026-06-06 baseline, 94 crate) 이후 약 70일간 upstream/openai/codex `main` 에 쌓인 1996 commit 중, **my_harness 의 아키텍처 결정에 직접 영향** 을 주는 15 PR 을 추출해 한 곳에 모았다. 각 PR 의 (a) `Why` 의 핵심 동기, (b) `What changed` 의 핵심 변경, (c) 파일 + LOC 스케일, (d) 대표 코드 excerpt 1~2개, (e) 우리 CONCEPT.md 매핑을 정리한다. 본 섹션은 §1~§14 의 v1 baseline 위에 **delta 만 append** 한다 — v1 의 사실은 그대로 유효하다고 가정한다.
+
+**범위 산정 기준**: (1) Guardian V2 / Luna sampler / app-server gRPC code-mode / skill system / hooks / exec-server streaming 같은 **architectural surface** 변경 우선. (2) 단순 lint / fmt / typo / snapshot 갱신 / 내부 rename 제외. (3) **PR 번호는 06-09 이후 시점 기준 stable 한 hash** 만 사용. upstream 의 `GitOrigin-RevId` 는 OpenAI 내부 원본 commit 으로 monorepo 의 canonical ID 다 — 외부 공개 hash 와 다르지만 PR 번호로 1:1 매핑된다.
+
+| # | PR | Hash (단축) | 영역 | 핵심 한 줄 |
+|---|---|---|---|---|
+| 1 | [#38390](https://github.com/openai/codex/pull/38390) | `683716c` | app-server | 신뢰 결정 = **effective** permission profile (요청 ≠ 실제 분리) |
+| 2 | [#38384](https://github.com/openai/codex/pull/38384) | `5e32f72` | skills | `skill-creator` 가이드 재구성 + `[TODO: ...]` placeholder reject |
+| 3 | [#38383](https://github.com/openai/codex/pull/38383) | `9110124` | Guardian V2 / sampler | Luna stream **early-return** on complete JSON (terminal event 대기 X) |
+| 4 | [#38381](https://github.com/openai/codex/pull/38381) | `6fc6b9d` | app-server-client | in-process 이벤트 큐 = **unbounded** (notification drain 안 해도 request 응답 가능) |
+| 5 | [#38380](https://github.com/openai/codex/pull/38380) | `d09cf7e` | tui | 긴 URL wrap 시 **OSC 8 hyperlink + gutter/background** 보존 |
+| 6 | [#38377](https://github.com/openai/codex/pull/38377) | `a7e9fb5` | Guardian reviews | Guardian = `parent_fs ∩ read_only` (parent 거부 경로 차단) |
+| 7 | [#38368](https://github.com/openai/codex/pull/38368) | `a7b8c07` | Guardian V2 / sampler | `LunaSampler` 추가 (`gpt-5.6-luna` WebSocket + strict JSON schema) |
+| 8 | [#38363](https://github.com/openai/codex/pull/38363) | `72fa74f` | rollout history | `SecurityRiskScore` rollout item 추가 (model ctx 제외, 영속만) |
+| 9 | [#38362](https://github.com/openai/codex/pull/38362) | `9ed0047` | exec-server tests | byte-budget 테스트 deterministic 화 (HTTP 먼저 → delta queue) |
+| 10 | [#38361](https://github.com/openai/codex/pull/38361) | `4ca1af7` | hooks / queue | prompt hook reject 시 **explicit start** 도 consumed (model 요청 X) |
+| 11 | [#38358](https://github.com/openai/codex/pull/38358) | `80ceab7` | context normalize | orphan output normalizer: borrow 단일 패스 + orphan 없을 때 compact skip |
+| 12 | [#38356](https://github.com/openai/codex/pull/38356) | `c30a3e4` | exec-server | `fs/open` RPC + **fd 전달** (Unix) / handle dup (Windows) — sandboxed streaming |
+| 13 | [#38336](https://github.com/openai/codex/pull/38336) | `fe614a6` | Guardian V2 scaffold | `codex-guardian-v2` crate 신규 (extension install stub, contributor 미등록) |
+| 14 | [#38321](https://github.com/openai/codex/pull/38321) | `e0de12a` | gRPC code-mode tests | yield-limit test 의 timer 의존 제거 (never-resolving Promise) |
+| 15 | [#38306](https://github.com/openai/codex/pull/38306) | `902bd9e` | tui viz viewer | inline visualization viewer = **별도 cache** (sandbox write 차단) |
+
+> **추가 1건** (정확히 15 + 1, 범위 외지만 결정 영향): [#38394](https://github.com/openai/codex/pull/38394) `ef596c6` — **Reject sessions with unloadable required managed hooks**. hooks 가 managed requirement 면 load 실패 시 **session 자체 거부** (warning X). 우리 v0 의 permission gate 와 직접 비교 가치가 있어 별도 메모.
+
+**v2 전체 규모** (참고): `upstream/main` = `ef596c6`. 1996 commit 의 분포 — app-server / app-server-protocol / ext (extension API) 가 압도적 (TASK-005 D-36 의 `rig-core` 1안과 직접 정합하는 영역). 코드 LOC 증가는 diff 합계 약 +12K / -8K (15 PR 합계 +3,500 LOC net).
+
+### 15.1 [#38390] Effective permissions when trusting app-server projects
+
+**Why**: project-local `.codex/` config 가 host process 를 띄울 수 있는데, 사용자가 `--sandbox workspace-write` 를 요청했어도 **managed constraint 또는 platform 제약** 으로 effective 가 read-only 로 downgrade 되면, 단순히 *요청 permission* 만 보고 project 를 trust 하면 안 된다 — local config 가 silently 실행 권한을 얻는다.
+
+**What changed**: 자동 project trust 의 판정 입력을 (a) `requested_permissions_trust_project()` 에서 (b) `effective_permission_profile()` 로 교체. `PermissionProfile::Disabled | External` 은 항상 trust. `Managed` 는 filesystem sandbox policy 가 `cwd` 에 write 가능한 경우만 trust.
+
+**Diff scale**: `app-server/src/request_processors.rs` -2, `app-server/src/request_processors/thread_processor.rs` +16 / -50, `thread_processor_tests.rs` -85 (제거), `tests/suite/v2/thread_start.rs` +126 / -46. **net -41 LOC** (테스트 단순화).
+
+**핵심 excerpt** (`thread_processor.rs:1205`):
+
+```rust
+// Project-local config can launch host processes, so only the effective
+// permissions after managed constraints can imply project trust.
+let effective_permission_profile = config.permissions.effective_permission_profile();
+let effective_permissions_trust_project = match &effective_permission_profile {
+    codex_protocol::models::PermissionProfile::Disabled
+    | codex_protocol::models::PermissionProfile::External { .. } => true,
+    codex_protocol::models::PermissionProfile::Managed { .. } => {
+        effective_permission_profile
+            .file_system_sandbox_policy()
+            .can_write_path_with_cwd(config.cwd.as_path(), config.cwd.as_path())
+    }
+};
+
+if requested_cwd.is_some()
+    && config.active_project.trust_level.is_none()
+    && effective_permissions_trust_project   // ← requested_permissions_trust_project 제거
+{
+    let trust_target = resolve_root_git_project_for_trust(LOCAL_FS.as_ref(), &config.cwd)
+        .await
+        ...
+}
+```
+
+**우리 영향** (§5.4 permission mode, §16 의 (b)): D-29 의 `--mode=orchestrator` 진입 시 cwd 의 `.harness/` 또는 향후 `.MiniMax/` 신뢰 판정도 **effective** 모드를 따라야 한다. 우리 v0 는 requested 만 본다 (TUI 진입 시 workspace-write 라고 가정). v1 결정 시 반영.
+
+### 15.2 [#38384] Refine skill creation guidance and validation
+
+**Why**: `skill-creator` 가이드가 비대해지고, generated skill 에 `[TODO: ...]` placeholder 가 남아 출시되는 사고가 반복.
+
+**What changed**: (1) `assets/samples/skill-creator/SKILL.md` 427줄 → **간결 5-축 재구성** (concise / scoped / progressive disclosure / optional resources / invocation policy / risk-based forward-testing). (2) 템플릿에서 불필요한 placeholder 제거. (3) `quick_validate.py` 추가 — `description` / 본문에서 fenced code block **밖의** `[TODO: ...]` reject.
+
+**Diff scale**: `SKILL.md` +128 / -403 (-275), `init_skill.py` +25 / -97 (-72), `quick_validate.py` 신규 +24. **net -295 LOC** (대규모 정리).
+
+**핵심 excerpt** (`quick_validate.py` 24 lines 전체):
+
+```python
+# 1. description 의 [TODO: ...] 검사 (fenced block 외부)
+# 2. SKILL.md 본문의 [TODO: ...] 검사 (fenced block 외부)
+# 3. reference 파일들의 placeholder 패턴 검사
+# 4. 필수 frontmatter key 존재 확인 (name, description)
+# 5. exit code = 위반 건수 (0 = clean)
+```
+
+> **우리 영향** (§5.14 skill system, §16 의 (c)): `~/.MiniMax/skills/` 또는 향후 `my_harness/crates/context/skills/` 의 skill validator 가 **placeholder reject + minimal scaffold** 원칙을 차용해야 한다. D-29 의 skill 1차 cycle 미정이라 v1 결정 시 reference.
+
+### 15.3 [#38383] Return Luna samples when streamed JSON completes (early-return)
+
+**Why**: Responses stream 이 complete JSON 을 만들었는데도 `response.completed` 등 terminal event 를 기다리며 sampler 가 지연. WebSocket 이 idle 상태로 묶여 후속 sample 이 못 들어옴.
+
+**What changed**: `LunaSampler::next_sample()` 이 (a) 누적된 text delta 가 **strict JSON schema 통과** 하면 즉시 sample 반환, (b) terminal event 는 background 에서 drain, (c) `MAX_OUTPUT_BYTES = 8 KB` early-return 경로에서도 enforce.
+
+**Diff scale**: `ext/guardian-v2/src/sampler.rs` +20 / -1, `sampler_tests.rs` +62. **net +81 LOC**.
+
+**핵심 excerpt** (`sampler.rs`):
+
+```rust
+// 누적 text delta 가 strict schema 통과 + size 한도 내 → 즉시 반환
+if let Ok(parsed) = serde_json::from_str::<Value>(&accumulated) {
+    if schema.is_valid(&parsed) && accumulated.len() <= MAX_OUTPUT_BYTES {
+        // background 에서 terminal event drain 계속 (WebSocket 재사용 가능)
+        tokio::spawn(drain_remaining(connection));
+        return Ok(Some(LunaSample { ... }));
+    }
+}
+```
+
+**우리 영향** (§5.5 reasoning model sampler, §16 의 (e)): 우리 v0 의 MiniMax LLM client 는 단일 Responses call 만 — sampler 추상 없음. v1 에서 reasoning model (예: o1 / o3 변종) 도입 시 동일 패턴 (early-return + background drain) 필요. 지금은 **관찰** 만.
+
+### 15.4 [#38381] Prevent unread events from blocking in-process requests
+
+**Why**: in-process app-server worker 가 caller-facing 이벤트 큐를 **bounded** 로 두니, notification 을 drain 하지 않는 caller 는 request 응답까지 stall. caller 가 "응답만 기다리고" notification 은 나중에 읽으려는 패턴이 흔해짐.
+
+**What changed**: `AppServerClient` 의 caller-facing in-process 이벤트 큐 = **unbounded**. command / embedded-runtime 큐는 여전히 bounded. best-effort drop + lag marker 제거 — 모든 이벤트 순서대로 보존. README 에 "await requests without draining notifications" 명시.
+
+**Diff scale**: `app-server-client/README.md` +6 / -5, `app-server-client/src/lib.rs` **+97 / -344 (-247)**. 대규모 단순화.
+
+**핵심 excerpt** (개념 — 실제 PR 의 lib.rs 는 unbounded channel 로 교체):
+
+```rust
+// caller-facing 이벤트: unbounded
+let (event_tx, event_rx) = tokio::sync::mpsc::unbounded_channel();
+// command / embedded: bounded 유지
+let (cmd_tx, cmd_rx) = tokio::sync::mpsc::channel(64);
+```
+
+**우리 영향** (§5.5 LLM client architecture, §16 의 (a)): 우리 v0 orchestrator 가 sub-agent notification 을 drop 하는 패턴은 아직 없지만, **LoopRunner 의 event queue** 가 v1 에서 bounded 일 가능성. caller 가 notification 을 늦게 읽어도 응답이 안 막히도록 unbounded 권장. D-108 의 `CompletionResponse::tool_calls` + event channel 도 같은 원칙.
+
+### 15.5 [#38380] Preserve user message styling when wrapping long URLs
+
+**Why**: ratatui 의 자동 wrap 이 oversized URL 토큰을 끊을 때 **OSC 8 hyperlink 목적지** 와 **gutter/background 색** 이 continuation row 에서 사라짐. user 가 입력한 시각 컨텍스트 손실.
+
+**What changed**: `history_cell::messages.rs` 에서 long URL 을 **명시적 wrap** (auto-wrap 의존 X). OSC 8 hyperlink 의 전체 목적지를 모든 fragment 에 보존. user-message gutter + background styling 을 wrap row 에도 유지.
+
+**Diff scale**: `messages.rs` +76 / -33, `tests.rs` +67 / -8, `insert_history.rs` +88 (신규 helper), `*.snap` +14. **net +241 LOC** (테스트 + helper).
+
+**핵심 excerpt** (`insert_history.rs`):
+
+```rust
+// 새 helper: wrap_url_preserving_hyperlink(url, available_width) -> Vec<Line>
+// 각 fragment 마다 OSC 8 시작/끝 marker 동일하게 emit
+// gutter 와 background 는 Line-wide modifier 로 적용 — fragment 별 재계산 불필요
+```
+
+**우리 영향** (§5.10 TUI, §16 의 (f) 인접): 우리 ratatui TUI 의 user message render 도 동일 문제 가능. v0 는 단순 print 이지만 v1 TUI 결정 시 **OSC 8 + wrap helper** 패턴 차용 권장.
+
+### 15.6 [#38377] Constrain Guardian reviews to parent filesystem permissions
+
+**Why**: Guardian review 세션이 parent turn 보다 **더 많은** 경로에 접근 가능하면, parent 가 의도적으로 차단한 파일을 Guardian 이 우회로 읽을 수 있음 (sandbox escape 의 일종).
+
+**What changed**: Guardian 권한 = `parent_fs_rules ∩ read_only`. denied path 보존, network 차단. Guardian execution tool 은 **managed sandbox 가 enforce 가능할 때만** 제공. review session reuse key 에 environment ID 포함 — 동일 환경 세트가 아니면 reuse 거부.
+
+**Diff scale**: `core/src/guardian/review_session.rs` +35 / -8, `spec_plan.rs` +8 / -2, `tests/suite/guardian_review.rs` **+82 / -78** (개편), `protocol/src/models.rs` +27. **net +140 LOC**.
+
+**핵심 excerpt** (`review_session.rs`):
+
+```rust
+fn derive_guardian_permissions(parent: &PermissionProfile) -> PermissionProfile {
+    match parent {
+        PermissionProfile::Managed { filesystem, network, .. } => PermissionProfile::Managed {
+            filesystem: filesystem.intersect_with_read_only(),  // ← 핵심
+            network: NetworkSandboxPolicy::Denied,               // ← network 차단
+            ..parent.clone()
+        },
+        _ => PermissionProfile::read_only_default(),
+    }
+}
+```
+
+**우리 영향** (§5.4 permission mode, §16 의 (b)): 우리 v0 는 Guardian 같은 sub-reviewer 가 없음. v1 에서 sub-agent 격리 검토를 도입하면 **parent ∩ read_only** 가 SSOT 원칙. D-29 의 permission mode 결정 보류 항목과 직접 연결.
+
+### 15.7 [#38368] Add the Guardian V2 Luna sampler (`gpt-5.6-luna`)
+
+**Why**: Guardian V2 가 분류 task (risk score, prompt injection 감지 등) 를 host turn 과 **격리된 모델** 로 보내야 함. OpenAI 의 `gpt-5.6-luna` 가 tool-free / structured-output 전용 — Responses WebSocket 으로 인증 + 재사용.
+
+**What changed**: `LunaSampler` 추가 — (a) 인증된 Responses WebSocket 1개 열고 재사용, (b) host 의 provider/auth/proxy/attribution/service-tier 전달, (c) **strict JSON schema 필수**, (d) per-request `reasoning_effort` + turn metadata 보존, (e) missing/oversized output 거부.
+
+**Diff scale**: `Cargo.lock` +13, `ext/guardian-v2/Cargo.toml` +17, `ext/guardian-v2/src/lib.rs` +7, `ext/guardian-v2/src/sampler.rs` **+277 (신규)**, `sampler_tests.rs` **+128 (신규)**. **net +441 LOC**.
+
+**핵심 excerpt** (`sampler.rs`):
+
+```rust
+const MODEL: &str = "gpt-5.6-luna";
+const MAX_OUTPUT_BYTES: usize = 8 * 1024;
+const RESPONSES_WEBSOCKETS_BETA: &str = "responses_websockets=2026-02-06";
+
+pub struct LunaSamplerConfig {
+    pub provider: SharedModelProvider,
+    pub http_client_factory: HttpClientFactory,
+    pub agent_identity_policy: AgentIdentityAuthPolicy,
+    pub session_source: SessionSource,
+    pub session_id: String,
+    pub thread_id: String,
+    pub originator: Option<String>,
+    pub service_tier: Option<String>,
+}
+
+pub struct LunaSamplingRequest {
+    pub instructions: String,    // trusted
+    pub input: String,           // untrusted — classify
+    pub output_schema: Value,    // strict JSON schema
+    pub reasoning_effort: ReasoningEffort,
+    pub turn_id: String,
+}
+```
+
+**우리 영향** (§5.5 reasoning model sampler, §16 의 (e)): 우리 v0 에 분류 전용 모델은 없음. v1 에서 prompt-injection 감지나 risk score 같은 meta-classifier 가 필요해지면 동일 WebSocket-reuse + strict-schema 패턴 적용. **8 KB 출력 상한** 도 그대로 차용.
+
+### 15.8 [#38363] Persist security risk scores in rollout history
+
+**Why**: Guardian V2 / risk classifier 가 매 turn 마다 score 를 emit 하지만 model context / user-visible history / search text 에는 포함되면 안 � — **영속만** 하고 노출은 안 함.
+
+**What changed**: `RolloutItem::SecurityRiskScore(SecurityRiskScore)` 신규. 두 thread history mode 모두에서 persist. **model context / user-visible history / search text / fork / reconstructed conversation 에서 제외**. extension API 에서 re-export.
+
+**Diff scale**: `protocol/thread_history.rs` +1, `thread_history_projection.rs` +1, `*_tests.rs` +6, `agent/control/spawn.rs` +2 / -2, `control_tests.rs` +1, `rollout_reconstruction.rs` +3, `*_tests.rs` +27, `session/tests.rs` +2, `extension-api/src/lib.rs` +1, `sessions/append.rs` +3 / -2, `append_tests.rs` +9, `history/src/lib.rs` +3, `rollout_payload.rs` +10, `tests.rs` +5 / -1, `memories/write/src/phase1.rs` +6, `app-server-exports-stable.json.zst` (bin 갱신). **net +60 LOC** (bin 제외).
+
+**핵심 excerpt** (`history/src/lib.rs`):
+
+```rust
+pub enum RolloutItem {
+    Compacted(CompactedItem),
+    TurnContext(TurnContextItem),
+    WorldState(WorldStateItem),
+    SecurityRiskScore(SecurityRiskScore),  // ← 신규
+    EventMsg(EventMsg),
+}
+```
+
+**우리 영향** (§5.10 session persistence, §16 의 (c) 인접): 우리 `state.json` 의 v0 schema 에 score 같은 **숨김 필드** 가 없다. v1 에서 meta-classifier 도입 시 `state.json` schema versioning + "model_context_visible: false" 같은 플래그 필요. D-112 의 Read auto-truncation / has_more 와 같은 "관찰 가능하지만 노출 제어" 라인.
+
+### 15.9 [#38362] Stabilize exec-server byte-budget tests
+
+**Why**: byte-budget 테스트가 timer-driven race 로 flaky. 30초 timeout 도 부족.
+
+**What changed**: (a) HTTP 응답을 body delta 큐잉 **전에** 보냄 (순서 고정). (b) 두 byte-budget 테스트 모두 barrier request timeout 을 **30초** 로 명시적 설정. 다른 operation 은 default 유지.
+
+**Diff scale**: `exec-server/tests/http_client.rs` **+13 / -11**. 작은 안정화.
+
+**우리 영향**: 우리 v0 에 exec-server 같은 RPC daemon 없음. 결정 보류. **관찰만**.
+
+### 15.10 [#38361] Test hook rejection for explicitly started queue items
+
+**Why**: prompt hook 이 reject 한 queued item 을 *automatic dispatch* 경로에서 consume 하는 것은 검증됐지만, **`start()` API 로 명시 시작** 한 경우는 검증 안 됨. 회귀 위험.
+
+**What changed**: `explicitly_started_rejected_queue_messages_are_consumed` 테스트 신규 — explicit start 후 hook reject → model request 없이 consumed. 자동 dispatch 테스트는 후속 input 진행 검증에 집중하도록 정리.
+
+**Diff scale**: `ext/queue/tests/queue_service.rs` **+24 / -6**.
+
+**핵심 excerpt** (`queue_service.rs`):
+
+```rust
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn explicitly_started_rejected_queue_messages_are_consumed() -> anyhow::Result<()> {
+    let server = start_mock_server().await;
+    let responses = responses::mount_sse_once(&server, responses::sse_completed("unexpected-turn")).await;
+    let test = test_codex()
+        .with_pre_build_hook(write_rejecting_prompt_hook)
+        .with_config(trust_discovered_hooks)
+        .with_config(|config| config.include_environment_context = false)
+        .build_with_auto_env(&server)
+        .await?;
+    // ... enqueue + start(timeout) 후 hook reject → consumed, model no request ...
+    assert_eq!(2, responses.requests().len());  // 초기 1 + 후속 1, rejected 는 안 보냄
+    Ok(())
+}
+```
+
+**우리 영향** (§5.14 hook system, §16 의 (c)): 우리 v0 의 hook 시스템은 0-단계. v1 hook engine 도입 시 *explicit start* 와 *automatic dispatch* 의 hook reject 동작을 분리 검증해야 한다는 원칙 차용.
+
+### 15.11 [#38358] Optimize orphan output normalization
+
+**Why**: `context_manager::normalize.rs` 가 orphan output 위치를 찾을 때 `call_id` 를 매번 clone + 두 개의 set 으로 분리 — 단일 패스로 줄이고, orphan 이 없으면 compact 자체를 skip.
+
+**What changed**: (a) borrow 단일 패스, (b) orphan 없을 때 history compact skip (기존 matching / error 동작 보존).
+
+**Diff scale**: `core/src/context_manager/normalize.rs` **+52 / -56** (-4).
+
+**핵심 excerpt** (개념 — borrow 단일 패스):
+
+```rust
+// 기존: call_ids = HashSet::new(); orphans = HashSet::new();
+//       for item in items { call_ids.insert(item.call_id()); if is_orphan { orphans.insert(item.call_id()); } }
+// 신규: 1 패스로 call_id 분류, orphan 없을 때 compact skip
+```
+
+**우리 영향** (§5.10 LoopRunner): 우리 `agent.rs::dispatch_tool_call` 의 결과 normalize 에서 같은 패턴 (clone 줄이기, skip-if-empty). **마이너 차용** — D-100/D-101 의 text-based dispatch 결과 처리에 적용 가능. 결정 보류.
+
+### 15.12 [#38356] Support sandboxed file streaming in exec-server
+
+**Why**: streaming read 가 platform filesystem sandbox 사용 시 reject 됨 — sandbox helper 가 `fs/open` 을 안 노출.
+
+**What changed**: `fs/open` RPC 신규 — sandbox helper 가 파일을 열고 (a) **Unix 는 fd 직접 전달**, (b) **Windows 는 handle dup**. `sandboxedFileStreaming` environment capability 로 광고. close-on-exec 보존 + macOS inherited-descriptor cleanup.
+
+**Diff scale**: `Cargo.lock` +1, `Cargo.toml` +1, `core/src/spawn.rs` +8, `exec-server-protocol/src/protocol.rs` +6, `exec-server/Cargo.toml` +2, `exec-server/src/fs_helper.rs` +14 / -8, `exec-server/src/fs_helper_main.rs` **+48 / -8**. **net +62 LOC**.
+
+**핵심 excerpt** (`exec-server-protocol/src/protocol.rs`):
+
+```rust
+pub struct EnvironmentCapabilities {
+    #[serde(default)] pub environment_config_read: bool,
+    #[serde(default)] pub sandboxed_file_streaming: bool,  // ← 신규
+}
+
+impl EnvironmentInfo {
+    pub fn platform_defaults() -> Self {
+        Self {
+            capabilities: EnvironmentCapabilities {
+                network_proxy_launch: true,
+                capability_discovery_sandbox: true,
+                environment_config_read: true,
+                sandboxed_file_streaming: true,  // ← 신규
+            },
+            ...
+        }
+    }
+}
+```
+
+**우리 영향** (§5.10 Bash tool sanitize, §16 의 (f)): 우리 v0 Bash tool 은 subprocess.exec 만 — file streaming 없음. v1 에서 Read tool 의 `large_file_chunked` (D-112) + sandboxed streaming 결합 시 동일 RPC 디자인 차용 가능. 지금은 **관찰**.
+
+### 15.13 [#38336] Add Guardian V2 extension scaffold (`codex-guardian-v2` crate)
+
+**Why**: Guardian V2 를 host (core) 와 분리 — extension 으로 pluggable. 1차 PR 은 scaffold 만, contributor 미등록.
+
+**What changed**: `codex-rs/ext/guardian-v2/Cargo.toml` (17 lines) + `src/lib.rs` (4 lines) 신규 — `install<C: Sync>(_registry: &mut ExtensionRegistryBuilder<C>) {}` empty stub. Cargo workspace + Bazel target 등록.
+
+**Diff scale**: `Cargo.lock` +7, `Cargo.toml` +1, `ext/guardian-v2/BUILD.bazel` +6, `ext/guardian-v2/Cargo.toml` +17, `ext/guardian-v2/src/lib.rs` +4. **net +35 LOC** (대부분 manifest).
+
+**핵심 excerpt** (`ext/guardian-v2/src/lib.rs`):
+
+```rust
+use codex_extension_api::ExtensionRegistryBuilder;
+
+/// Installs the Guardian V2 extension without registering contributors yet.
+pub fn install<C: Sync>(_registry: &mut ExtensionRegistryBuilder<C>) {}
+```
+
+**우리 영향** (§5.14 extension system, §16 의 (b)): 우리 v0 의 sub-agent system 은 hardcoded. v1 extension API 도입 시 *scaffold 먼저 / contributor 나중* 의 점진 패턴 차용. 우리 `crates/context/` 의 permission gate 가 v1 extension 으로 분리될 가능성. **결정 보류** 항목과 연결.
+
+### 15.14 [#38321] Make gRPC code-mode yield tests deterministic
+
+**Why**: yield-limit test 가 timer scheduling 에 의존 — flaky. cell 종료 후에도 session 이 yield limit 를 enforce 하는지 검증이 race 함.
+
+**What changed**: (a) `sessions_enforce_independent_yield_limits` 테스트가 **never-resolving Promise** 사용 — yield 가 유지되어야 응답 가능. (b) `yield_control()` 로 yielded cell 생성 (timer 의존 제거).
+
+**Diff scale**: `code-mode-host/tests/grpc.rs` +5 / -2, `grpc_notifications.rs` +1 / -4. **net 0 LOC**.
+
+**핵심 excerpt** (`grpc.rs`):
+
+```rust
+assert_eq!(
+    execute(&limited, request("await new Promise(() => {});")).await?,
+    RuntimeResponse::Yielded {
+        cell_id: cell_id("2"),
+        content_items: Vec::new(),
+    }
+);
+```
+
+**우리 영향** (§5.10 TUI interrupt/recovery, §16 의 (d)): 우리 v0 의 interrupted-turn recovery 없음. v1 에서 cell-style compute (예: sandboxed JS eval) 도입 시 동일 *never-resolving* 테스트 패턴 차용. 지금은 **관찰**.
+
+### 15.15 [#38306] Protect inline visualization viewers from sandbox writes
+
+**Why**: inline visualization (예: mermaid → SVG) viewer 문서가 sandboxed session 이 write 가능한 위치에 있으면, session 이 viewer 를 변조 후 browser 에 띄울 수 있음 — XSS 표면.
+
+**What changed**: (a) viewer 문서를 `CODEX_HOME` 아래 **별도 cache** 에 materialize (source + artifact thread ID 로 key). (b) **active filesystem policy 가 viewer cache 에 write 가능하면 link 생성 안 함** — full-disk-write session 도 link 비활성. (c) symlink 포함 경로 reject. (d) in-memory tracking 으로 unchanged viewer 는 file content 신뢰 없이 reuse.
+
+**Diff scale**: `tui/src/app/history_pagination.rs` +2 / -2, `app/tests/session_lifecycle_requests.rs` +7 / -7, `tui/src/app/transcript_export.rs` +4 / -4, `tui/src/app_server_session/history.rs` +1 / -1, 추가 test 파일들. **net ~0 LOC** (정책 변경).
+
+**우리 영향** (§5.10 TUI viz, §16 인접): 우리 v0 의 visualization 미지원. v1 markdown viewer / HTML preview 도입 시 *별도 cache + write-policy check* 가 SSOT. 지금은 **관찰**.
+
+### 15.16 [#38394] (참고) Reject sessions with unloadable required managed hooks
+
+**Why**: hooks 가 managed requirement 면 load 실패 시 session 자체 거부 (warning X). 잘못된 matcher / 빈 command / 미지원 handler type 3가지 reject.
+
+**What changed**: hook engine + session startup + app-server thread startup 3곳에 검증. hooks feature disabled 면 requirement enforce 안 함. ordinary managed config hook 의 load 실패는 warning 유지.
+
+**Diff scale**: `app-server/tests/suite/v2/thread_start.rs` +81, `core/src/session/session.rs` +1 / -1, `core/src/session/tests.rs` +7 / -2, `core/tests/suite/hooks.rs` +32, `hooks/src/engine/command_runner_tests.rs` +1, `hooks/src/engine/discovery.rs` **+78 / -28**, `hooks/src/engine/mod.rs` +7, `hooks/src/engine/mod_tests.rs` **+228 (신규)**, `hooks/src/registry.rs` +10 / -4. **net +447 LOC**.
+
+**우리 영향** (§5.4 permission mode, §5.14 hook system): 우리 v0 의 hook 0-단계와 직접 비교 가치. 결정적 원칙 = "managed 가 *requirement* 면 load 실패 시 *거부*" — 우리 v1 결정 시 hard fail / soft warn 분리 기준 차용.
+
+---
+
+## §16 Codex v2 영향 분석 — my_harness 결정 매핑
+
+**목적**: §15 의 15 PR 을 **우리 CONCEPT.md §5 의 아키텍처 결정 6 영역** 에 매핑하고, "지금 결정해야 하는가 / 관찰만 / 결정 보류" 를 명시한다. 각 영향 항목은 (a) 어떤 PR 이 근거인지, (b) 우리 현재 상태 (v0), (c) 권장 v1 결정 / 옵션, (d) 결정 ID 후보 와 우선순위를 정리한다.
+
+**6 영향 영역** (D-129 의 §16 본문):
+
+| ID | 영역 | 관련 PR | 우선순위 |
+|---|---|---|---|
+| (a) | §5.5 LLM client architecture — in-process event queue unbounded | #38381 | **P1** (v1 결정) |
+| (b) | §5.4 permission mode — effective permission / Guardian V2 scaffold | #38390, #38377, #38336, #38394 | **P0** (v0 회귀 위험) |
+| (c) | §5.14 skill system — placeholder reject + minimal scaffold | #38384, #38361, #38363 | P1 (v1 결정) |
+| (d) | §5.10 LoopRunner — interrupted turn recovery + yield-limit test | #38321 | P2 (v1.5+) |
+| (e) | §5.5 reasoning model — Luna sampler + strict JSON schema | #38383, #38368 | P2 (v1.5+) |
+| (f) | §5.10 Bash tool sanitize — sandboxed streaming + URL wrap | #38356, #38380 | P2 (v1+) |
+
+### 16.1 (a) §5.5 LLM client architecture — in-process event queue unbounded
+
+**근거 PR**: [#38381](#154-38381-prevent-unread-events-from-blocking-in-process-requests) — `app-server-client/src/lib.rs` +97 / -344.
+
+**우리 v0 상태**: `my_harness/crates/llm/` 의 `CompletionRequest` / `CompletionResponse` (D-108) 는 단순 request/response. notification channel 없음. tool_calls 도 `Vec<ToolCall>` 로 inline.
+
+**권장 v1 결정**:
+- (옵션 X) LoopRunner 의 event queue = unbounded (`tokio::sync::mpsc::unbounded_channel`) — caller 가 notification drain 안 해도 응답 가능.
+- (옵션 Y) tool result / progress notification 을 **drop OK** 한 category 와 **순서 보존 필수** category 로 분리. 필수만 bounded, 나머지 unbounded.
+- 결정 보류 이유: 우리 LoopRunner 가 아직 sub-agent notification 패턴 없음 (TASK-005 D-36 의 sub-agent 위임 미구현). **결정 보류** — sub-agent 도입 시점에 재방문.
+
+**연결**: §5.5 LLM client architecture (CONCEPT.md) + D-108 (`CompletionResponse::tool_calls`) 의 event channel 방향.
+
+### 16.2 (b) §5.4 permission mode — effective permission / Guardian V2 scaffold
+
+**근거 PR**: [#38390](#151-38390-effective-permissions-when-trusting-app-server-projects) + [#38377](#156-38377-constrain-guardian-reviews-to-parent-filesystem-permissions) + [#38336](#1513-38336-add-guardian-v2-extension-scaffold) + [#38394](#1516-38394-reject-sessions-with-unloadable-required-managed-hooks) (참고).
+
+**우리 v0 상태**: `my_harness/crates/cli/src/main.rs` 의 `--mode=orchestrator` 진입 시 cwd 의 신뢰 = 항상 trust (TUI 진입 가정). requested vs effective 분리 없음. managed config / Guardian V2 같은 격리 검토자 없음.
+
+**권장 v1 결정**:
+- (옵션 α) **effective permission 우선** — requested 와 effective 가 다르면 effective 사용. project-local config trust 판정도 effective 기반. PR #38390 의 핵심 패턴 그대로.
+- (옵션 β) **Guardian V2 style sub-reviewer** — `parent_fs ∩ read_only` 권한으로 격리 검토자 spawn. 우리 sub-agent 격리의 SSOT.
+- (옵션 γ) **extension scaffold 먼저** — `crates/context/permissions/` 를 extension API 로 분리 (PR #38336 의 점진 패턴).
+- **P0 우선순위**: 옵션 α — v0 회귀 위험 (project trust 가 requested 만 보면 local config 가 silently 권한 얻음). 옵션 β/γ 는 v1 결정.
+
+**결정 후보**: D-130 (TASK-005 follow-up, effective permission 우선). 누적 결정 75 → **76** 가능성. yklee 결정 대기.
+
+**연결**: §5.4 permission mode (CONCEPT.md) + D-29 (3-모드: orchestrator/single/loop) + §5.14 extension system.
+
+### 16.3 (c) §5.14 skill system — placeholder reject + minimal scaffold
+
+**근거 PR**: [#38384](#152-38384-refine-skill-creation-guidance-and-validation) + [#38361](#1510-38361-test-hook-rejection-for-explicitly-started-queue-items) + [#38363](#158-38363-persist-security-risk-scores-in-rollout-history) (인접).
+
+**우리 v0 상태**: `~/.MiniMax/skills/` 또는 향후 `my_harness/crates/context/skills/` 미구현. skill validator / creator 0-단계.
+
+**권장 v1 결정**:
+- (옵션 A) **minimal scaffold 원칙** — skill 은 처음에 placeholder + 필수 frontmatter (name, description) 만. PR #38384 의 `quick_validate.py` 패턴 차용.
+- (옵션 B) **placeholder reject validator** — `[TODO: ...]` 가 fenced block 외부에 있으면 reject. exit code = 위반 건수.
+- (옵션 C) **explicit vs auto hook dispatch 분리 검증** — PR #38361 의 *explicit start* 와 *auto dispatch* 의 hook reject 분리. 우리 hook engine 도입 시 동일 분리.
+- (옵션 D) **숨김 rollout item** — `state.json` 에 score 같은 meta-classifier 결과 저장하되 model context 에는 노출 안 함. PR #38363 의 `SecurityRiskScore` 패턴.
+- **P1 우선순위**: 옵션 A+B — skill 1차 cycle 시 validator 와 함께 도입. 옵션 C+D 는 후속.
+
+**결정 후보**: D-131 (TASK-005 follow-up, skill system v1). 누적 결정 76 → **77** 가능성. yklee 결정 대기.
+
+**연결**: §5.14 skill system (CONCEPT.md) + D-29 (3-모드) + D-100 (A-min tool dispatch 의 dispatch loop 의 skill invocation).
+
+### 16.4 (d) §5.10 LoopRunner — interrupted turn recovery
+
+**근거 PR**: [#38321](#1514-38321-make-grpc-code-mode-yield-tests-deterministic) — `code-mode-host/tests/grpc.rs` 의 never-resolving Promise 패턴.
+
+**우리 v0 상태**: LoopRunner 의 interrupted-turn (Ctrl-C / EOF / timeout) 시 in-flight LLM call / tool result 의 처리 = 단순 abort. recovery / resume 메커니즘 없음.
+
+**권장 v1 결정**:
+- (옵션 P) **never-resolving 패턴 테스트** — interrupted turn 후 다음 turn 의 context 가 stale 하지 않은지 검증. PR #38321 의 테스트 원칙.
+- (옵션 Q) **session resume via rollout** — `state.json` 의 마지막 good state + partial in-flight 표시. PR #38363 의 rollout item 모델 차용.
+- **P2 우선순위**: 옵션 P/Q — v1.5+ 결정. v0 는 단순 abort 유지.
+
+**결정 후보**: D-132 (v1.5+, LoopRunner interrupt recovery). 누적 결정 결정 보류.
+
+**연결**: §5.10 LoopRunner (CONCEPT.md) + D-100/D-101 (A-min text-based tool dispatch 의 결과 처리).
+
+### 16.5 (e) §5.5 reasoning model — Luna sampler + strict JSON schema
+
+**근거 PR**: [#38383](#153-38383-return-luna-samples-when-streamed-json-completes) + [#38368](#157-38368-add-the-guardian-v2-luna-sampler).
+
+**우리 v0 상태**: MiniMax LLM client 1종. 분류 전용 모델 / meta-classifier 없음. reasoning effort 변수 없음.
+
+**권장 v1 결정**:
+- (옵션 M) **reasoning effort enum** — `CompletionRequest::reasoning_effort: Option<ReasoningEffort>`. PR #38368 의 `LunaSamplingRequest::reasoning_effort` 패턴.
+- (옵션 N) **strict JSON schema 응답** — 분류 task 에 `output_schema: serde_json::Value` 강제. PR #38368 의 `LunaSamplingRequest::output_schema` + PR #38383 의 `MAX_OUTPUT_BYTES` (8 KB) 한도.
+- (옵션 O) **WebSocket-reuse sampler** — 동일 provider 의 분류 요청을 단일 WebSocket 으로 multiplex. PR #38368 의 `LunaSampler` 패턴. 우리 v0 의 MiniMax Responses API 가 WebSocket 지원 여부 미확인 → 결정 보류.
+- **P2 우선순위**: 옵션 M+N — v1.5+ 결정 (meta-classifier / risk score 도입 시).
+
+**결정 후보**: D-133 (v1.5+, reasoning model sampler). 누적 결정 결정 보류.
+
+**연결**: §5.5 LLM client architecture (CONCEPT.md) + D-108 (`CompletionResponse::tool_calls`) + D-122 (Anthropic wire format).
+
+### 16.6 (f) §5.10 Bash tool sanitize — sandboxed streaming + URL wrap
+
+**근거 PR**: [#38356](#1512-38356-support-sandboxed-file-streaming-in-exec-server) + [#38380](#155-38380-preserve-user-message-styling-when-wrapping-long-urls).
+
+**우리 v0 상태**: `my_harness/crates/tools/` 의 Bash tool = `std::process::Command` 직접 (D-100 의 A-min text-based dispatch). sandbox 없음 (Landlock/Seatbelt 미도입). Read tool 의 large file = D-112 의 1MB cap + chunked Read. TUI 의 URL wrap = 단순 print.
+
+**권장 v1 결정**:
+- (옵션 U) **sandboxed file streaming RPC** — Read tool 의 chunked Read 가 sandboxed 환경에서도 작동하도록 `fs/open` RPC + fd 전달. PR #38356 의 `fs/open` 패턴.
+- (옵션 V) **URL wrap helper + OSC 8** — ratatui 의 user message render 에서 long URL wrap 시 hyperlink 보존 + gutter/background 유지. PR #38380 의 `insert_history.rs` 패턴.
+- (옵션 W) **sandbox backend 선택** — Landlock (Linux) / Seatbelt (macOS) / Job Object (Windows) 중 v1 우선순위. 우리 v0 는 sandbox 0-단계라 결정 보류.
+- **P2 우선순위**: 옵션 V — TUI 결정 시 함께. 옵션 U/W 는 v1+ 결정.
+
+**결정 후보**: D-134 (v1+, sandboxed streaming + URL wrap). 누적 결정 결정 보류.
+
+**연결**: §5.10 Bash tool sanitize (CONCEPT.md) + D-29 (3-모드) + D-112 (Read auto-truncation).
+
+### 16.7 결정 매트릭스 요약
+
+| 영역 | v0 상태 | v1 권장 결정 | 결정 ID 후보 | 우선순위 |
+|---|---|---|---|---|
+| (a) LLM event queue | unbounded 미정 | unbounded + category 분리 | 결정 보류 (sub-agent 도입 시) | P1 |
+| (b) Permission mode | requested-only | **effective 우선** | **D-130** | **P0** |
+| (c) Skill system | 0-단계 | minimal scaffold + validator | D-131 | P1 |
+| (d) LoopRunner interrupt | 단순 abort | resume via rollout | D-132 | P2 |
+| (e) Reasoning model | 1-모델 | strict schema + effort enum | D-133 | P2 |
+| (f) Bash tool sanitize | sandbox 0-단계 | URL wrap helper + sandboxed streaming | D-134 | P2 |
+
+**P0 (b) 만 즉시 결정 권장** — 우리 v0 의 project trust 판정이 requested-only 라 local config 가 silently 권한 얻을 수 있는 회귀 위험. PR #38390 의 *effective permission* 패턴을 D-130 으로 확정하면 §5.4 permission mode 의 v1 결정이 한 단계 명확해진다.
+
+나머지 (a)/(c)/(d)/(e)/(f) 는 TASK-005 v1+ / v1.5+ 결정 보류 — 결정 ID 후보만 제시하고 yklee 결정 대기.
+
+### 16.8 v1 결정 보류 누적 (D-129 의 §16 부록)
+
+CONCEPT.md §11 의 결정 보류 항목 (TASK-002/005/006/007/008) + 본 §16 의 신규 항목 합산:
+
+- **TASK-002** (TUI 라이브러리) — 결정 보류
+- **TASK-005** (CLI/TUI 전환) — 결정 보류, §16 (a)/(b)/(c)/(f) 와 연결
+- **TASK-006** (TUI = ratatui) — D-36 로 결정 (TASK-005 Rust 정합 자동 확정), §16 (f) 의 URL wrap 과 연결
+- **TASK-007** (Permission mode) — 결정 보류, §16 (b) 가 핵심 입력
+- **TASK-008** (Extension API) — 결정 보류, §16 (b)/(c) 의 scaffold / skill 과 연결
+- **D-130 (신규)** — effective permission 우선. §16 (b). P0.
+- **D-131 (신규)** — skill system v1 (minimal + validator). §16 (c). P1.
+- **D-132 (신규)** — LoopRunner interrupt recovery. §16 (d). P2.
+- **D-133 (신규)** — reasoning model sampler. §16 (e). P2.
+- **D-134 (신규)** — Bash tool sandboxed streaming + URL wrap. §16 (f). P2.
+
+**누적 결정 카운트**: D-129 까지 = **75** (D-128 + D-129 의 §15/§16 본 작성). 본 §16 의 신규 결정 ID 후보 (D-130~D-134) 는 yklee 확정 시 **76 → 80** 으로 증가.
