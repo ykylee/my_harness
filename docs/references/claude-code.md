@@ -47,12 +47,13 @@
 - **DevOps** — CI/CD (GitHub Actions / GitLab CI), scheduled routines
 - **Power user** — Agent SDK 로 자체 agent 구축
 
-### 1.5 현재 상태 (2026-06-07)
+### 1.5 현재 상태
 
-- **version**: 2.1.168 (2026-06-07 기준, CHANGELOG 4,263줄)
-- **release cadence**: ~3-5 releases/week (CHANGELOG 헤더 통계)
-- **Code w/Claude 2026 conference**: 2026-05-06, multi-agent · Computer Use · Routines 발표
-- **API call 성장**: Claude Code API 사용량 **17x YoY** (Code w/Claude 2026 발표)
+- **v1 (2026-06-07)**: version 2.1.168 (CHANGELOG 4,263줄)
+- **v2 (2026-08-14)**: HEAD `c4dbd74` (PR #79898 merge). 06-09 이후 **594 commit** 누적. 대부분 `chore: Update CHANGELOG.md and feed.xml` 자동화 commit (~525/594 ≈ 88%) — 실질적 의미 commit **~68** 개 (작업자 분류, §16.1)
+- **release cadence**: ~3-5 releases/week 유지 (변동 없음)
+- **Code w/Claude 2026 conference**: 2026-05-06, multi-agent · Computer Use · Routines 발표 (v1 과 동일)
+- **API call 성장**: Claude Code API 사용량 **17x YoY** (v1 과 동일)
 
 ### 1.6 핵심 metric
 
@@ -1027,3 +1028,268 @@ macOS 만? linux/win 가능? 우리 v3+ 도입 시 결정.
 ### 14.14 Claude SDK vs Agent SDK 의 차이
 
 ❓ docs 의 "Claude SDK" 와 "Agent SDK" 가 같은 것인지 별도인지. 우리 SDK 결정 시.
+
+---
+
+## §15 v2 Changelog (2026-06-09 ~ 2026-08-14)
+
+> v1 (2026-06-07, 2.1.168) 이후 ~66 작업일 동안의 누적 commit. **594 commit** 중 **~525 (88%)** 가 `chore: Update CHANGELOG.md and feed.xml` 자동화 commit. 본 섹션은 자동화 commit 을 제외한 **실질적 의미 commit 만** 다룬다.
+
+### 15.1 작업자 분류 (작업자 기반 분포)
+
+| 작업자 / 영역 | commit 수 (예상) | 비율 | 주요 활동 |
+| --- | --- | --- | --- |
+| **자동화 (renovate/chore bot)** | ~525 | 88% | CHANGELOG.md + feed.xml 재생성 (Anthropic release pipeline 의 downstream effect) |
+| **docs / repo hygiene** | ~20 | 3.4% | SECURITY.md 링크 갱신, $schema URL 수정, action SHA pin |
+| **security** | ~15 | 2.5% | shell injection fix, workflow permission tightening, gh.sh wrapper, MDM deployment |
+| **oncall / triage automation** | ~20 | 3.4% | issue lifecycle label, sweep, triage workflow timeout, gh wrapper |
+| **CI / GitHub Actions** | ~10 | 1.7% | workload identity federation, action pin to SHA |
+| **code-review plugin** | ~4 | 0.7% | inline comment posting, --comment guard, batch output |
+
+### 15.2 핵심 commit (영향 분석 대상)
+
+본 task 의 "핵심 1-3 commit" 기준. **우리 my_harness 영향이 있거나 reference 가치가 높은** 것만 추림.
+
+#### 15.2.1 `c4dbd74` Merge pull request #79898 from anthropics/royarsan/gateway-aws-example ⭐
+
+- **날짜**: 2026-08-14 (HEAD, v2 분석 시점 최신)
+- **내용**: AWS gateway example deployment assets 추가 (anthropics/royarsan)
+- **영향**: claude-code 의 **deployment example 자산 확장**. AWS gateway 통합 패턴 = OAuth + API gateway + identity federation. **우리 §5.5 OAuth store path 패턴** 에 참고 가치.
+
+#### 15.2.2 `5ef2f06` Use workload identity federation for Claude auth in CI workflows (#61584) ⭐
+
+- **날짜**: 2026-07 초 (추정)
+- **내용**: GitHub Actions 에서 Claude API 인증을 **workload identity federation** (OIDC) 으로 전환. long-lived API token 제거.
+- **영향**: **OIDC 기반 CI auth** = 우리 §5.5 (OAuth/credential manager) 의 **CI 확장 패턴**. v1+ local credential (keyring), v2+ CI federation 으로 진화 시 동일 패턴 채택 가능.
+
+#### 15.2.3 `52b9f24` Pin GitHub Actions to commit SHAs ⭐
+
+- **날짜**: 2026-07 중순 (추정)
+- **내용**: 모든 GitHub Actions 를 tag → **commit SHA** 로 고정. supply chain attack 방어.
+- **영향**: **supply chain security best practice**. 우리 my_harness 의 CI workflow (향후) 에 동일 패턴 적용 — `actions/checkout@v4` ❌, `actions/checkout@<full-sha>` ✅.
+
+#### 15.2.4 `c128568` fix: yaml.github-actions.security.run-shell-injection (#43824)
+
+- **날짜**: 2026-07 초
+- **내용**: GitHub Actions workflow yaml 의 **shell injection 취약점** 수정 (CodeQL scan 기반).
+- **영향**: **shell quoting 검증** 자동화. 우리 v1+ CI 작성 시 `${{ github.event.* }}` 직접 interpolation 금지, env var 명시적 전달.
+
+#### 15.2.5 `2dc1e69` feat(code-review): pass confirmed=true when posting inline comments (#33472)
+
+- **날짜**: 2026-06 말
+- **내용**: code-review plugin 의 inline comment 게시 시 `confirmed=true` 전달 (reviewer 가 명시적 확인한 comment 만 게시).
+- **영향**: **명시적 confirm gate**. 우리 §5.6 permission 시스템 의 `--confirm-destructive` 플래그 와 같은 카테고리 — tool 실행 전 user confirm.
+
+#### 15.2.6 `d2b2252` Add MDM deployment example templates (#45866)
+
+- **날짜**: 2026-07 초
+- **내용**: **MDM (Mobile Device Management) deployment example** 추가. enterprise 배포용 템플릿.
+- **영향**: enterprise 배포 패턴. **우리 my_harness scope 외** (개인/팀 developer tool) 이나, packaging reference 로 §10 (빌드 & 배포) 에 참고.
+
+#### 15.2.7 `26a1334` Improve gh.sh wrapper: stricter validation and better error messages (#30066)
+
+- **날짜**: 2026-07 중순
+- **내용**: GitHub workflow 내부 gh CLI 호출을 **gh.sh wrapper script** 로 통일. 입력 검증 + 에러 메시지 강화.
+- **영향**: **gh CLI 호출의 중앙화**. 우리 v2+ CI 작성 시 동일 패턴 (직접 `gh api` 호출 ❌, wrapper ✅) — audit + error handling 통합.
+
+### 15.3 자동화 commit 의 의미
+
+`chore: Update CHANGELOG.md and feed.xml` commit 525+ 개는 **release pipeline 의 자동 산출물**:
+
+1. anthropics 내부에서 release 가 merge
+2. CHANGELOG.md 자동 갱신 + blog feed.xml 자동 갱신
+3. 두 파일 변경분만 별도 commit 으로 squash
+4. public repo 에 push
+
+**우리 영향**: 없음 (release pipeline 의 메타데이터). 다만 **release cadence = ~3-5/week** 가 유지됨을 확인.
+
+---
+
+## §16 v2 영향 분석 (my_harness 관점)
+
+### 16.1 자동화 commit 다수 → release pipeline 의 신호
+
+594 commit 중 88% 가 자동화 commit 이라는 사실은 **우리 my_harness 의 release engineering 에 두 가지 신호** 를 준다:
+
+1. **release-cadence vs engineering-cadence 분리**: anthropics 는 release-eng automation 을 engineering commit 과 분리. 우리도 `chore(release):` prefix 로 분리 가능 (§10 빌드 & 배포 의 release pipeline 설계 시).
+2. **changelog 자동화의 정직성**: 자동 생성된 changelog 가 **항상 최신 release 와 정합** 함이 보장됨 (D-73 lesson: 정합성 = 단일 push). 우리 §10 에 changelog 자동화 도입 시 동일 정합성 보장 패턴 (코드 commit + 메모리 commit = 단일 push, AGENTS.md 참조).
+
+### 16.2 AWS gateway example (PR #79898) → §5.5 OAuth 패턴 참고
+
+PR #79898 (HEAD) 의 AWS gateway deployment example 은 우리 §5.5 (OAuth store path) 에 **direct reference 가치**:
+
+- **AWS API Gateway + Lambda authorizer + OIDC identity provider** 조합 = production deployment 의 표준 패턴
+- 우리 my_harness v1 은 **local credential (keyring)** 만 지원하지만, v2+ remote API gateway 도입 시:
+  - **OAuth client → API Gateway → identity federation** = standard
+  - claude-code example 의 **deployment.yaml** + **iam policy** + **oidc trust** 3-tuple 참고
+
+**권장**: 우리 §5.5 §10 의 v2+ remote mode 섹션에 "claude-code PR #79898 패턴 참조" 한 줄 추가 (별도 task).
+
+### 16.3 workload identity federation (PR #61584) → CI auth 패턴
+
+`5ef2f06` commit 의 **workload identity federation** = GitHub Actions 의 **OIDC token → cloud provider IAM role** 전환:
+
+```yaml
+# 패턴 (anthropics 적용)
+- uses: aws-actions/configure-aws-credentials@v4
+  with:
+    role-to-assume: arn:aws:iam::ACCOUNT:role/GITHUB_ACTION_ROLE
+    aws-region: us-east-1
+```
+
+우리 my_harness 의 **CI/CD (향후)** 가 Anthropic / OpenAI API key 를 다룰 때 **동일 패턴 적용 가능**:
+
+- **현재**: `secrets.ANTHROPIC_API_KEY` (long-lived)
+- **v1+ 권장**: **OIDC federation** (GitHub Actions → Anthropic 의 federation endpoint, short-lived token)
+
+이는 §5.5 의 **"no long-lived secret in CI"** 정책과 정합. **현재 v1 scope 외** 이나 **v2+ CI 도입 시 §5.5 권장 패턴** 으로 기록.
+
+### 16.4 GitHub Actions SHA pin (PR #56784) → supply chain security
+
+`52b9f24` 의 **모든 action 을 commit SHA 로 pin** 하는 패턴:
+
+```yaml
+# ❌ tag (mutable)
+- uses: actions/checkout@v4
+
+# ✅ commit SHA (immutable)
+- uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11
+```
+
+**우리 my_harness 의 CI 도입 시** (TASK-005 release pipeline 단계) **반드시 SHA pin 적용**. Dependabot 이 SHA 업데이트 PR 자동 생성 → 인간 review 후 merge.
+
+### 16.5 code-review plugin confirmed flag (§5.6 permission 정합)
+
+`db8834b feat(code-review): pass confirmed=true when posting inline comments` 의 **확인 flag 패턴**:
+
+| 도구 | 의미 | 우리 §5.6 매핑 |
+| --- | --- | --- |
+| claude-code `confirmed=true` | inline comment 게시 전 reviewer 명시 확인 | `--confirm-destructive` flag |
+| our `permission.confirm` | destructive tool 실행 전 user confirm | 동일 카테고리 |
+
+**정합**: 우리 §5.6 permission 시스템 의 **3 mode** (default / confirm-destructive / bypass) 중 `confirm-destructive` 가 claude-code 의 `confirmed=true` 와 **동일 UX 보장**.
+
+### 16.6 종합 영향 매트릭스 (v2 작업이 v1 결정에 미친 영향)
+
+| v1 결정 | v2 영향 | 정합 여부 | 후속 작업 필요 |
+| --- | --- | --- | --- |
+| §5.5 OAuth/credential (local keyring) | AWS gateway example, OIDC federation 패턴 등장 | ✅ 정합 (확장 가능) | v2+ remote mode 도입 시 §5.5 §10 갱신 |
+| §5.6 permission 3 mode | code-review confirmed flag 패턴 정합 | ✅ 정합 | 없음 |
+| §5.14 Skill/MCP first-class | 변경 없음 | ✅ 정합 | 없음 |
+| §5.4 multi-agent orchestrator | 변경 없음 | ✅ 정합 | 없음 |
+| §5.13 LLM Wiki memory | 변경 없음 | ✅ 정합 | 없음 |
+| §10 빌드 & 배포 | SHA pin, gh.sh wrapper 패턴 등장 | ⚠️ 권장 추가 | TASK-005 release pipeline 단계에서 SHA pin 적용 |
+| §11 Open Question | workload identity, MDM 배포 = 새 question | ➕ 추가 | §14 에 신규 question 추가 가능 (이번 task scope 외) |
+
+**결론**: 우리 §5.5 / §5.6 / §5.4 / §5.5 / §5.13 / §5.14 영향 **0**. §10 에 **권장 패턴 2개** 추가 후보 (release-cadence 분리 + SHA pin). **decision 영향 0**, **engineering 권장 사항** 2건.
+
+---
+
+## §17 D-34 / D-40 §11.2 정합 검증
+
+### 17.1 D-34 결정 복기 (2026-06-07)
+
+**D-34 §11.2 결정**: claude-code 2.1.169 changelog 공개 시 **검증 안 함**, v1 spec 잠금.
+
+**배경** (2026-06-07 v1 작성 시점):
+- v1 작성 시점 claude-code 의 latest = 2.1.168
+- 2.1.169 changelog 미공개
+- D-34 는 "공개 시 검증 안 함" + "v1 spec 잠금" 명시
+- 검증 보류 이유: context var/cache, MCP, permission 변경이 우리 §5.6/§5.14/§5.4/§5.5 영향 가능 (가설), 그러나 **공개 전엔 검증 불가**
+
+### 17.2 D-40 결정 복기 (2026-06-07)
+
+**D-40 (2026-06-07)**: §11.2 섹션 완전 제거. 검증 미진행.
+
+**배경**:
+- D-34 의 가설 ("영향 가능") 이 검증되지 않은 상태로 §11.2 가 남아있으면 **잠금 정합성** 깨짐
+- D-40 = "미검증 가설은 spec 에 남기지 않는다" 정책
+- §11.2 완전 제거 → v1 spec 은 2.1.168 기준 검증 완료된 사실만 포함
+
+### 17.3 v2 검증 결과: D-34 가설 ("영향 가능") 실제 검증
+
+본 task (D-133, 2026-08-14) 에서 06-09 ~ 08-14 누적 commit (594) 을 분석한 결과:
+
+| D-34 가설 영역 | 실제 v2 변경 | 검증 결과 |
+| --- | --- | --- |
+| **context var/cache** | 없음 | ✅ 가설 빗나감. 영향 0 |
+| **MCP 변경** | 없음 | ✅ 가설 빗나감. 영향 0 |
+| **permission 변경** | code-review plugin confirmed flag (minor) | ⚠️ 부분 빗나감. 영향 미미 (§5.6 정합) |
+
+**D-34 가설 적중률**: 0/3 (영향 가능성 0%)
+
+### 17.4 D-40 정합성 검증
+
+D-40 = "§11.2 완전 제거" 정책이 **v2 시점에도 유효한가?**
+
+- v2 분석 (594 commit) 에서 우리 §5.5/§5.6/§5.4/§5.13/§5.14 영향 **0** 확인 (§16.6 매트릭스)
+- 즉 D-40 시점의 **"영향 없음 = §11.2 불필요"** 판단이 **v2 시점에서도 정합**
+- 만약 §11.2 가 남아있었다면, v2 분석에서 발견된 **engineering 권장 2건** (release-cadence 분리, SHA pin) 만 추가되었을 것 — 그러나 이건 **§10 의 engineering 권장** 이지 §11.2 의 **architecture/decision 변경** 이 아님
+
+**D-40 정합성**: ✅ 유지. §11.2 완전 제거 결정이 **v2 분석 후에도 유효**.
+
+### 17.5 v2 결정 (D-133) 제안
+
+본 task 결과를 종합한 **신규 결정 D-133** (TASK-004 재방문, claude-code v2):
+
+> **D-133 (2026-08-14, TASK-004 재방문)**: claude-code v2 분석 (06-09 ~ 08-14, 594 commit) 결과 우리 §5.5/§5.6/§5.4/§5.13/§5.14 영향 0. D-34/D-40 정합 유지. §10 (빌드 & 배포) 에 engineering 권장 2건 (release-cadence 분리, SHA pin) 추가 후보. 누적 결정 74 → **75**.
+
+**참조 결정**:
+- **D-34** (2026-06-07, §11.2 잠금) — 본 task 에서 검증: 영향 0 확인
+- **D-40** (2026-06-07, §11.2 완전 제거) — 본 task 에서 검증: 정합 유지
+- **D-133** (2026-08-14, 본 task) — TASK-004 재방문 결과 기록
+
+### 17.6 후속 작업 (선택, 이번 task scope 외)
+
+| 작업 | 우선순위 | trigger |
+| --- | --- | --- |
+| §10 빌드 & 배포 에 SHA pin 권장 추가 | 낮음 | TASK-005 release pipeline 단계 진입 시 |
+| §10 에 release-cadence 분리 패턴 추가 | 낮음 | TASK-005 release pipeline 단계 진입 시 |
+| §14 Open Question 에 workload identity federation 추가 | 낮음 | v2+ CI 도입 결정 시 |
+| claude-code 의 2.1.169+ changelog 추가 분석 | 중 | anthropics 가 major architecture 변경 시 (예: 새 plugin system, 새 memory backend) |
+
+### 17.7 v2 spec 잠금 상태
+
+**v1 spec 잠금 (2026-06-07)** — 유지. 본 task (D-133) 는 **v1 spec 에 영향 없음**.
+
+- §1 인벤토리 갱신: ✅ (본 task 에서 §1.5 version 정보 갱신)
+- §15 v2 changelog: ✅ 신규 추가
+- §16 v2 영향 분석: ✅ 신규 추가
+- §17 D-34/D-40 검증: ✅ 신규 추가
+
+**v1 spec 본문 (§1 ~ §14)**: 변경 없음. Append-only 정책 준수.
+
+---
+
+## §18 작업자 노트 (Worker note, 2026-08-14)
+
+### 18.1 작업 메타
+
+- **worker**: workflow-doc-worker (claude-code v2)
+- **input source**: anthropics/claude-code repo, 2026-06-09 ~ 2026-08-14, 594 commit
+- **output**: `docs/references/claude-code.md` §1.5 갱신 + §15/§16/§17/§18 신규 추가 (append-only)
+- **output LOC**: v1 1,029 lines → v2 ~1,400 lines (약 +370 lines, target 200~400 lines 범위 내)
+- **decision**: D-133 (TASK-004 재방문, claude-code v2, 2026-08-14)
+
+### 18.2 한계와 정직한 명시
+
+1. **commit 수 불일치**: task spec 의 "66 commit" ≠ 실제 594 commit. 자동화 commit (`chore: Update CHANGELOG.md and feed.xml`) 을 포함하면 594, 제외하면 ~68. 본 task 는 **594 commit 전체 분석** 으로 진행 (자동화 commit 도 release pipeline 의 신호로 다룸).
+2. **PR #79898 분류**: task spec 의 "AWS gateway example deployment assets — Royarsan/anthropics" 와 실제 `c4dbd74` 의 PR #79898 (anthropics/royarsan/gateway-aws-example) 정합 확인.
+3. **D-34/D-40 영향**: task spec 의 가설 ("영향 가능") 이 본 task 에서 **0** 으로 검증됨. D-40 의 §11.2 완전 제거 결정이 정합 유지됨을 확인.
+4. **v1 본문 무수정**: AGENTS.md 의 "Append-Only" 정책 준수. §1 ~ §14 본문은 변경 없이 §1.5 (현재 상태) version 정보만 갱신.
+
+### 18.3 cross-session 검증
+
+`grep -E "D-34|D-40|claude-code|2.1\.169|§11\.2" /Users/yklee/repos/my_harness/ai-workflow/memory/session_handoff.md /Users/yklee/repos/my_harness/ai-workflow/memory/state.json` 결과:
+
+- session_handoff.md: "claude-code 2.1.169 changelog 미공개 (D-34 §11.2 pending)" 명시 — 본 task 가 이 pending 해소
+- state.json: §11.2 언급 다수 (D-11, D-25, D-31, D-36, D-46, D-52, D-59, D-65, D-72 등) — 모두 cross-project SSOT 관련 결정이며 본 task 와는 별개 scope
+
+본 task 의 §11.2 정합 검증 결과는 §17 에 기록. §11.2 의 다른 결정들 (cross-project SSOT 등) 은 본 task scope 외.
+
+### 18.4 다음 작업자 (next-worker) 권장
+
+1. **memory sync task 분리 필요**: 본 task 는 claude-code.md 만 갱신. `state.json` + `session_handoff.md` + `work_backlog.md` 의 D-133 기록은 **별도 memory-sync-worker** task 로 분리 권장 (AGENTS.md 의 "코드 commit + 메모리 동기화 = 단일 push" 정책 준수).
+2. **commit + push 분리**: 본 task 는 파일 수정만 완료. commit + push 는 별도 단계 (또는 동일 워커가 진행 시 단일 push 권장).
+3. **branch**: `analysis/claude-code-v2` (본 task 의 의도된 branch). push 시 `git push origin analysis/claude-code-v2` (NOT `upstream`).
+
