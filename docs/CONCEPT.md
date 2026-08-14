@@ -1036,7 +1036,8 @@ Distribution: 5 install paths (install.sh / install.ps1 / brew / winget / apt-dn
 ## 12. 참고 (References)
 
 - [REFERENCES.md §5 우리 방향성 초안](./REFERENCES.md) — 8축 매트릭스 → 본 컨셉 §5 정합
-- [references/README.md](./references/README.md) — 7-doc 통합 인덱스 + cross-review
+- [references/README.md](./references/README.md) — 8-doc 통합 인덱스 + cross-review
+- [references/grok-build.md](./references/grok-build.md) — Grok Build (2026-08-14 2차 14섹션). 완성된 5-component 제품, overlay 권장 / 포크 비권장
 - [references/claude-code.md](./references/claude-code.md) — Harness 5 components, plugin 4-계층, 5 surfaces
 - [references/headroom.md](./references/headroom.md) — CCR, CacheAligner, ContentRouter
 - [references/PROVIDERS.md](./references/PROVIDERS.md) — rig-core 1안 / Vercel AI SDK 2안 / litellm proxy

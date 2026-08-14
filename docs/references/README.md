@@ -1,8 +1,9 @@
-# Reference Analysis Index & Cross-Review (7 docs)
+# Reference Analysis Index & Cross-Review (8 docs)
 
-> **용도**: 7개 reference 분석 (opencode · aider · codex · goose · gemini-cli · headroom · claude-code) 의 인덱스 + 통합 리뷰. 보고서 "레퍼런스 분석" 섹션 작성용 백데이터.
+> **용도**: 8개 reference 분석 (opencode · aider · codex · goose · gemini-cli · headroom · claude-code · **grok-build**) 의 인덱스 + 통합 리뷰. 보고서 "레퍼런스 분석" 섹션 작성용 백데이터.
 >
 > **갱신 정책**: 새 reference 분석 추가 시 §1 인벤토리 + §2 비교 매트릭스 + §3 my_harness 영향 분석 갱신.
+> **2026-08-14**: grok-build 8번째 추가. 2차 심층 14섹션 [grok-build.md](./grok-build.md).
 
 ---
 
@@ -17,8 +18,9 @@
 | 5 | **gemini-cli** | google-gemini/gemini-cli | yklee/gemini-cli | [gemini-cli.md](./gemini-cli.md) | 21,074 | Apache 2.0 | Google integration, OAuth |
 | 6 | **headroom** | chopratejas/headroom | yklee/headroom | [headroom.md](./headroom.md) | 42,496 | Apache 2.0 | **context compression layer** ⭐ |
 | 7 | **claude-code** | anthropics/claude-code | yklee/claude-code | [claude-code.md](./claude-code.md) | 1,029 (analyzed) | **Anthropic Commercial** (closed) | **harness-first 5 components** ⭐ |
+| 8 | **grok-build** | xai-org/grok-build | (미미러, `~/repos/grok-build`) | [grok-build.md](./grok-build.md) | 1,362,619 `*.rs` (test 포함) | Apache 2.0 | **완성된 5-component 제품. 포크 비권장, overlay 권장** ⭐ |
 
-**합계**: 7 docs, ~430KB 분석, 약 335,000+ LOC reference source
+**합계**: 8 docs. grok-build 는 2026-07-15 Apache 2.0 오픈소스. 외부 PR 거부, 모노레포 주기 sync.
 
 ---
 
@@ -37,10 +39,12 @@
 | 5 | gemini-cli | TypeScript | Node.js 20+ | ❌ |
 | 6 | headroom | Python + Rust + TS | polyglot | 부분 |
 | 7 | claude-code | TypeScript (추정, closed) | Node.js 18+ + native binary | ✅ |
+| 8 | grok-build | Rust 1.92 | tokio + ratatui | ✅ (`grok`) |
 
 **우리 my_harness 권장**:
-- **1안 Rust** — codex/goose 와 같은 (단일 binary, 빠른 startup, low memory)
+- **1안 Rust** — codex/goose/grok-build 와 같은 (단일 binary, 빠른 startup, low memory)
 - **2안 TypeScript** — opencode/gemini-cli 와 같은 (Bun runtime, 빠른 dev cycle)
+- **2026-08-14**: 자체 Rust 재구현보다 grok-build overlay (래퍼+plugin) 가 더 짧다. 독립 런타임이 필요하면 여전히 goose 포크.
 
 ### 축 2: LLM 통합
 
@@ -53,6 +57,7 @@
 | 5 | gemini-cli | Gemini only | ❌ | ❌ |
 | 6 | headroom | transparent middleware (provider 비종속) | ❌ | ❌ |
 | 7 | claude-code | Claude + 3P (3rd-party integrations) | **✅ 3 in order** | **✅ per-model** |
+| 8 | grok-build | xAI 기본 + **custom models** (chat_completions / responses / messages) | 모델별 `[model.*]` | ✅ reasoning effort |
 
 **우리 my_harness 권장**:
 - **rig-core (1안) / Vercel AI SDK (2안)** — 12+/15+ provider
@@ -69,6 +74,7 @@
 | 5 | gemini-cli | terminal (Ink) | ❌ | ❌ | ❌ |
 | 6 | headroom | CLI + Proxy daemon | ❌ | ❌ | ❌ |
 | 7 | claude-code | ✅ TUI (React/Ink) | **✅ VS Code** | **✅ Web** | **✅ Desktop** |
+| 8 | grok-build | ✅ 풀스크린 ratatui + 마우스 | ACP (`grok agent`) | ❌ | ❌ |
 
 **우리 my_harness 권장**:
 - **v1**: CLI + TUI (claude-code 의 cross-surface 는 v2+)
@@ -86,6 +92,7 @@
 | 5 | gemini-cli | **extensions** (TOML, MCP, skills) | **high** | ✅ |
 | 6 | headroom | ❌ (PR + 머지 방식) | minimal | ❌ |
 | 7 | claude-code | **4-계층 (commands/agents/skills/hooks) + marketplace** | **very high** | ✅ (plugin.json) |
+| 8 | grok-build | **동일 4-계층 + marketplace + MCP + ACP** (이미 구현) | **very high** | ✅ (plugin.json, 선택) |
 
 **우리 my_harness 권장**:
 - **v1**: minimal (도메인별 명령 inline) + mavis-team skills
@@ -103,6 +110,7 @@
 | 5 | gemini-cli | GEMINI.md | ❌ | ❌ | ✅ (extensions) |
 | 6 | headroom | n/a (middleware) | n/a | **✅ 6 algorithms + CCR** | n/a |
 | 7 | claude-code | **CLAUDE.md + auto memory + /compact** | **✅** | **✅** | **✅ first-class** |
+| 8 | grok-build | AGENTS.md / CLAUDE.md / `.grok/rules` + auto-compact | experimental | ✅ `xai-grok-compaction` | ✅ rmcp 2.1 |
 
 **우리 my_harness 권장**:
 - **CLAUDE.md 표준** (claude-code 패턴, 이미 MiniMax.md 가 동급)
@@ -122,6 +130,7 @@
 | 5 | gemini-cli | ❌ | local |
 | 6 | headroom | ❌ (proxy daemon) | n/a |
 | 7 | claude-code | **✅ 5 surfaces cross-session** | **cross-surface state** |
+| 8 | grok-build | TUI + headless + ACP | `~/.grok/sessions/` JSONL |
 
 **우리 my_harness 권장**:
 - **v1**: local session (`state.json` + journal) — standard_ai_workflow 와 결합
@@ -138,6 +147,7 @@
 | 5 | gemini-cli | simple + sandbox | ❌ | ❌ |
 | 6 | headroom | n/a | ❌ | n/a |
 | 7 | claude-code | **4 mode** | **✅ 85+ hooks** | **✅ pattern + LLM + agentic** |
+| 8 | grok-build | **5 mode** + OS sandbox 프로필 | ✅ PreToolUse deny / Stop gate | folder-trust + Landlock/Seatbelt |
 
 **우리 my_harness 권장**:
 - **v1**: claude-code 4 mode 차용 (default/acceptEdits/plan/bypassPermissions)
@@ -155,6 +165,7 @@
 | 5 | gemini-cli | ❌ (npm) | install.sh | npm | mac/linux/win |
 | 6 | headroom | ✅ Python+Rust+TS | pip/npm | brew, pip | mac/linux/win |
 | 7 | claude-code | ✅ (추정) | **5 native paths** | brew, winget, apt/dnf/apk | **5 surfaces** |
+| 8 | grok-build | ✅ | install.sh / install.ps1 / `grok update` | 공식 채널 | mac/linux/win |
 
 **우리 my_harness 권장**:
 - **claude-code 5 install paths 패턴** (install.sh / install.ps1 / brew / winget / linux pkg)
@@ -166,7 +177,7 @@
 
 ### 3.1 TASK-005 스택 결정 (Rust 1안 vs TS 2안)
 
-**3개 reference 가 Rust** (codex, goose, claude-code 추정), **4개 reference 가 TypeScript** (opencode, gemini-cli, headroom 부분, claude-code 추정). 결론: **양쪽 모두 viable**. 우리 결정 기준:
+**4개 reference 가 Rust** (codex, goose, grok-build, claude-code 추정), **4개 reference 가 TypeScript** (opencode, gemini-cli, headroom 부분, claude-code 추정). 결론: **양쪽 모두 viable**. 우리 결정 기준:
 
 | 기준 | Rust 1안 (codex/goose) | TS 2안 (opencode/gemini-cli) |
 | --- | --- | --- |
@@ -178,9 +189,10 @@
 | **mavis-team 통합** | spawn rust binary (쉬움) | spawn node binary (쉬움) |
 
 **권장**:
-- 1안 = **Rust** (단일 binary + ratatui + Tauri) — codex/goose 와 같은 안정성
+- 1안 = **Rust** (단일 binary + ratatui + Tauri) — codex/goose/grok-build 와 같은 안정성
 - 2안 = **TypeScript** (Bun + React/Ink + Electron/Tauri) — opencode/gemini-cli 와 같은 dev 속도
 - **최종 결정은 yklee 의 도메인별 우선순위** (코드 > 서버 > 환경 → 1안 / 셋업 속도 > 1안 / desktop 중요 → 2안)
+- **2026-08-14 (grok-build)**: CONCEPT 5 components 가 grok-build 에 이미 구현됨. 자체 재구현 / 소스 포크보다 **overlay (래퍼 + plugin)** 가 기본 경로. 독립 런타임이 필요하면 goose 포크.
 
 ### 3.2 TASK-002 도메인별 명령 (코드/서버/환경)
 

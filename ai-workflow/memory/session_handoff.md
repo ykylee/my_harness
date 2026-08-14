@@ -4,7 +4,7 @@
 - Scope: current focus, task status, key changes, next actions, risks
 - Audience: yklee, Mavis orchestrator, .MiniMax 워커 에이전트
 - Status: active
-- Updated: 2026-07-01 (**D-105 Edit v2 line_anchored mode 완료** — oh-my-pi Hashline 점진 차용 2차 cycle. **D-105 (`5e39f5e`)** = Edit v2 line_anchored mode (`LineAnchoredEdit` struct + `apply_line_replacement` helper + `execute_line_anchored` path + 10 test 추가 (8 line_anchored + 1 unit + 1 old mode regression), tools 62 → 72 / 회귀 0 / clippy clean). **D-126 (2026-07-01)** = ENXIO 가드 UX 개선 (b안, 본 operation log §8) — `TtyGuard::enter()?` 비-TTY 시 친절한 한국어 메시지 + exit 1. operation log `ai-workflow/memory/logs/2026-07-01-ENXIO-investigation.md` (186 lines). main = D-126 commit (코드+메모리 단일 push). 누적 결정 73 → 74. = Edit v2 line_anchored mode (`LineAnchoredEdit` struct + `apply_line_replacement` helper + `execute_line_anchored` path + 10 test 추가 (8 line_anchored + 1 unit + 1 old mode regression), tools 62 → 72 / 회귀 0 / clippy clean). **D-104 (`43bc908`)** = Read v2 LINE:TEXT + 4-hex content_hash (이전 세션). main = `5e39f5e`. 이전: 2026-06-30 D-100/D-101/D-102/D-103 (A-min tool dispatch + follow-up polish + prompt 개선 + dedup 안전망 + large file chunked Read) + 2026-06-14 D-98/D-99 (Plugin 4-계층 Sub-task 1 Auto Memory))
+- Updated: 2026-08-14 (**D-134 grok-build 8번째 reference + 2차 14섹션 심층** — 세션 종료, overlay/포크 결정 보류. 다음 세션 이어감)
 - Related docs: [Project Profile](../../docs/PROJECT_PROFILE.md), [Work Backlog](./work_backlog.md), [State Cache](./state.json), [CONCEPT.md](../../docs/CONCEPT.md) (SSOT)
 
 ## Current Focus
@@ -866,3 +866,41 @@
 
 - 76 → **76** (v3 reset 결정 보류 = 결정 추가 불요, 사용자 결정 대기)
 - main = `4d031ff`. 7 reference 재방문 (D-127~D-133) 완료. 다음 세션 시작점 = v3 reset 옵션 결정 (yklee).
+
+---
+
+## 세션 종료 (2026-08-14, 2차) — D-134 grok-build reference
+
+### 1. 사용자 메시지
+
+- "저장소 작업 내역 확인해봐" → 상태 복원 (main=`591609f`, v3 reset 보류)
+- "reference에 grok build도 추가하자 그리고 grok build를 기반으로 커스텀 하네스를 만들어볼거야 검토해봐" → 8번째 reference + 뼈대 적합성 검토
+- "3" → 레퍼런스만 두고 14섹션을 goose.md 급으로 깊게
+- "일단 세션 정리하고 다음 세션에 이어하자" → 본 종료
+
+### 2. 한 일 (D-134)
+
+- 로컬 클론 `/Users/yklee/repos/grok-build` + `grok 1.0.3` + user-guide 실측
+- 신규 [docs/references/grok-build.md](../../docs/references/grok-build.md) 14섹션 + §15 영향 (약 700줄, 코드 인용)
+- [docs/references/README.md](../../docs/references/README.md) 7-doc → **8-doc** (8축 매트릭스 행 추가)
+- CONCEPT §12 링크만 추가. positioning 변경 없음
+
+### 3. 코드로 닫힌 사실 (결정은 아님)
+
+- Grok Build = Apache 2.0, Rust 1.92, crate 79, `*.rs` 136만 줄, 외부 PR 거부, 모노레포 dump
+- CONCEPT 5 components 이미 1:1 (Tools/Context/Session/Plugins/Sub-agents)
+- TUI 는 in-process `MvpAgent` + ACP. `grok agent stdio` / `--plugin-dir` 가 래퍼 정공법
+- 소스 포크는 비권장 (generated Cargo.toml + 기여 거부 + 암호화 프롬프트)
+- 독립 런타임이 필요하면 이전 추천(goose fork) 유지
+
+### 4. 보류 (다음 세션 진입점)
+
+1. **커스텀 하네스 경로** — A overlay (`grok` 엔진 + myharness plugin/래퍼) / B grok 소스 포크(비권장) / C goose 포크(독립 런타임)
+2. A 선택 시 CONCEPT §0 positioning 수정 필요
+3. D-130 follow-up (CCR + Memory fail-closed) — 경로와 무관하게 유효
+4. TASK-002 / OAuth real flow (이전부터 blocked)
+
+### 5. 누적 결정
+
+- 76 → **77** (D-134). overlay/포크 자체는 미결정.
+- 문서+메모리 단일 commit. working tree 는 본 commit 후 clean 이어야 함.
