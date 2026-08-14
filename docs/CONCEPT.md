@@ -2,35 +2,35 @@
 
 > **본 문서는 my_harness 의 단일 진실 공급원 (single source of truth).**
 >
-> **D-135 (2026-08-14)**: 제품 경로 = **Grok Build overlay**. `grok` 가 엔진, myharness 는 3-도메인 래퍼 + plugin. standalone 런타임 문장은 폐기.
+> **D-140 (2026-08-14)**: 제품 = **Owned Surface + Headless Engine**. 화면은 `surface/` (myharness). 엔진은 숨긴 `grok` (`-p` / `agent stdio`). 기본 경로에서 grok TUI 를 열지 않는다.
 >
-> **구현 사양**: [`architecture/DETAILED_DESIGN_OVERLAY.md`](./architecture/DETAILED_DESIGN_OVERLAY.md)
+> **구현 사양**: [`architecture/DETAILED_DESIGN_SURFACE.md`](./architecture/DETAILED_DESIGN_SURFACE.md) (SSOT). overlay 엔진 계약은 [`architecture/DETAILED_DESIGN_OVERLAY.md`](./architecture/DETAILED_DESIGN_OVERLAY.md).
 >
 > **갱신 정책**: 마일스톤 별 갱신. 본 문서 갱신 시 관련 (MiniMax.md, PROJECT_PROFILE.md, REFERENCES.md, README.md, development_log.md) 도 함께 align.
 >
-> **최종 갱신**: 2026-08-14 (D-135 overlay). 이전: 2026-06-07 v1 draft (D-22~D-38 standalone Rust MVP).
+> **최종 갱신**: 2026-08-14 (D-140 owned surface). 이전: D-135 overlay 래퍼.
 
 ---
 
-## 0. 핵심 Positioning (D-135 overlay, D-25 개발 분리 유지)
+## 0. 핵심 Positioning (D-140 owned surface, D-135 엔진 유지)
 
 ### my_harness 는
 
-- **Grok Build 위의 개인 하네스** — 설치된 `grok` 가 엔진 (TUI · tools · session · permission · subagent)
-- **3-도메인 래퍼** — `myharness code|server|env …` 가 사용자 표면. 동사를 `grok -p` / `--agent` / TUI 로 번역
-- **grok plugin** — skills / commands / agents / hooks 를 `--plugin-dir` 로 주입 (자체 loader 없음)
-- **MiniMax 우선** — grok `[model.minimax]` (`chat_completions` + `base_url`). Ollama 동일
-- **개발 시 Mavis zero coupling** — 이 repo 를 개발할 때 쓰는 workflow 와 산출물 런타임은 분리 (D-25 유지)
+- **화면의 주인** — `surface/` TUI/CLI. 워드마크·타이틀은 `myharness`. 기본 경로에서 grok pager 를 열지 않는다
+- **숨긴 엔진** — 설치된 `grok` ≥ 1.0.3. 한 턴은 `grok -p`, 대화 TUI 는 `grok agent stdio` (ACP). `--plugin-dir` 은 agent 전용
+- **3-도메인** — `myharness code|server|env …` 와 같은 브랜드의 TUI
+- **plugin** — `plugins/myharness/` 를 `grok plugin install --trust` 로 싣는다 (자체 loader 없음)
+- **MiniMax 우선** — grok `[model.minimax]`. 칩에는 사용자 alias 만 (`MiniMax-M3`)
+- **개발 시 Mavis zero coupling** (D-25 유지)
 
 ### my_harness 는 **아니다** (NOT)
 
-- ❌ **standalone 코딩 에이전트 런타임** — 5 components 를 다시 구현하지 않음 (D-135. 구 D-24/D-25 제품 문장 폐기)
-- ❌ **grok 소스 포크** — 136만 줄 + generated workspace + 외부 PR 거부. 비권장 (D-134)
-- ❌ **goose 포크** — 독립 런타임이 필요할 때만. 지금 경로 아님
-- ❌ **다른 도구의 오케스트레이션 도구**
-- ❌ **Mavis / mavis-team 과 결합된 런타임** — 개발 도구로 Mavis 를 쓸 수는 있으나 산출물은 Mavis 를 모름
-- ❌ **외부 4-워커 운영 도구**
-- ❌ **제품 브랜드를 grok 에서 지우는 스킨** — 로고/키맵/빌트인 slash 는 overlay 로 못 지움
+- ❌ **standalone 5-component 런타임** — Tools/Session/Plugin loader 를 다시 짜지 않음
+- ❌ **grok 소스 포크** (D-134)
+- ❌ **기본 경로의 grok TUI** — `myharness engine` 만 벤더 화면 (D-135.8 은 이 경로의 사실)
+- ❌ **goose 포크** — 독립 런타임이 필요할 때만
+- ❌ **Mavis 결합 런타임 / 4-워커 오케스트레이터**
+- ❌ **v0 `myharness/` crates 에 신규 기능** (D-135.6)
 
 ### 위치 (Positioning)
 
@@ -40,23 +40,20 @@
 └─────────────────────────────────────────┘
               ↓ terminal
 ┌─────────────────────────────────────────┐
-│  myharness (thin CLI + plugin)          │  ← D-135
-│  - 3-도메인 동사 번역                    │
-│  - plugin.json 4계층                     │
-│  - task/handoff (D-26)                   │
+│  myharness (surface/)                   │  ← D-140
+│  - 픽셀 / 12 동사 / task / 브랜드        │
+│  - ACP 클라이언트 (S4b+)                 │
 └─────────────────────────────────────────┘
-              ↓ exec  grok --plugin-dir …
+         ↓ grok -p          ↓ grok agent stdio
+         (한 턴 CLI)         (제품 TUI, fd pipe)
 ┌─────────────────────────────────────────┐
-│  grok (Grok Build ≥ 1.0.3)              │  ← 엔진
-│  Tools · Context · Session              │
-│  Plugins · Sub-agents                   │
-│  compaction · JSONL · permission        │
+│  grok (Grok Build ≥ 1.0.3)              │  ← 엔진, 화면 아님
+│  Tools · Context · Session · Plugins    │
 └─────────────────────────────────────────┘
-              ↓ [model.minimax] / [model.ollama]
-              chat_completions
+              ↓ [model.minimax]
 ```
 
-**my_harness** = yklee 의 3-도메인 표면. **엔진은 grok**. 설계: [DETAILED_DESIGN_OVERLAY.md](./architecture/DETAILED_DESIGN_OVERLAY.md).
+**my_harness** = 3-도메인 하네스. 화면은 우리 것. 엔진은 grok. 설계: [DETAILED_DESIGN_SURFACE.md](./architecture/DETAILED_DESIGN_SURFACE.md).
 
 ---
 
@@ -64,7 +61,7 @@
 
 ## 1. 한 줄 Positioning
 
-**my_harness = yklee 의 3-도메인 하네스 래퍼** — 엔진은 설치된 `grok` (Grok Build), 표면은 `myharness code|server|env`, 확장은 grok plugin. 개발 workflow 만 Mavis / standard_ai_workflow.
+**my_harness = yklee 의 3-도메인 하네스** — 화면은 `surface/` (myharness). 엔진은 숨긴 `grok`. MiniMax. 개발 workflow 만 Mavis / standard_ai_workflow.
 
 ---
 
@@ -81,8 +78,8 @@
 
 ## 3. 핵심 가치 (3가지)
 
-### 3.1 **3-도메인 표면 + 완성된 엔진** (D-135)
-차별점은 자체 5 components 재구현이 아니다. grok 가 이미 Tools/Context/Session/Plugins/Sub-agents 를 가지고 있다. 우리는 **코드/서버/환경 동사** 와 **한국어 workflow** 와 **MiniMax 기본** 을 그 위에 얹는다.
+### 3.1 **3-도메인 표면 + 숨긴 엔진** (D-140)
+차별점은 자체 5 components 재구현이 아니다. **화면을 우리가 그리는 것**이다. grok 는 Tools/Session/Plugins 를 뒤에서 돌린다. 사용자는 GROK 워드마크가 아니라 myharness 크롬을 본다.
 
 ### 3.2 **Provider 는 grok `[model.*]`** (D-135.4)
 MiniMax / Ollama / OpenAI 호환은 `api_backend = chat_completions` + `base_url`. 자체 `rig-core` 클라이언트는 v0 참고 구현 (D-135.6). 외부 orchestrator 는 여전히 불필요 — 경유가 grok sampler 일 뿐.
@@ -114,25 +111,25 @@ MiniMax / Ollama / OpenAI 호환은 `api_backend = chat_completions` + `base_url
 
 ### 4.2 Out-of-scope
 
-- **자체 5 components 재구현** (TUI/tools/session/plugin loader/subagent SDK)
+- **엔진 5 components 재구현** (tools/session/plugin loader/subagent SDK)
 - **grok 소스 포크** / generated workspace 소유
 - **v0 `myharness/` crates 에 신규 기능** (D-135.6)
-- 5 surfaces cross-session — grok ACP 가 있으면 엔진 측. 우리가 안 짬
-- grok 로고/키맵/빌트인 slash 제거
+- **표면 TUI + ACP 클라이언트는 in-scope** (`surface/`, D-140). 엔진 pager 를 스킨하는 것은 아님
+- grok 로고/키맵/빌트인 slash 를 overlay 로 지우기 — 그 화면을 기본으로 안 연다
 - Computer Use / Multi-user / RBAC
 - 5 surface 동시 유지 (anti-pattern) — 절대 안 함
 
 ---
 
-## 5. overlay 스펙 (D-135)
+## 5. overlay 스펙 (D-135 엔진 · D-140 표면)
 
-> 아래 §5.2~§5.14 의 명령·6원칙·디렉터리 **의도**는 유지한다. **구현 주체**는 2026-06 의 자체 Rust crates 가 아니라 grok + 래퍼다. 모듈 분해는 [DETAILED_DESIGN_OVERLAY.md](./architecture/DETAILED_DESIGN_OVERLAY.md).
+> 아래 §5.2~§5.14 의 명령·6원칙·디렉터리 **의도**는 유지한다. **화면 구현 주체**는 `surface/` (D-140). **엔진**은 grok. 래퍼 bash 는 S8 전까지 설치 기본. 모듈: [DETAILED_DESIGN_SURFACE.md](./architecture/DETAILED_DESIGN_SURFACE.md).
 
-### 5.1 아키텍처: 엔진 = grok, 표면 = myharness ⭐
+### 5.1 아키텍처: 화면 = surface, 엔진 = grok ⭐
 
 ```
 ┌─────────────────────────────────────────────┐
-│  myharness CLI (thin)                       │  ← 3-도메인 동사 + task/handoff
+│  myharness (surface/)                       │  ← 픽셀 / 12 동사 / task / ACP
 ├─────────────────────────────────────────────┤
 │  plugins/myharness/                         │  ← plugin.json 4계층
 │  commands/ · skills/ · agents/ · hooks/     │
@@ -582,43 +579,40 @@ produced_artifacts:
   - docs/TASK-005_DECISION.md
 ```
 
-#### 5.9.4 우리 my_harness 의 위치 (재확인, D-135)
+#### 5.9.4 우리 my_harness 의 위치 (재확인, D-140)
 
 ```
 ┌─────────────────────────────────────────┐
 │  yklee (terminal)                        │
 └─────────────────────────────────────────┘
-              ↓ `myharness <command>`
+              ↓ `myharness`
 ┌─────────────────────────────────────────┐
-│  myharness 래퍼                          │
-│  - 3-도메인 동사                         │
-│  - 6 원칙 native (task/handoff/log)     │
+│  surface/ (화면)                         │
+│  - 크롬 / 12 동사 / 6원칙 / ACP          │
 └─────────────────────────────────────────┘
-       ↓ exec grok --plugin-dir        ↓
-   ~/.grok/ (엔진)                 ~/.myharness/ (래퍼)
+     ↓ -p (한 턴)          ↓ agent stdio
+   ~/.grok/ (엔진)                 ~/.myharness/ (표면)
      sessions/                       state/
      auth.json                       handoff/
      memory/                         log.jsonl
      config.toml                     plugins/
-                            ↓ (opt) auto-detect
-                       ai-workflow/memory/    (개발 repo 에서만)
 ```
 
 **핵심**:
-- **6 원칙은 래퍼가 지킨다** — Mavis 없어도 `~/.myharness/` 에 task/handoff/log
-- **세션 본문은 grok `updates.jsonl`** — 우리가 JSONL 을 다시 짜지 않음
-- **옵션 Mavis 통합** — auto-detect, flag 로 off
+- **6 원칙은 표면이 지킨다**
+- **세션 본문은 grok `updates.jsonl`**
 - **개발 workflow ≠ 산출물 런타임** (D-25)
 
 ---
 
-### 5.10 Agent 모드 (3가지, D-29 · D-135 매핑)
+### 5.10 Agent 모드 (3가지, D-29 · D-140 매핑)
 
-엔진 기본은 grok TUI (in-process `MvpAgent`). 우리 `--mode` 는 래퍼 번역이다.
+기본 화면은 **우리 TUI** (S8+). grok pager 가 아니다.
 
-- `orchestrator` (default) → `grok` TUI. 플래그 불필요
-- `single` → `grok -p`
-- `loop` → 래퍼가 `--goal` / `--max-iterations` 를 프롬프트에 삽입 (grok 에 ralph-wiggum 플래그 없음)
+- `orchestrator` (default) → `surface/` TUI (`grok agent stdio`)
+- `single` → `grok -p` 한 턴
+- `loop` → 프롬프트에 goal 삽입 (1차)
+- `myharness engine` → 벤더 TUI (opt-in)
 
 my_harness 의 **메인 에이전트**는 기본적으로 **orchestrator** 역할. 작업 카테고리마다 **sub-agent 를 내장**하여 작업 분배 + context 효율화. 모드 변경으로 단일 에이전트 / 무한루프 모드 전환 가능.
 
@@ -868,6 +862,8 @@ auto_invoke:
 | **D-135 PR-4** | 3-도메인 skills + PreToolUse | **done** (D-137) |
 | **D-135 PR-5** | `task start\|end` 래퍼 | **done** (D-137) |
 | **D-138 M3** | `scripts/install.sh` + README 설치 | **done** (Rust clap M3.2 deferred) |
+| **D-140 S0** | 문서 SSOT Owned Surface | **done** |
+| **D-140 S1** | `surface/` 크롬 TUI (엔진 없음) | **done** |
 | **TASK-005-2** 자체 Plugin loader | — | **OOS** (grok plugin.json 이 대체) |
 | **TASK-005-3+** 5 surfaces / Computer Use | 엔진(grok ACP) 범위. 우리 재구현 안 함 | deferred |
 

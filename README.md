@@ -1,12 +1,10 @@
 # my_harness
 
-- **yklee의 3-도메인 하네스 래퍼** — `myharness code|server|env …` 가 사용자 표면
-- **엔진**: 설치된 [`grok`](./docs/references/grok-build.md) (Grok Build ≥ 1.0.3). 5 components 재구현 안 함
-- **확장**: grok plugin (`plugins/myharness/`, `--plugin-dir`)
-- **LLM**: grok `[model.minimax]` / `[model.ollama]` (`chat_completions`)
-- **기반 표준**: [`standard_ai_workflow`](https://github.com/ykylee/standard_ai_workflow) 6 원칙은 **래퍼**가 지킴
-- **컨셉 SSOT**: [`docs/CONCEPT.md`](./docs/CONCEPT.md) · 설계: [`docs/architecture/DETAILED_DESIGN_OVERLAY.md`](./docs/architecture/DETAILED_DESIGN_OVERLAY.md)
-- **결정**: D-135 (2026-08-14) overlay. 구 standalone Rust MVP 는 v0 참고 구현
+- **yklee의 3-도메인 하네스** — 화면은 myharness (`surface/`). 엔진은 숨긴 grok
+- **설계 SSOT**: [`docs/architecture/DETAILED_DESIGN_SURFACE.md`](./docs/architecture/DETAILED_DESIGN_SURFACE.md) (D-140)
+- **컨셉**: [`docs/CONCEPT.md`](./docs/CONCEPT.md)
+- **엔진 계약**: [`docs/architecture/DETAILED_DESIGN_OVERLAY.md`](./docs/architecture/DETAILED_DESIGN_OVERLAY.md)
+- v0 `myharness/` crates = 참고만. 설치 기본은 S8 전까지 `bin/myharness` bash
 
 ## 이 저장소의 두 가지 역할
 

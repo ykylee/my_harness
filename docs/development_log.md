@@ -422,3 +422,10 @@ yklee 가 판단: 외부 워커 컨슈밍만으로는 **yklee 만이 진화 가�
 - `scripts/install.sh` + README 설치. Rust clap 보류
 - smoke PASS. 다음 M4 (승인) 또는 live MiniMax
 - 누적 결정 80 → **81**
+
+### 2026-08-14 — D-140 S0+S1 Owned Surface
+
+- 제품 재설계 SSOT `docs/architecture/DETAILED_DESIGN_SURFACE.md`
+- CONCEPT §0 화면=surface, 엔진=숨긴 grok. 기본 grok TUI 문장 폐기
+- `surface/` 크롬 TUI + brand remap. `cargo test --manifest-path surface/Cargo.toml` PASS
+- 다음 PR-S2 12 동사

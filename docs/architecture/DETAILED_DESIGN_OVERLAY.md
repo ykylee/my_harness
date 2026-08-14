@@ -49,22 +49,19 @@ yklee
 ### 2.1 런타임
 
 ```
-myharness (thin CLI)
+myharness (surface/ 바이너리, S8+)
     │  which grok && grok --version
-    │  resolve plugin dir + model + cwd
-    ├─ interactive / no extra args
-    │     myharness> REPL (엔진 TUI 아님)
+    ├─ TTY / 인자 없음
+    │     우리 TUI → grok agent stdio --plugin-dir (fd pipe)
     ├─ myharness engine
     │     exec grok TUI (벤더 브랜딩, opt-in)
-    ├─ myharness <domain> <verb> [args]
-    │     exec grok -p "<translated prompt>" --plugin-dir ... -m ...
-    ├─ myharness agent stdio
-    │     exec grok agent stdio --plugin-dir ...
-    └─ myharness task start|end
-          자체 구현 (ai-workflow 파일 write). grok 호출 없음
+    ├─ myharness <domain> <verb>
+    │     grok -p -m … --always-approve   (--plugin-dir 없음)
+    └─ task / setup-model
+          표면 자체. grok 호출 없음
 ```
 
-기본 TUI 는 grok pager 가 in-process `MvpAgent` 를 띄운다. 우리는 ACP 클라이언트를 다시 짜지 않는다. 래퍼는 `exec` 가 기본이다.
+제품 기본은 **우리 화면**. ACP 클라이언트는 `surface/` 가 짠다 ([DETAILED_DESIGN_SURFACE.md](./DETAILED_DESIGN_SURFACE.md)). 래퍼 `exec grok` 는 `engine` 만.
 
 ### 2.2 우리가 소유하는 프로세스
 

@@ -91,7 +91,7 @@ context_summary: <필요한 컨텍스트>
 
 이 하네스는 **코드 개발 / 서버 관리 / 환경 셋업** 세 도메인의 작업 진입점이다. 각 도메인별 표준 명령은 **[`docs/CONCEPT.md`](./docs/CONCEPT.md) §5.2 (명령 가이드)** 가 SSOT — 본 섹션은 그 참조 + 점진 채움용.
 
-**컨셉 핵심 (CONCEPT.md §0, D-135)**: 엔진 = `grok` ≥ 1.0.3 · 표면 = 3-도메인 래퍼 · 확장 = grok plugin · LLM = `[model.minimax]`. 자체 5 components / rig-core 런타임은 v0 참고.
+**컨셉 핵심 (CONCEPT.md §0, D-140)**: 화면 = `surface/` · 엔진 = 숨긴 `grok` · MiniMax. 설계 `docs/architecture/DETAILED_DESIGN_SURFACE.md`.
 
 ### 코드 개발
 

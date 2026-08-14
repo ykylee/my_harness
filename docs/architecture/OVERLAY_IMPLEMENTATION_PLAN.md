@@ -29,7 +29,8 @@ M0 문서 ✅ → M1 실행 가능 → M2 도메인 가치 → M3 경화 → M4 
 | **M3** | 경화 | 설치 경로 + 사용 문서 | `scripts/install.sh` + smoke. Rust clap 은 보류 | **done** (D-138, M3.2 deferred) |
 | **M4** | v0 정리 | crates archive | yklee 승인 후 `archive/v0-runtime/` 또는 태그 | 보류 |
 
-OOS (하지 않음): 자체 Plugin loader, grok 소스 포크, TUI 재구현, rig-core 신규, CCR/ONNX, marketplace 서버.
+OOS: 자체 Plugin loader, grok 소스 포크, 엔진 5 components 재구현, v0 crates 신규 기능.
+**표면 TUI + ACP 는 D-140 in-scope** — [DETAILED_DESIGN_SURFACE.md](./DETAILED_DESIGN_SURFACE.md) PR-S0–S8.
 
 ---
 

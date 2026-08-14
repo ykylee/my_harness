@@ -1,0 +1,16 @@
+[package]
+name = "myharness"
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.91"
+license = "MIT OR Apache-2.0"
+description = "myharness owned surface — chrome TUI (D-140). Not a myharness/ workspace member."
+
+[[bin]]
+name = "myharness"
+path = "src/main.rs"
+
+[dependencies]
+clap = { version = "4", features = ["derive"] }
+crossterm = "0.29"
+ratatui = "0.30"

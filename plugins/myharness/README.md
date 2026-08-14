@@ -2,7 +2,7 @@
 
 Grok Build overlay plugin (D-135 / D-136).
 
-로드 경로: `myharness` 래퍼가 `--plugin-dir` 로 이 디렉터리를 넘긴다 (자동 trust).
+로드 경로: `grok plugin install --trust` (설치 스크립트). `--plugin-dir` 은 `grok agent stdio` 전용이지 `grok -p` 가 아니다.
 
 ```bash
 grok plugin validate plugins/myharness
