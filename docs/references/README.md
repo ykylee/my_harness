@@ -44,7 +44,7 @@
 **우리 my_harness 권장**:
 - **1안 Rust** — codex/goose/grok-build 와 같은 (단일 binary, 빠른 startup, low memory)
 - **2안 TypeScript** — opencode/gemini-cli 와 같은 (Bun runtime, 빠른 dev cycle)
-- **2026-08-14**: 자체 Rust 재구현보다 grok-build overlay (래퍼+plugin) 가 더 짧다. 독립 런타임이 필요하면 여전히 goose 포크.
+- **2026-08-14 D-135 결정**: grok-build overlay (래퍼+plugin). 자체 Rust 재구현 / grok 포크 안 함. 독립 런타임이 필요하면 그때 goose 포크.
 
 ### 축 2: LLM 통합
 
@@ -60,8 +60,7 @@
 | 8 | grok-build | xAI 기본 + **custom models** (chat_completions / responses / messages) | 모델별 `[model.*]` | ✅ reasoning effort |
 
 **우리 my_harness 권장**:
-- **rig-core (1안) / Vercel AI SDK (2안)** — 12+/15+ provider
-- **claude-code 패턴**: fallbackModel 3 in order + per-model thinking toggle (TASK-005 결정 시)
+- **D-135**: grok `[model.*]` (`chat_completions`). MiniMax 기본. 자체 rig-core 런타임은 v0 참고
 
 ### 축 3: TUI / Frontend
 

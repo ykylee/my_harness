@@ -4,7 +4,7 @@
 - 범위: 하네스 개요, 문서 구조, 기본 명령, 검증 포인트, 예외 규칙
 - 대상 독자: yklee (single user / 프로젝트 오너), my_harness 개발 시 사용하는 Mavis / Mavis 워커 (이 저장소 개발 workflow 한정)
 - 상태: active
-- 최종 수정일: 2026-08-14 (TASK-004 재방문 — D-127~D-133 결정 log + 7 reference v2 영향 분석)
+- 최종 수정일: 2026-08-14 (D-135 overlay 재구성 — CONCEPT §0 갱신)
 - 관련 문서: [공통 표준](../ai-workflow/core/global_workflow_standard.md) (Mavis 워크플로우 표준 — 이 저장소 개발 workflow 한정), [MiniMax 진입점](../MiniMax.md) (Mavis 진입점 — 이 저장소 개발 workflow 한정), **[CONCEPT.md](./CONCEPT.md) ← my_harness v1 컨셉 SSOT (Mavis zero coupling)**, [development_log.md](./development_log.md), [REFERENCES.md](./REFERENCES.md)
   - CONCEPT.md §5.10 Agent 모드 (orchestrator/single/loop)
   - CONCEPT.md §5.11 Built-in sub-agents (15개, 3-도메인)
@@ -16,7 +16,7 @@
 ## 1. 프로젝트 개요
 - 프로젝트명: My Harness
 - 프로젝트 슬러그: my-harness
-- 프로젝트 산출물: **my_harness** — yklee 의 **standalone CLI/TUI coding agent**. terminal 에서 `myharness <command>` 로 직접 실행, LLM provider 와 **직접 통신**, 3-도메인 (코드/서버/환경) 작업. 자세한 컨셉은 **[CONCEPT.md](./CONCEPT.md) (SSOT)** 참조.
+- 프로젝트 산출물: **my_harness** — yklee 의 **grok overlay 하네스**. 엔진은 설치된 `grok` ≥ 1.0.3, 표면은 `myharness code|server|env`, 확장은 grok plugin. LLM 은 grok `[model.*]` (MiniMax 기본). 자세한 컨셉은 **[CONCEPT.md](./CONCEPT.md) (SSOT)** · 설계는 **[architecture/DETAILED_DESIGN_OVERLAY.md](./architecture/DETAILED_DESIGN_OVERLAY.md)**.
 - **산출물의 적용 도메인** (my_harness 가 작업하는 범위):
   - **코드 개발 전반** — 새 기능 구현, 리팩토링, 버그 수정, 리뷰, 테스트, PR 작업
   - **기본 서버 관리** — 프로세스/서비스 상태 점검, 로그 확인, 설정 변경, 배포 헬퍼
@@ -27,7 +27,7 @@
   - 이 workflow 는 **yklee 가 my_harness 를 개발할 때** 사용. my_harness 가 동작할 때는 무관 (CONCEPT.md §5.8 참조)
 - 주요 이해관계자: yklee (오너/유지보수), Mavis / Mavis 워커 (개발 workflow 한정, 산출물 무관)
 - 적용 환경 (개발 시): macOS (M-series), Python 3.11+, Mavis 데몬, gh CLI, 필요 시 원격 서버 SSH
-- 적용 환경 (산출물 my_harness): **사용자 terminal** (macOS / Linux / Windows), **Rust 1안** (D-36 — ratatui + rig-core + rmcp + keyring + cargo-dist), LLM provider API (Anthropic/OpenAI/Google/DeepSeek/local Ollama), (선택) headroom built-in 알고리즘
+- 적용 환경 (산출물 my_harness): **사용자 terminal**, 런타임 의존 **`grok` ≥ 1.0.3**, 래퍼 + `plugins/myharness/`, MiniMax/Ollama 는 grok `[model.*]`. v0 Rust crates 는 참고 구현 (D-135.6)
 
 ## 2. 문서 구조 (Path)
 - 문서 위키 홈: `README.md`

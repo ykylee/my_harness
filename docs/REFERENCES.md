@@ -3,7 +3,7 @@
 - 문서 목적: TASK-004 산출물. **최초 5개** 오픈소스 코딩 에이전트 하네스를 8축으로 비교 분석해 `my_harness` CLI/TUI 툴의 아키텍처 결정 입력을 만든다.
 - 범위: 5개 레퍼런스 × 8축 비교표 + 1-페이지 프로필 + 교차 인사이트 + 우리 방향성 초안
 - 대상 독자: yklee, Mavis orchestrator, 다음 디자인 리뷰 참여자
-- 상태: **superseded** — 5 reference 1차 (TASK-004) 한정. 7 reference 통합 리뷰는 [`docs/references/README.md`](./references/README.md) (D-21, 2026-06-07) 가 SSOT. v1 컨셉은 [`CONCEPT.md`](./CONCEPT.md) 가 SSOT.
+- 상태: **superseded** — 5 reference 1차 (TASK-004) 한정. 8 reference 통합 리뷰는 [`docs/references/README.md`](./references/README.md). 제품 경로는 D-135 overlay — [`CONCEPT.md`](./CONCEPT.md) + [`architecture/DETAILED_DESIGN_OVERLAY.md`](./architecture/DETAILED_DESIGN_OVERLAY.md).
 - 최종 수정일: 2026-06-07
 - 관련 문서: [PROJECT_PROFILE](./PROJECT_PROFILE.md), [CONCEPT.md](./CONCEPT.md), [references/README.md](./references/README.md) (7-doc 통합), [references/claude-code.md](./references/claude-code.md), [references/headroom.md](./references/headroom.md), [TASK-005](../../ai-workflow/memory/backlog/2026-06-05.md), [harness-refs/.upstream-urls](../../../harness-refs/.upstream-urls)
 

@@ -1,5 +1,7 @@
 # INITIAL_DESIGN.md — my_harness v1 아키텍처 초기 설계 (TASK-005-1 입력)
 
+> **상태 (D-135, 2026-08-14): historical / superseded.** 제품 경로의 설계 SSOT 는 [`DETAILED_DESIGN_OVERLAY.md`](./DETAILED_DESIGN_OVERLAY.md). 본 문서는 v0 자체 Rust 런타임의 audit trail. 신규 구현의 입력이 아니다.
+
 > **본 문서의 위치**: my_harness v1 Rust MVP 구현 (TASK-005-1) 의 **아키텍처 사양서**. CONCEPT.md (마스터 SSOT) + REQUIREMENTS.md (WP1, FR/NFR/Constraint) + USE_CASES.md (WP2, actor × use case) 를 종합하여, **본 문서만으로 v1 Rust 모듈 / API / CLI 표면 시작 가능** 한 수준의 설계를 명세한다.
 >
 > **상태**: draft (v1, WP3 산출물, D-40 v1 spec 잠금 상태)

@@ -393,3 +393,12 @@ yklee 가 판단: 외부 워커 컨슈밍만으로는 **yklee 만이 진화 가�
 - **D-133 핵심**: D-34/D-40 §11.2 잠금 정합 검증. 우리 영향 0. 결정 변경 불요
 - **다음 1순위 (yklee 결정)**: D-130 즉시 follow-up 2 commit (CCR + Memory) / D-130 §16.3 cli wrap → TASK-005-2 v1.5+ Sub-task 2 / D-127 §16.c session retry / D-129 §16.2 effective permission
 - **누적 결정 69 → 81** (D-127~D-133, 7 신규). main = `8782abf`. 결정 log 후속
+
+### 2026-08-14 — D-134 + D-135 overlay 재구성
+
+- **D-134**: grok-build 8번째 reference, 14섹션 실측. overlay vs 포크 미결정으로 종료
+- **D-135 (본 세션, yklee 확정)**: 제품 경로 = **A overlay**. `grok` 엔진 + myharness 래퍼/plugin
+- **문서**: CONCEPT §0/§5.1/§5.7/§5.8/§6/§8 갱신. 신규 [`docs/architecture/DETAILED_DESIGN_OVERLAY.md`](./architecture/DETAILED_DESIGN_OVERLAY.md). README / PROFILE / MiniMax / AGENTS / REFERENCES / grok-build §15 / INITIAL_DESIGN·REQUIREMENTS 배너
+- **OOS**: 자체 Plugin 인프라 (A1~A4), grok 소스 포크, v0 crates 신규 기능
+- **다음**: PR-1 plugin 스캐폴드 → PR-2 thin CLI
+- **누적 결정 77 → 78** (D-135). 코드 0

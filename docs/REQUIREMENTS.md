@@ -1,5 +1,7 @@
 # my_harness v1 — 요구사항 (REQUIREMENTS.md)
 
+> **상태 (D-135, 2026-08-14): historical / superseded.** 제품 경로의 요구는 [`CONCEPT.md`](./CONCEPT.md) §0·§4·§5.1 과 [`architecture/DETAILED_DESIGN_OVERLAY.md`](./architecture/DETAILED_DESIGN_OVERLAY.md). 본 문서는 v0 Rust MVP 의 audit trail.
+
 > **본 문서 = my_harness v1 의 입력 사양서**. TASK-005-1 (v1 Rust MVP 구현) 의 **유일한 입력 문서**로, 본 문서만으로 Rust 모듈 / API / CLI 트리 시작 가능하도록 작성되었다.
 >
 > **SSOT (single source of truth)**: [`docs/CONCEPT.md`](./CONCEPT.md) (1,024줄 / 12섹션, D-22~D-40 결정 반영). 본 문서의 모든 claim 은 `CONCEPT.md §X.Y` 로 cross-ref.

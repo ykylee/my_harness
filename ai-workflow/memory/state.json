@@ -1,6 +1,6 @@
 {
   "schema_version": "1",
-  "generated_at": "2026-08-14T13:20:00Z",
+  "generated_at": "2026-08-14T18:00:00Z",
   "source_of_truth": {
     "project_profile_path": "docs/PROJECT_PROFILE.md",
     "session_handoff_path": "ai-workflow/memory/session_handoff.md",
@@ -24,9 +24,9 @@
     "v1_mvp_build": "TASK-005-1 v1 MVP 8/8 waves 완료 (D-49~D-52) + Device Authorization Grant (D-53) + --no-browser 3 모드 (D-54) + polling output/expired_in 단위 (D-55) + token 단위 변환 (D-56) + OAuth 자동 resolve (D-57) + OAuth 자동 refresh (D-58, W15.b) + W16 auth add-local subcommand (D-59) + W16 follow-up LocalLlm 라우팅 분기. **v1 MVP 종료 선언 (2026-06-09 22:48)**. 40+ commit dual push. 388+ tests pass, 0 fail, 2 ignored. + D-104 oh-my-pi Hashline Read v2 (2026-07-01) + D-105 Edit v2 line_anchored mode (2026-07-01). main = 5e39f5e."
   },
   "session": {
-    "current_baseline": "**D-134 (2026-08-14) grok-build 8번째 reference + 2차 14섹션 심층**. 클론 `~/repos/grok-build`, 설치 grok 1.0.3. Apache 2.0 / Rust 1.92 / 79 crate / 136만 *.rs. CONCEPT 5 components 1:1. overlay 정공법 = grok agent stdio + --plugin-dir. 소스 포크 비권장. overlay vs goose-fork **미결정**. 이전 D-127~D-133 7-ref v2 재방문 완료. 누적 결정 76 → **77**.\n\n---\n\n**2차 세션 (2026-08-14, 결정 없이 종료)**: workflow 메모리 restore 후 TASK-005-2 v2.0 Plugin 4-계층 Sub-task 2 진입 옵션 5개 (a Plugin 인프라 / b commands/ slash / c skills/ provider-auto-config 정식 / d agents/ Sub-agent SDK / e hooks/ markdown rule) + 묶음 옵션 4개 (A1~A4) 제시. yklee 결정 없이 종료. 실제 코드/문서 변경 0건, 결정 ID 불요. **다음 세션 진입점**: (1) A1~A4 중 선택 또는 sub-task 분할 재논의, (2) D-134 grok-build overlay/포크 결정. main = `4eec8e8`. git clean. 결정 카운트 77 그대로.",
-    "current_axis": "**다음 세션 진입점 (yklee 결정)**: (1) 커스텀 하네스 경로 A overlay / B grok 포크(비권장) / C goose 포크 (2) A 선택 시 CONCEPT §0 수정 (3) D-130 follow-up CCR+Memory fail-closed (경로 무관) (4) TASK-002 / OAuth real flow. | **2차 세션 (2026-08-14)**: TASK-005-2 v2.0 Plugin 4-계층 Sub-task 2 (옵션 A1~A4 미선택, 다음 세션 진입점 보존)",
-    "current_focus": "**D-126 ENXIO 가드 UX 개선 완료 (2026-07-01)** — 비-TTY TUI 모드 진입 시 친절한 한국어 메시지 + exit 1. 이전 baseline D-125 의 `unknown mode` 회귀는 그대로 유지, 그 위에 가드 메시지 한 단계 더. 다음 1순위 (yklee 결정): (a) D-106+ tree-sitter 도입 / (b) D-106+ pure insert/delete / (c) Anthropic wire format / (d) D-100 한계 follow-up / (e) TASK-002 도메인 명령 / (f) MiniMax OAuth real flow / (g) TUI shell + interactive mode 검증 / (h) cargo hygiene / (i) Lark multi-section parser / (j) D-109+ block-aware insert/replace.",
+    "current_baseline": "**D-135 (2026-08-14) overlay 확정**. 제품 경로 = 설치된 grok ≥ 1.0.3 엔진 + myharness 3-도메인 래퍼 + plugin.json. CONCEPT §0 standalone 폐기. 설계 docs/architecture/DETAILED_DESIGN_OVERLAY.md. 자체 Plugin A1~A4 = OOS. v0 crates = 참고만. 코드 0. 누적 결정 77 → **78**. 다음 = PR-1 plugins/myharness 스캐폴드.",
+    "current_axis": "**D-135 overlay 구현**. 다음: PR-1 plugin 스캐폴드 → PR-2 thin CLI → PR-3 MiniMax [model.*]. D-130 follow-up 은 경로 무관 별도.",
+    "current_focus": "**D-135 overlay 문서 재구성 완료**. CONCEPT/설계/README/PROFILE 정합. 다음 1순위 = PR-1 `plugins/myharness/` plugin.json 스캐폴드.",
     "in_progress_items": [
       "TASK-005-1 v1 MVP 종료 선언 (D-59 follow-up, 2026-06-09 22:48) — W3~W16 완료 + dual-push + 브랜치 정리 + main 머지. 388+ tests pass. v1 빌드 phase 완전 종료.",
       "TASK-005-2 v1.5 종료 선언 (D-70, 2026-06-10) — v1.5 phase 완전 종료. 8 결정 (D-60~D-65 + D-69 + D-70). 437 tests pass / 0 fail / 2 ignored + clippy 0 warning. main = 79f38b8",
@@ -105,9 +105,9 @@
       "Gitea PAT (D-44) — ~/.git-credentials (chmod 600). 회전 권고",
       "GitHub auth via gh CLI (ykylee)"
     ],
-    "last_decision_id": "D-134",
+    "last_decision_id": "D-135",
     "last_session_date": "2026-08-14",
-    "decision_count": 77
+    "decision_count": 78
   },
   "decisions": {
     "decided": [
@@ -614,7 +614,9 @@
       "D-130 (2026-08-14) TASK-004 재방문 — headroom v2 (v0.23.0 + Unreleased) + D-66/D-67/D-68 tract 재평가",
       "D-131 (2026-08-14) TASK-004 재방문 — goose v2 (ACP provider + 보안 강화)",
       "D-132 (2026-08-14) TASK-004 재방문 — gemini-cli v2 (v0.45→v0.55.1)",
-      "D-133 (2026-08-14) TASK-004 재방문 — claude-code v2 (66 commit, D-34/D-40 §11.2 정합 검증)"
+      "D-133 (2026-08-14) TASK-004 재방문 — claude-code v2 (66 commit, D-34/D-40 §11.2 정합 검증)",
+      "D-134 (2026-08-14) grok-build 8번째 reference + 14섹션",
+      "D-135 (2026-08-14) 제품 경로 = grok overlay. CONCEPT §0 갱신. DETAILED_DESIGN_OVERLAY.md"
     ],
     "deferred": [
       {

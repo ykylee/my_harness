@@ -1,21 +1,22 @@
 # my_harness
 
-- **yklee의 개인 코딩 에이전트 CLI/TUI** — `myharness <command>` 로 terminal 에서 직접 실행
-- **산출물**: standalone CLI/TUI coding agent (3-도메인: 코드 개발 / 서버 관리 / 환경 셋업)
-- **기반 표준**: [`standard_ai_workflow`](https://github.com/ykylee/standard_ai_workflow) v0.5.0-beta — **6 원칙 native 준수** (한국어 보고 / 컨텍스트 절약 / 상태값 / 이벤트 소싱 / 비참조 / handoff)
-- **런타임 의존**: LLM provider API 와 **직접 통신** (Anthropic / OpenAI / Google / DeepSeek / local Ollama 등)
-- **v1 컨셉 SSOT**: [`docs/CONCEPT.md`](./docs/CONCEPT.md) (Mavis zero coupling — my_harness 자체는 Mavis 와 무관)
-- **컨셉 확립일**: 2026-06-07 (D-22~D-34)
-- **다음 결정**: TASK-005 (스택: Rust vs TS) → v1 MVP 빌드
+- **yklee의 3-도메인 하네스 래퍼** — `myharness code|server|env …` 가 사용자 표면
+- **엔진**: 설치된 [`grok`](./docs/references/grok-build.md) (Grok Build ≥ 1.0.3). 5 components 재구현 안 함
+- **확장**: grok plugin (`plugins/myharness/`, `--plugin-dir`)
+- **LLM**: grok `[model.minimax]` / `[model.ollama]` (`chat_completions`)
+- **기반 표준**: [`standard_ai_workflow`](https://github.com/ykylee/standard_ai_workflow) 6 원칙은 **래퍼**가 지킴
+- **컨셉 SSOT**: [`docs/CONCEPT.md`](./docs/CONCEPT.md) · 설계: [`docs/architecture/DETAILED_DESIGN_OVERLAY.md`](./docs/architecture/DETAILED_DESIGN_OVERLAY.md)
+- **결정**: D-135 (2026-08-14) overlay. 구 standalone Rust MVP 는 v0 참고 구현
 
 ## 이 저장소의 두 가지 역할
 
 이 저장소는 **두 가지 역할**을 동시에 한다 (D-25 명확화):
 
-### A. **my_harness 산출물** 의 source tree (v1+)
-- `myharness <command>` CLI 의 코드가 들어갈 영역
-- v1 spec: [`docs/CONCEPT.md`](./docs/CONCEPT.md) §5 (12 subsections)
-- 핵심 컴포넌트: Harness 5 (Tools/Context/Session/Plugins/Sub-agents) + Agent 3 모드 + 15개 built-in sub-agents
+### A. **my_harness 산출물** 의 source tree (D-135 overlay)
+- thin CLI 래퍼 + `plugins/myharness/` (grok `plugin.json`)
+- spec: [`docs/CONCEPT.md`](./docs/CONCEPT.md) §0 · §5.1 · [DETAILED_DESIGN_OVERLAY.md](./docs/architecture/DETAILED_DESIGN_OVERLAY.md)
+- 엔진 5 components 는 grok. 우리는 3-도메인 동사 + plugin + task/handoff
+- `myharness/` Rust crates = v0 참고 구현 (신규 기능 금지)
 
 ### B. **이 repo 의 개발 workflow** (D-25, yklee 가 my_harness 개발 시 사용)
 - Mavis(MiniMax Code) + `minimax-code` 오버레이 + `standard_ai_workflow` kit
@@ -26,7 +27,8 @@
 
 | 결정 ID | 내용 | § |
 | --- | --- | --- |
-| D-25 | **Mavis zero coupling** — my_harness 는 Mavis 와 100% 독립 | §5.8 |
+| **D-135** | **제품 경로 = grok overlay** (래퍼+plugin). 자체 런타임 폐기 | §0, §5.1 |
+| D-25 | **Mavis zero coupling** — 개발 workflow 와 산출물 분리 (유지) | §5.8 |
 | D-26 | **standard_ai_workflow 6 원칙 native** + 옵션 Mavis 디렉토리 sync | §5.9 |
 | D-27 | **headroom = built-in 압축** (외부 proxy 의존 X) | §3.3, §5.6 |
 | D-28 | **Provider 6개** (claude/codex/gemini native + deepseek/minimax/local OpenAI 호환) | §5.5 |
@@ -46,14 +48,15 @@
 ├── .MiniMax/
 │   └── agents/                      # Mavis 워커 정의 (orchestrator/code/doc/validation)
 ├── docs/
-│   ├── CONCEPT.md                   # ★ v1 컨셉 SSOT (A 의 v1 spec)
+│   ├── CONCEPT.md                   # ★ 컨셉 SSOT (D-135 overlay)
 │   ├── PROJECT_PROFILE.md           # 이 하네스 운영 규칙
 │   ├── development_log.md           # 결정 이력 (D-01~D-42)
 │   ├── REFERENCES.md                # 5 reference 1차 비교표 (TASK-004 1차, superseded)
 │   └── references/                  # 7 reference 심층분석 + cross-review
-│       ├── README.md                # 7-doc 통합 인덱스 + 8축 비교 매트릭스
+│       ├── README.md                # 8-doc 통합 인덱스 + 8축 비교 매트릭스
+│       ├── grok-build.md            # 8번째. D-135 엔진 실측
 │       ├── ANALYSIS_PLAN.md         # 14섹션 템플릿
-│       ├── PROVIDERS.md             # LLM provider 추상화 비교
+│       ├── PROVIDERS.md             # LLM provider 추상화 비교 (v0)
 │       ├── codex.md / aider.md / goose.md / opencode.md / gemini-cli.md
 │       ├── claude-code.md           # 7번째 (closed source 분석)
 │       └── headroom.md              # 6번째 (context compression)
@@ -65,19 +68,10 @@
 │   └── tests/                       # 스모크 테스트
 └── README.md                        # 이 파일
 
-# my_harness v1 출시 시 (TASK-005-1)
-# 신규 추가 영역 (v1 산출물 source):
-#   myharness/                        # Python 또는 Rust 패키지
-#   ├── cli/                          # CLI entry + argparse
-#   ├── llm/                          # provider 비종속 LLM client
-#   ├── harness/                      # 5 components
-│   ├── agents/                       # 15개 built-in sub-agents
-#   ├── skills/                       # built-in skills
-#   ├── hooks/                        # markdown rules
-#   ├── compression/                  # Layer 1+2 압축
-#   └── llm-wiki/                     # LLM Wiki memory
-#   tests/
-#   pyproject.toml / Cargo.toml
+# overlay 산출물 (D-135, 다음 PR)
+#   plugins/myharness/                # grok plugin.json + skills/agents/hooks
+#   bin/myharness                     # thin 래퍼 (1차 셸 → Rust)
+# myharness/                          # v0 crates — 참고만, 신규 기능 금지
 ```
 
 ## 첫 세션 시작하기 (개발 workflow, B)
@@ -88,7 +82,9 @@
 3. Mavis 가 `MiniMax.md` → `state.json` → `session_handoff.md` → `work_backlog.md` → `docs/PROJECT_PROFILE.md` 순서로 읽고 현재 상태를 복원한다.
 4. 첫 실제 작업은 `ai-workflow/memory/backlog/2026-06-05.md` 에 TASK 추가하고 `state.json` 을 재생성한다.
 
-## v1 산출물 CLI 명령 (A, TASK-005-1 출시 후)
+## 산출물 CLI 명령 (A, overlay — CONCEPT.md §5.2)
+
+엔진이 PATH 의 `grok` 이어야 한다. 래퍼는 `--plugin-dir` 를 붙인다.
 
 ```bash
 # 3-도메인 명령 (CONCEPT.md §5.2)

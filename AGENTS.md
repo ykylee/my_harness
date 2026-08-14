@@ -4,14 +4,14 @@
 - 범위: 세션 복원, workflow state docs 참조 순서, 사용자 보고 언어, 기본 실행/검증 명령, 오케스트레이터/서브에이전트 운영 원칙
 - 대상 독자: opencode, opencode sub-agents, 저장소 관리자, 멀티 에이전트 운영자
 - 상태: active
-- 최종 수정일: 2026-06-08
-- 관련 문서: `MiniMax.md` (Mavis / Mavis Code 진입점, 같은 내용 한국어 단일 톤), `ai-workflow/memory/state.json`, `ai-workflow/memory/session_handoff.md`, `ai-workflow/memory/work_backlog.md`, `ai-workflow/memory/PROJECT_PROFILE.md`, **[docs/CONCEPT.md](./docs/CONCEPT.md)** ← **my_harness v1 컨셉 (SSOT, 2026-06-07 확립)**
+- 최종 수정일: 2026-08-14
+- 관련 문서: `MiniMax.md` (Mavis / Mavis Code 진입점, 같은 내용 한국어 단일 톤), `ai-workflow/memory/state.json`, `ai-workflow/memory/session_handoff.md`, `ai-workflow/memory/work_backlog.md`, `docs/PROJECT_PROFILE.md`, **[docs/CONCEPT.md](./docs/CONCEPT.md)** ← **SSOT (D-135 overlay, 2026-08-14)**, [docs/architecture/DETAILED_DESIGN_OVERLAY.md](./docs/architecture/DETAILED_DESIGN_OVERLAY.md)
   - §5.10 Agent 모드 (orchestrator/single/loop)
   - §5.11 Built-in sub-agents
   - §5.12 `~/.myharness/` 디렉토리 구조
   - §5.13 LLM Wiki memory
   - §5.14 Skill/MCP first-class
-  - §11 결정 보류 (TASK-002/005/006/007/008)
+  - §11 결정 보류 (TASK-002) · D-135 overlay 확정
 
 ## 목적
 
@@ -91,18 +91,16 @@ context_summary: <필요한 컨텍스트>
 
 이 하네스는 **코드 개발 / 서버 관리 / 환경 셋업** 세 도메인의 작업 진입점이다. 각 도메인별 표준 명령은 **[`docs/CONCEPT.md`](./docs/CONCEPT.md) §5.2 (명령 가이드)** 가 SSOT — 본 섹션은 그 참조 + 점진 채움용.
 
-**v1 컨셉 핵심 (CONCEPT.md §3)**: Harness 5 components · Provider 비종속 (rig-core 1안 / Vercel AI SDK 2안) · 3-도메인 + CCR.
+**컨셉 핵심 (CONCEPT.md §0, D-135)**: 엔진 = `grok` ≥ 1.0.3 · 표면 = 3-도메인 래퍼 · 확장 = grok plugin · LLM = `[model.minimax]`. 자체 5 components / rig-core 런타임은 v0 참고.
 
 ### 코드 개발
 
 - v1 명령: `myharness code review|implement|test|commit` (CONCEPT.md §5.2 코드 도메인)
-- **TASK-005 결정 (D-36, 2026-06-07, `docs/development_log.md` §5)**: 스택 = **Rust 1안**. Cargo workspace (`myharness/Cargo.toml`) + 8 member crates (core / llm / tui / tools / context / cli / auth / compression). 의존성: `rig-core = "0.38"`, `rmcp = "1.7"`, `ratatui`, `keyring`, `cargo-dist`.
-- **TASK-006 결정 (D-36 의 TASK-005 Rust 정합 자동 확정)**: TUI = **ratatui** (`myharness/crates/tui/`).
-- 설치 (Rust 1안 기반): `cargo build --release --manifest-path myharness/Cargo.toml` — release binary `myharness/target/release/myharness` 산출
-- 로컬 실행: `./target/release/myharness --mode=orchestrator` (D-29, 3-모드: orchestrator/single/loop)
-- 빠른 테스트: `cargo test --manifest-path myharness/Cargo.toml --workspace --lib`
-- 격리 테스트: `cargo test --manifest-path myharness/Cargo.toml -p <crate-name> --lib` (예: `-p myharness-core`, `-p myharness-llm`)
-- 실행 확인: `./target/release/myharness --version` 또는 `./target/release/myharness --mode=single "echo hello"` (단일 에이전트 smoke)
+- **D-135 (2026-08-14)**: 제품 경로 = grok overlay. 설치 = 공식 `grok` + 래퍼. 설계 = `docs/architecture/DETAILED_DESIGN_OVERLAY.md`
+- **D-36 (historical)**: v0 스택 = Rust crates. 신규 기능 금지 (D-135.6)
+- 엔진 확인: `grok --version` (필요 ≥ 1.0.3)
+- 래퍼 실행 (PR-2 이후): `myharness env diagnose`
+- v0 참고 테스트만 필요 시: `cargo test --manifest-path myharness/Cargo.toml --workspace --lib`
 
 ### 서버 관리
 

@@ -697,4 +697,4 @@ pub enum TelemetryMode {
 | **Overlay** | `--plugin-dir` 자동 trust + `grok agent stdio` + `[model.*]` + PreToolUse. 3-도메인 명령은 래퍼. |
 | **독립 런타임** | 포크 대상은 grok-build 가 아니라 **goose**. grok 는 패턴 이식 소스. |
 
-이 문서는 결정을 내리지 않는다. 14섹션 실측만 고정한다.
+**D-135 (2026-08-14)**: 위 분기 중 **Overlay 확정**. 구현 사양 [`../architecture/DETAILED_DESIGN_OVERLAY.md`](../architecture/DETAILED_DESIGN_OVERLAY.md). 본 문서의 14섹션 실측은 그대로 근거다.

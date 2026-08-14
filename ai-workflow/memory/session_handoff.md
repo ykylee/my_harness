@@ -4,8 +4,8 @@
 - Scope: current focus, task status, key changes, next actions, risks
 - Audience: yklee, Mavis orchestrator, .MiniMax 워커 에이전트
 - Status: active
-- Updated: 2026-08-14 (**D-134 grok-build 8번째 reference + 2차 14섹션 심층** — 세션 종료, overlay/포크 결정 보류. 다음 세션 이어감)
-- Updated: 2026-08-14 (2차 세션 — TASK-005-2 v2.0 Plugin 4-계층 Sub-task 2 진입 옵션 5개 제시, yklee 결정 없이 종료. main = `4eec8e8`, 결정 카운트 77, git clean. 다음 세션 = A1~A4 선택 또는 D-134 overlay/포크)
+- Updated: 2026-08-14 (**D-135 overlay 확정 + 문서 재구성**. CONCEPT §0 갱신. 설계 `docs/architecture/DETAILED_DESIGN_OVERLAY.md`. 다음 = PR-1 plugin 스캐폴드. A1~A4 Plugin 인프라 = OOS)
+- Updated: 2026-08-14 (이전: D-134 grok-build 14섹션. overlay/포크 당시 미결정 → D-135 로 해소)
 - Related docs: [Project Profile](../../docs/PROJECT_PROFILE.md), [Work Backlog](./work_backlog.md), [State Cache](./state.json), [CONCEPT.md](../../docs/CONCEPT.md) (SSOT)
 
 ## Current Focus
@@ -905,3 +905,37 @@
 
 - 76 → **77** (D-134). overlay/포크 자체는 미결정.
 - 문서+메모리 단일 commit. working tree 는 본 commit 후 clean 이어야 함.
+
+---
+
+## 세션 종료 (2026-08-14, D-135) — overlay 문서 재구성
+
+### 1. 사용자 메시지
+
+- "이전 작업 확인하자. 레퍼런스 검토 작업 하다가 뭔가 꼬였어" → 진입점 A 4중 정의 진단
+- "A 안을 브리핑해줘" → D-134 overlay 브리핑
+- "좋아 A 안에 따라 재구성을 시작하자. 문서부터 컨셉, 설계 등 전체적으로 갱신해줘" → D-135
+
+### 2. 한 일
+
+- **D-135 확정**: 제품 경로 = grok overlay. 자체 Plugin A1~A4 = OOS
+- 신규 [`docs/architecture/DETAILED_DESIGN_OVERLAY.md`](../../docs/architecture/DETAILED_DESIGN_OVERLAY.md)
+- CONCEPT §0 / §5.1 / §5.3 / §5.7 / §5.8 / §5.9.4 / §6 / §8 / §11.4
+- README, PROJECT_PROFILE, MiniMax, AGENTS, REFERENCES, grok-build §15, INITIAL_DESIGN·REQUIREMENTS 배너, development_log
+- 코드 0. v0 crates 신규 기능 금지
+
+### 3. 다음 세션 진입점
+
+1. **PR-1** `plugins/myharness/` 스캐폴드 (`plugin.json` + stub)
+2. **PR-2** thin CLI 래퍼 + grok 가드 + 12 동사
+3. PR-3 MiniMax `[model.*]` smoke
+4. D-130 follow-up (CCR/Memory) — 경로 무관, 별도
+
+### 4. 누적 결정
+
+- 77 → **78** (D-135)
+- in_progress: D-135 PR-1
+- blocked: TASK-002, MiniMax OAuth real flow
+- recently-done 머리: D-135
+
+- 

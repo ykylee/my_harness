@@ -1,30 +1,36 @@
-# my_harness — 개발 컨셉 (v1 SPEC / Master Concept)
+# my_harness — 개발 컨셉 (Master Concept / SSOT)
 
-> **본 문서는 my_harness 의 단일 진실 공급원 (single source of truth)**: 7 reference 분석 종합 + yklee 의 작업 컨셉 + TASK-005/002/007 결정 입력을 모두 반영한 v1 MVP 스펙.
+> **본 문서는 my_harness 의 단일 진실 공급원 (single source of truth).**
+>
+> **D-135 (2026-08-14)**: 제품 경로 = **Grok Build overlay**. `grok` 가 엔진, myharness 는 3-도메인 래퍼 + plugin. standalone 런타임 문장은 폐기.
+>
+> **구현 사양**: [`architecture/DETAILED_DESIGN_OVERLAY.md`](./architecture/DETAILED_DESIGN_OVERLAY.md)
 >
 > **갱신 정책**: 마일스톤 별 갱신. 본 문서 갱신 시 관련 (MiniMax.md, PROJECT_PROFILE.md, REFERENCES.md, README.md, development_log.md) 도 함께 align.
 >
-> **최종 갱신**: 2026-06-07 (v1 draft, 7 reference 분석 후) — **D-24: orchestration framing 제거** (standalone harness tool 로 재확립)
+> **최종 갱신**: 2026-08-14 (D-135 overlay). 이전: 2026-06-07 v1 draft (D-22~D-38 standalone Rust MVP).
 
 ---
 
-## 0. 핵심 Positioning (D-25 교정 후, Mavis zero coupling)
+## 0. 핵심 Positioning (D-135 overlay, D-25 개발 분리 유지)
 
 ### my_harness 는
 
-- **완전 standalone CLI/TUI coding agent** — `myharness <command>` 로 terminal 에서 직접 실행
-- **Harness-first 5 components** (Tools · Context · Session · Plugins · Sub-agents) — Model + Harness = Agent
-- **Direct LLM provider 통신** — Anthropic/OpenAI/Google/local Ollama 등 provider API 와 직접 통신
-- **Zero external dependency** — Mavis, Mavis, Mavis, mavis-team, standard_ai_workflow, 4-워커 어느 것과도 결합 없음
-- **Sibling to claude-code / codex / aider / goose / gemini-cli / opencode** — 7 reference 분석이 동급 comparison
+- **Grok Build 위의 개인 하네스** — 설치된 `grok` 가 엔진 (TUI · tools · session · permission · subagent)
+- **3-도메인 래퍼** — `myharness code|server|env …` 가 사용자 표면. 동사를 `grok -p` / `--agent` / TUI 로 번역
+- **grok plugin** — skills / commands / agents / hooks 를 `--plugin-dir` 로 주입 (자체 loader 없음)
+- **MiniMax 우선** — grok `[model.minimax]` (`chat_completions` + `base_url`). Ollama 동일
+- **개발 시 Mavis zero coupling** — 이 repo 를 개발할 때 쓰는 workflow 와 산출물 런타임은 분리 (D-25 유지)
 
 ### my_harness 는 **아니다** (NOT)
 
-- ❌ **다른 도구의 오케스트레이션 도구** (orchestrator 가 아님)
-- ❌ **Mavis / Mavis / mavis-team / standard_ai_workflow 와 결합된 도구** — yklee 가 Mavis 로 my_harness 를 개발할 수는 있으나 my_harness 자체는 Mavis 와 무관
-- ❌ **외부 4-워커(Claude/Codex/Gemini/OpenCode) 운영/통합 도구** — 그 도구들은 sibling 이지 my_harness 의 dispatch 대상 아님
-- ❌ **workflow / state management 시스템** — workflow 는 my_harness 의 concern 아님
-- ❌ **외부 headroom proxy 의존** — headroom 의 압축 알고리즘은 **built-in 으로** 우리 Context component 에 내장 (D-27). proxy 방식 의존 안 함
+- ❌ **standalone 코딩 에이전트 런타임** — 5 components 를 다시 구현하지 않음 (D-135. 구 D-24/D-25 제품 문장 폐기)
+- ❌ **grok 소스 포크** — 136만 줄 + generated workspace + 외부 PR 거부. 비권장 (D-134)
+- ❌ **goose 포크** — 독립 런타임이 필요할 때만. 지금 경로 아님
+- ❌ **다른 도구의 오케스트레이션 도구**
+- ❌ **Mavis / mavis-team 과 결합된 런타임** — 개발 도구로 Mavis 를 쓸 수는 있으나 산출물은 Mavis 를 모름
+- ❌ **외부 4-워커 운영 도구**
+- ❌ **제품 브랜드를 grok 에서 지우는 스킨** — 로고/키맵/빌트인 slash 는 overlay 로 못 지움
 
 ### 위치 (Positioning)
 
@@ -32,24 +38,25 @@
 ┌─────────────────────────────────────────┐
 │  yklee (user)                            │
 └─────────────────────────────────────────┘
-              ↓ terminal 직접 호출
+              ↓ terminal
 ┌─────────────────────────────────────────┐
-│  my_harness (CLI/TUI)                    │  ← STANDALONE
-│  Harness 5 components                    │
-│  ┌───────────────────────────────────┐  │
-│  │ Context component:                │  │
-│  │  - CLAUDE.md, auto memory         │  │
-│  │  - built-in compression ⭐        │  │  ← D-27: headroom 알고리즘 built-in
-│  │    (CacheAligner, ContentRouter,  │  │     (선택적, user on/off)
-│  │     CCR, SmartCrusher, CodeComp,  │  │
-│  │     Kompress-base)               │  │
-│  └───────────────────────────────────┘  │
+│  myharness (thin CLI + plugin)          │  ← D-135
+│  - 3-도메인 동사 번역                    │
+│  - plugin.json 4계층                     │
+│  - task/handoff (D-26)                   │
 └─────────────────────────────────────────┘
-              ↓ Direct LLM API call
-              (Anthropic/OpenAI/...)
+              ↓ exec  grok --plugin-dir …
+┌─────────────────────────────────────────┐
+│  grok (Grok Build ≥ 1.0.3)              │  ← 엔진
+│  Tools · Context · Session              │
+│  Plugins · Sub-agents                   │
+│  compaction · JSONL · permission        │
+└─────────────────────────────────────────┘
+              ↓ [model.minimax] / [model.ollama]
+              chat_completions
 ```
 
-**my_harness** = terminal 에서 직접 실행되는 standalone CLI/TUI. **headroom 의 압축 알고리즘은 built-in 으로** 내장 (외부 proxy 의존 X). 사용자가 끄면 native cache 만 사용. 3-도메인 (코드/서버/환경) 작업 전문.
+**my_harness** = yklee 의 3-도메인 표면. **엔진은 grok**. 설계: [DETAILED_DESIGN_OVERLAY.md](./architecture/DETAILED_DESIGN_OVERLAY.md).
 
 ---
 
@@ -57,7 +64,7 @@
 
 ## 1. 한 줄 Positioning
 
-**my_harness = yklee 의 개인 코딩 에이전트 CLI/TUI** — Mavis / MiniMax Code 런타임 기반, **Harness-first architecture** (Model + 5 components), **3-도메인** (코드/서버/환경) 동시 지원, **standard_ai_workflow + minimax-code** 듀얼 오버레이.
+**my_harness = yklee 의 3-도메인 하네스 래퍼** — 엔진은 설치된 `grok` (Grok Build), 표면은 `myharness code|server|env`, 확장은 grok plugin. 개발 workflow 만 Mavis / standard_ai_workflow.
 
 ---
 
@@ -74,11 +81,11 @@
 
 ## 3. 핵심 가치 (3가지)
 
-### 3.1 **Harness-first** (claude-code 13.1)
-모델보다 **Harness 5 components** (Tools, Context, Session, Plugins, Sub-agents) 가 차별점. claude-code 의 `Agent = Model + Harness` 청사진 차용. my_harness 단독으로 LLM provider 와 직접 통신하여 코드/서버/환경 작업 수행.
+### 3.1 **3-도메인 표면 + 완성된 엔진** (D-135)
+차별점은 자체 5 components 재구현이 아니다. grok 가 이미 Tools/Context/Session/Plugins/Sub-agents 를 가지고 있다. 우리는 **코드/서버/환경 동사** 와 **한국어 workflow** 와 **MiniMax 기본** 을 그 위에 얹는다.
 
-### 3.2 **Provider 비종속** (aider/opencode/goose 13.2 + claude-code 13.15)
-12+ (Rust 1안 `rig-core`) 또는 15+ (TS 2안 `Vercel AI SDK`) provider + **3 fallback model** (claude-code 패턴). 어떤 provider 든 my_harness 가 직접 통신 — 외부 orchestrator 불필요.
+### 3.2 **Provider 는 grok `[model.*]`** (D-135.4)
+MiniMax / Ollama / OpenAI 호환은 `api_backend = chat_completions` + `base_url`. 자체 `rig-core` 클라이언트는 v0 참고 구현 (D-135.6). 외부 orchestrator 는 여전히 불필요 — 경유가 grok sampler 일 뿐.
 
 ### 3.3 **3-도메인 동시 + 2-계층 Context 압축** (D-27 + D-30)
 
@@ -90,71 +97,63 @@
 
 ## 4. 스코프
 
-### 4.1 In-scope (v1 MVP)
+### 4.1 In-scope (overlay 1차, D-135)
 
-**3-도메인**:
+**3-도메인 표면** (그대로):
 - **코드 개발 전반** — 새 기능 구현, 리팩토링, 버그 수정, 리뷰, 테스트, PR 작업
 - **기본 서버 관리** — 프로세스/서비스 상태 점검, 로그 확인, 설정 변경, 배포 헬퍼
 - **환경 셋업** — 로컬/원격 개발 환경 부트스트랩, 의존성 설치, 셸/도구 설정
 
-**3-언어 동시** (cross-platform):
-- macOS (Intel + Apple Silicon Universal)
-- Linux (Debian/Fedora/RHEL/Alpine)
-- Windows (PowerShell/CMD, x64/ARM64)
+**엔진/확장**:
+- 설치된 `grok` ≥ 1.0.3 가드
+- `plugins/myharness/` (`plugin.json` + skills/commands/agents/hooks)
+- MiniMax `[model.minimax]` + env `MINIMAX_API_KEY`
+- `myharness task start|end` (D-26, grok 바깥)
 
-### 4.2 Out-of-scope (v1)
+플랫폼은 grok 가 지원하는 범위 (공식 바이너리: macOS / Linux. Windows best-effort).
 
-- 5 surfaces cross-session (claude-code 13.2) — v2+ (TUI/IDE/Web hand-off)
-- Plugin marketplace community (claude-code 13.3) — v2+
-- Computer Use (claude-code 13.23) — v3+
-- Routines / scheduled tasks (claude-code 13.17) — v2+
-- Channels (Slack/Telegram webhook) — v2+
-- Multi-user / RBAC — v3+
-- 5 surface 동시 유지 (claude-code 13.36 anti-pattern) — 절대 안 함
+### 4.2 Out-of-scope
+
+- **자체 5 components 재구현** (TUI/tools/session/plugin loader/subagent SDK)
+- **grok 소스 포크** / generated workspace 소유
+- **v0 `myharness/` crates 에 신규 기능** (D-135.6)
+- 5 surfaces cross-session — grok ACP 가 있으면 엔진 측. 우리가 안 짬
+- grok 로고/키맵/빌트인 slash 제거
+- Computer Use / Multi-user / RBAC
+- 5 surface 동시 유지 (anti-pattern) — 절대 안 함
 
 ---
 
-## 5. v1 MVP 스펙
+## 5. overlay 스펙 (D-135)
 
-### 5.1 아키텍처: Harness 5 components ⭐
+> 아래 §5.2~§5.14 의 명령·6원칙·디렉터리 **의도**는 유지한다. **구현 주체**는 2026-06 의 자체 Rust crates 가 아니라 grok + 래퍼다. 모듈 분해는 [DETAILED_DESIGN_OVERLAY.md](./architecture/DETAILED_DESIGN_OVERLAY.md).
+
+### 5.1 아키텍처: 엔진 = grok, 표면 = myharness ⭐
 
 ```
 ┌─────────────────────────────────────────────┐
-│  User Interface (CLI + TUI)                 │  ← v1 CLI + TUI 만
+│  myharness CLI (thin)                       │  ← 3-도메인 동사 + task/handoff
 ├─────────────────────────────────────────────┤
-│  Command & Tool Layer                       │  ← commands + tools
+│  plugins/myharness/                         │  ← plugin.json 4계층
+│  commands/ · skills/ · agents/ · hooks/     │
 ├─────────────────────────────────────────────┤
-│  Harness 5 Components                       │
+│  grok (installed binary ≥ 1.0.3)            │  ← 엔진, 재구현 금지
 │  ┌───────────────────────────────────────┐  │
-│  │ 1. Tools        — Read/Write/Edit/    │  │
-│  │                  Bash/Grep/Glob +     │  │
-│  │                  plugin tools        │  │
-│  │ 2. Context      — CLAUDE.md +        │  │
-│  │                  auto memory +       │  │
-│  │                  /compact + CCR      │  │
-│  │ 3. Session      — local state.json + │  │
-│  │                  standard_ai_workflow│  │
-│  │ 4. Plugins      — 4계층 (commands/   │  │
-│  │                  agents/skills/hooks)│  │
-│  │ 5. Sub-agents   — mavis-team worker  │  │
-│  │                  pool + Agent SDK    │  │
+│  │ 1. Tools     — GrokBuild + Hashline   │  │
+│  │ 2. Context   — AGENTS.md + compact    │  │
+│  │ 3. Session   — updates.jsonl + FTS    │  │
+│  │ 4. Plugins   — --plugin-dir + market  │  │
+│  │ 5. Sub-agents — task, depth 1         │  │
 │  └───────────────────────────────────────┘  │
 ├─────────────────────────────────────────────┤
-│  Query Engine — streaming, tool dispatch,   │
-│                 retry, context compression   │
-├─────────────────────────────────────────────┤
-│  Service Layer — auth, plugins, state,      │
-│                  analytics, secret mgmt     │
-├─────────────────────────────────────────────┤
-│  Infrastructure — filesystem, Git, config,  │
-│                   permissions, secure store  │
+│  grok sampler — 3 backend stream + retry    │
 └─────────────────────────────────────────────┘
                     ↓
-        Claude API + 3P providers
-        (rig-core 1안 / Vercel AI SDK 2안)
+        [model.minimax] chat_completions
+        (Ollama / OpenAI 호환 동일)
 ```
 
-**참조**: claude-code.md §2, arxiv 2604.14228
+**참조**: [grok-build.md](./references/grok-build.md) §2·§9·§15, [DETAILED_DESIGN_OVERLAY.md](./architecture/DETAILED_DESIGN_OVERLAY.md)
 
 ### 5.2 명령 가이드 (도메인별)
 
@@ -184,20 +183,18 @@ myharness env shell <cmd>               # 셸 명령 + LLM 분석
 myharness env diagnose                 # 환경 진단
 ```
 
-**각 명령 = 1 sub-agent (mini_coder_max / fullstack-dev / etc) 위임** — mavis-team 의 worker pool 활용.
+**각 명령 = 래퍼가 grok `-p` / `--agent` / plugin agent 로 번역**. 빌트인 grok 에이전트 (`explore` / `plan` / `general-purpose`) 이름은 섀도잉하지 않음.
 
-### 5.3 설치 / 배포 (claude-code 13.9 + 13.10)
+### 5.3 설치 / 배포 (D-135.1)
 
-**5 install paths**:
-| OS | 권장 | 대안 |
-| --- | --- | --- |
-| macOS / Linux | `curl -fsSL https://myharness.dev/install.sh \| bash` | brew `--cask myharness` (stable) / `@latest` (bleeding) |
-| Windows (PS) | `irm https://myharness.dev/install.ps1 \| iex` | winget `Yklee.Myharness` |
-| Linux package | apt / dnf / apk | install.sh |
+**2층**:
 
-- **Auto-update**: native install 만 background. brew/winget 수동
-- **Stable vs Latest 듀얼 채널** (claude-code 13.10)
-- **단일 binary** (Rust 1안 / TS+Bun 2안)
+1. **엔진** — 공식 `curl -fsSL https://x.ai/cli/install.sh | bash` → `~/.grok/bin/grok`. 업데이트는 `grok update`.
+2. **래퍼** — 이 저장소의 `myharness` (1차 셸, 이후 단일 binary). plugin 트리를 `~/.myharness/plugins/myharness/` 에 둔다.
+
+래퍼는 `grok` 가 PATH 에 있고 버전이 `≥ 1.0.3` 인지 확인한다. 없으면 exit 2 + 설치 URL.
+
+자체 5 install paths / cargo-dist 제품 배포는 **overlay 1차 OOS**. v0 경로의 잔여 계획.
 
 ### 5.4 보안 (claude-code 13.8 + 13.4 + 13.13)
 
@@ -223,7 +220,9 @@ myharness env diagnose                 # 환경 진단
 - Linux Secret Service (libsecret)
 - 토큰 값은 메모리/문서/git 저장 금지
 
-### 5.5 LLM 통합 (D-15 + D-28 + D-38)
+### 5.5 LLM 통합 (D-15 + D-28 + D-38 · D-135.4 경유)
+
+**D-135.4**: 제품 경로의 LLM 호출은 grok sampler. MiniMax / Ollama 는 `[model.<name>]` + `api_backend = chat_completions`. 아래 5.5.1~5.5.3 은 v0 자체 클라이언트의 역사적 spec 이며, overlay 1차에서 재구현하지 않는다. `provider-auto-config` 는 grok skill 로 이식 가능 (PR-4).
 
 #### 5.5.1 지원 Provider (D-28, 정적 등록)
 
@@ -463,32 +462,35 @@ LLM provider API
 - CCR (reversible + retrieval) — round-trip 비용 trade-off
 - Kompress-base (ONNX) — 95% 자유 텍스트 압축, ML 모델 weight 포함 (~수 MB)
 
-### 5.7 Plugin 시스템 (claude-code 13.3)
+### 5.7 Plugin 시스템 (D-135.3 — grok plugin.json)
 
-**4 계층** (v1.5+):
+자체 Plugin loader / dispatcher 는 **만들지 않는다.** grok 가 읽는 트리를 저장소에 둔다.
+
 ```
-~/.myharness/plugins/<name>/
-├── plugin.json           # manifest
-├── commands/             # slash commands
-├── agents/               # specialized sub-agents
-├── skills/               # auto-invoke knowledge
-└── hooks/                # event handlers (markdown rule)
+plugins/myharness/              # --plugin-dir (자동 trust)
+├── plugin.json                 # name, version, skills/commands/agents/hooks
+├── commands/                   # slash 추가 (빌트인 충돌 시 빌트인 승)
+├── agents/                     # .md (빌트인 3 이름 섀도잉 금지)
+├── skills/                     # SKILL.md
+└── hooks/hooks.json            # PreToolUse 등 15 이벤트
 ```
 
-**v1 MVP**: local plugin only (commands + hooks). marketplace 는 v2+.
+사용자 사본: `~/.myharness/plugins/myharness/`. marketplace 는 grok 측 (`grok plugin install`). 우리 marketplace 서버는 OOS.
 
-### 5.8 외부 의존성 없음 (Zero external dependency)
+**TASK-005-2 Sub-task 2 (자체 Plugin 인프라 A1~A4) = OOS.**
 
-my_harness 는 다음 어느 것과도 **결합 없음**:
-- ❌ Mavis (Mavis) — chat agent
-- ❌ Mavis / mavis-team — orchestration engine
-- ❌ standard_ai_workflow — Mavis 의 workflow meta layer
-- ❌ 4-워커 (Claude/Codex/Gemini/OpenCode) — sibling 일 뿐
+### 5.8 런타임 의존 (D-135.1, D-25 개발 분리 유지)
 
-**유일한 런타임 의존**:
-- LLM provider API (Anthropic / OpenAI / Google / local Ollama) — **직접 통신**
-- OS 표준 라이브러리 (filesystem, network, process)
-- (선택) headroom MCP server — 사용자 opt-in
+**유일한 엔진 의존**:
+- 설치된 **`grok` ≥ 1.0.3** (Grok Build, Apache 2.0)
+- LLM 은 grok `[model.*]` 경유 (MiniMax / Ollama / OpenAI 호환)
+- OS 표준 라이브러리
+
+**결합하지 않음** (D-25 유지):
+- ❌ Mavis / mavis-team — 개발 도구일 뿐
+- ❌ 4-워커 (Claude/Codex/Gemini/OpenCode) — sibling
+- ❌ grok **소스 트리** — 바이너리만
+- ❌ 자체 TUI / tool registry / session store (v0 crates 는 참고만)
 
 **호환되는 외부 도구** (sibling, not dependency):
 - 사용자가 plugin 으로 추가 가능 (claude-code 4-계층 plugin 시스템)
@@ -580,39 +582,43 @@ produced_artifacts:
   - docs/TASK-005_DECISION.md
 ```
 
-#### 5.9.4 우리 my_harness 의 위치 (재확인)
+#### 5.9.4 우리 my_harness 의 위치 (재확인, D-135)
 
 ```
 ┌─────────────────────────────────────────┐
-│  yklee (terminal 직접)                   │
+│  yklee (terminal)                        │
 └─────────────────────────────────────────┘
               ↓ `myharness <command>`
 ┌─────────────────────────────────────────┐
-│  my_harness (CLI/TUI)                    │  ← 100% standalone
-│  - Harness 5 components                  │
-│  - standard_ai_workflow 6 원칙 native   │  ← 한국어/절약/상태/이벤트/비참조/handoff
-│  - LLM provider 직접 통신                │
+│  myharness 래퍼                          │
+│  - 3-도메인 동사                         │
+│  - 6 원칙 native (task/handoff/log)     │
 └─────────────────────────────────────────┘
-       ↓                          ↓
-   LLM provider           .myharness/ (자체)
-                              ├── state/         (항상)
-                              ├── handoff/       (항상)
-                              ├── log.jsonl      (항상)
-                              ├── memory/auto/   (항상)
-                              └── plugins/       (항상)
+       ↓ exec grok --plugin-dir        ↓
+   ~/.grok/ (엔진)                 ~/.myharness/ (래퍼)
+     sessions/                       state/
+     auth.json                       handoff/
+     memory/                         log.jsonl
+     config.toml                     plugins/
                             ↓ (opt) auto-detect
-                       ai-workflow/memory/    (Mavis 디렉토리 발견 시만)
+                       ai-workflow/memory/    (개발 repo 에서만)
 ```
 
 **핵심**:
-- **my_harness = 자체 `.myharness/` 디렉토리 + standard_ai_workflow 6 원칙 native** — Mavis 없어도 동작
-- **옵션 Mavis 통합** — auto-detect 로 seamless, 사용자 flag 로 off 가능
-- **Mavis 가 my_harness 를 spawn 해도** 동일한 6 원칙 + 자체 디렉토리 + 옵션 통합
-- **my_harness 개발 workflow** (이 repo 의 Mavis + standard_ai_workflow) = **my_harness 산출물과 무관** (D-25)
+- **6 원칙은 래퍼가 지킨다** — Mavis 없어도 `~/.myharness/` 에 task/handoff/log
+- **세션 본문은 grok `updates.jsonl`** — 우리가 JSONL 을 다시 짜지 않음
+- **옵션 Mavis 통합** — auto-detect, flag 로 off
+- **개발 workflow ≠ 산출물 런타임** (D-25)
 
 ---
 
-### 5.10 Agent 모드 (3가지, D-29)
+### 5.10 Agent 모드 (3가지, D-29 · D-135 매핑)
+
+엔진 기본은 grok TUI (in-process `MvpAgent`). 우리 `--mode` 는 래퍼 번역이다.
+
+- `orchestrator` (default) → `grok` TUI. 플래그 불필요
+- `single` → `grok -p`
+- `loop` → 래퍼가 `--goal` / `--max-iterations` 를 프롬프트에 삽입 (grok 에 ralph-wiggum 플래그 없음)
 
 my_harness 의 **메인 에이전트**는 기본적으로 **orchestrator** 역할. 작업 카테고리마다 **sub-agent 를 내장**하여 작업 분배 + context 효율화. 모드 변경으로 단일 에이전트 / 무한루프 모드 전환 가능.
 
@@ -658,17 +664,20 @@ myharness --mode=loop --goal "fix all TODO comments" --max-iterations=20 .
 | **Utility** | `git-operator` | git workflow (commit/PR/branch) |
 | | `file-searcher` | file glob/find/grep |
 
-**Sub-agent 정의 위치**:
-- v1: 하드코딩 (Python module 내장) — 빠르고 검증 용이
-- v1.5+: `~/.myharness/sub-agents/<name>/SYSTEM.md` (사용자 정의 가능, claude-code 4-계층 agents 와 정합)
+**Sub-agent 정의 위치** (D-135):
+- 엔진 빌트인 3: `general-purpose` / `explore` / `plan` (이름 섀도잉 금지)
+- 우리 도메인 에이전트: `plugins/myharness/agents/*.md`
+- v0 하드코딩 Rust/Python sub-agent = 참고만. 신규 추가 금지
 
 **Orchestrator 의 dispatch 로직**:
 - user 명령 분석 → 도메인/카테고리 매칭 → 적절한 sub-agent spawn
 - sub-agent 결과 통합 → user 에게 한국어 보고 (D-26)
 
-### 5.12 `~/.myharness/` 디렉토리 구조 (D-31)
+### 5.12 `~/.myharness/` 디렉토리 구조 (D-31 · D-135.5)
 
 yklee 환경 검증: 다른 agent 도구 모두 `~/.<toolname>/` 컨벤션 (claude/codex/gemini/headroom/minimax/jules/coderabbit). 우리도 동일.
+
+**D-135.5**: 엔진 홈은 `~/.grok/` (세션 JSONL, auth.json, grok config). 래퍼 홈은 `~/.myharness/` (task/handoff/log/plugin 사본). `GROK_HOME=~/.myharness` 로 합치지 않음.
 
 **v1 구현 범위 (D-69)**: 표의 **11 top-level dirs + root** 가 `init_home_dir()` (paths.rs:141) 가 자동 생성. sub-dir (state/current.toml, memory/auto/, compression/cache/, sub-agents/<name>/, cache/models/, llm-wiki/ 등) 는 v1.5+ 구현. **OAuth token 실제 dir** = `~/.myharness/oauth/{provider}.toml` (`TokenStore::new()`, store.rs:39) — §5.5.2 의 `state/auth/` 와 다름 (해당 경로는 `state_auth_toml()` = auth **state metadata** 용, status/last_login 등).
 
@@ -846,17 +855,20 @@ auto_invoke:
 
 ---
 
-## 6. v2+ 로드맵 (TASK-005-N 형식)
+## 6. 로드맵 (D-135 이후)
 
-> **TASK-005 (스택 결정) 후속 마일스톤** 들. 각 TASK-005-N = v1 MVP 이후 순차 milestone.
+> 제품 경로는 overlay. TASK-005-1 v0 Rust MVP 는 **완료된 historical**. 자체 Plugin 인프라 (구 TASK-005-2 Sub-task 2) 는 **OOS**.
 
-| task_id (TASK-005-N) | 핵심 | 채택 패턴 |
+| task_id | 핵심 | 상태 |
 | --- | --- | --- |
-| **TASK-005-1** (v1.0 MVP) | CLI + TUI, 3-도메인, single binary | 1차 8개 adopt |
-| **TASK-005-2** (v1.5) | Plugin 4-계층, marketplace beta, auto memory | 2차 7개 adopt |
-| **TASK-005-3** (v2.0) | TUI/IDE/Web hand-off (5 surfaces), Routines | claude-code 13.2 + 13.17 |
-| **TASK-005-4** (v2.5) | Multi-agent parallel + confidence scoring | claude-code 13.11 (code-review) |
-| **TASK-005-5** (v3.0) | Computer Use, Multi-user, RBAC | claude-code 13.23 + 13.34 |
+| **TASK-005-1** (v0 runtime) | 자체 Rust crates CLI/TUI | done (historical, D-135.6 참고만) |
+| **D-135 PR-1** | `plugins/myharness/` 스캐폴드 | planned |
+| **D-135 PR-2** | thin CLI 래퍼 + grok 가드 + 12 동사 | planned |
+| **D-135 PR-3** | MiniMax `[model.*]` smoke | planned |
+| **D-135 PR-4** | 3-도메인 skills + PreToolUse | planned |
+| **D-135 PR-5** | `task start\|end` 래퍼 | planned |
+| **TASK-005-2** 자체 Plugin loader | — | **OOS** (grok plugin.json 이 대체) |
+| **TASK-005-3+** 5 surfaces / Computer Use | 엔진(grok ACP) 범위. 우리 재구현 안 함 | deferred |
 
 ---
 
@@ -893,14 +905,17 @@ auto_invoke:
 
 ---
 
-## 8. 안티 패턴 (6개, 절대 안 함)
+## 8. 안티 패턴 (절대 안 함)
 
-1. **closed source + leak 의존** (claude-code 13.27) → **MIT/Apache 2.0 (open)**
-2. **듀얼 언어** (headroom 13.15) → **단일 언어** (Rust 1안 OR TS 2안)
-3. **100+ slash commands** (claude-code 13.30) → **3-도메인 × 3-4 명령** = ~12 명령 max
-4. **5 surface 동시 유지** (claude-code 13.36) → **v1 CLI+TUI only**, 점진 확장
-5. **cloud auto memory privacy** (claude-code 13.37) → **v1 local-only**, v2+ opt-in cloud
-6. **subscription requirement** (claude-code 13.34) → **CLI free**, v2+ premium 검토
+1. **closed source + leak 의존** → 우리 코드 MIT/Apache. 엔진은 grok (Apache 2.0 바이너리)
+2. **grok 소스 포크를 뼈대로 삼기** (D-134/D-135) — 136만 줄 + generated workspace + PR 거부
+3. **5 components 재구현** — 엔진이 이미 가지고 있음
+4. **100+ slash commands** → **3-도메인 × 3-4 명령** = ~12 명령 max
+5. **5 surface 동시 유지** → 래퍼 CLI + grok TUI 만
+6. **cloud auto memory** → local-only (`~/.grok/memory`, `~/.myharness/`)
+7. **CONCEPT §0 standalone 을 유지한 채 grok 를 뼈대로 쓰기** — 모순 (폐기됨)
+8. **hook fail-open 을 보안 경계로 믿기**
+9. **브랜드/키맵/빌트인 slash 를 overlay 로 지우기**
 
 ---
 
@@ -923,8 +938,10 @@ auto_invoke:
 | 리스크 | 영향 | 대응 |
 | --- | --- | --- |
 | **Worker long Write abort** (D-16) | 분석/문서 작업 지연 | chunked write + early deliverable signal + minimal board noise |
-| **Provider API 변경** | 호환성 깨짐 | rig-core / Vercel AI SDK 의 abstraction layer 활용 |
-| **headroom API 변경** | CCR integration 깨짐 | MCP server 노출 → 우리 쪽만 갱신 |
+| **grok 업데이트** | 래퍼 플래그/plugin 스키마 깨짐 | `min_version` 가드 + smoke |
+| **MiniMax + xAI-only 툴** | image/web_search 실패 | plugin 문서화, 해당 툴 비활성 |
+| **Provider API 변경** | 호환성 깨짐 | grok `[model.*]` 가 흡수. 우리 llm crate 신규 작업 금지 |
+| **headroom API 변경** | CCR 재구현 유혹 | Layer 2 재구현 OOS (D-66/D-130). grok compaction 사용 |
 | **5 surface 점진 확장 시 maintenance 부담** | bug fix 5x | v1 CLI+TUI 만, v2 부터 surface 추가 시 별도 sprint |
 | **plugin 생태계 부재** (v1 local only) | 확장성 제한 | v1.5 부터 marketplace beta |
 | **3 fallback 의 provider 가용성** | fallback 발동 시 지연 | fallback 도 동일 abstraction 위에서 |
@@ -943,6 +960,22 @@ auto_invoke:
 | **TASK-006** | TUI 라이브러리 (ratatui vs React/Ink) | — | ✅ **D-36 결정: ratatui + crossterm** (TASK-005 종속) |
 | **TASK-007** | headroom built-in 알고리즘 구현 우선순위 | — | ✅ **D-37 결정: v1 = 3 알고리즘 (CacheAligner + ContentRouter + SmartCrusher + CodeCompressor), CCR + Kompress-base v1.5+ 로 연기** |
 | **TASK-008** | Provider fallback list (3 모델) | — | ✅ **D-38 결정: 하드코딩 폐기 → `provider-auto-config` skill (D-38) 로 런타임 discovered list + per-provider auth 동적 구성** |
+| **제품 경로** | overlay / grok 포크 / goose 포크 | — | ✅ **D-135 결정: A overlay** ([DETAILED_DESIGN_OVERLAY.md](./architecture/DETAILED_DESIGN_OVERLAY.md)) |
+
+### 11.2 결정 완료 — D-135 (2026-08-14)
+
+**제품 경로 = Grok Build overlay.**
+
+- 엔진 = 설치된 `grok` ≥ 1.0.3
+- 표면 = `myharness code|server|env`
+- 확장 = grok `plugin.json` (`--plugin-dir`)
+- LLM = `[model.minimax]` / `[model.ollama]`
+- 홈 분리 = `~/.grok/` 엔진 + `~/.myharness/` 래퍼
+- v0 crates = 참고 구현, 신규 기능 금지
+- 자체 Plugin 인프라 (A1~A4) = OOS
+- CONCEPT §0 standalone / Direct LLM / Zero external runtime = 폐기
+
+상세: [DETAILED_DESIGN_OVERLAY.md](./architecture/DETAILED_DESIGN_OVERLAY.md) §1 Key Decisions.
 
 ### 11.3 결정 완료 (Decided) — D-36
 
@@ -1035,12 +1068,14 @@ Distribution: 5 install paths (install.sh / install.ps1 / brew / winget / apt-dn
 
 ## 12. 참고 (References)
 
-- [REFERENCES.md §5 우리 방향성 초안](./REFERENCES.md) — 8축 매트릭스 → 본 컨셉 §5 정합
+- **[architecture/DETAILED_DESIGN_OVERLAY.md](./architecture/DETAILED_DESIGN_OVERLAY.md)** — D-135 구현 사양 (제품 경로 SSOT)
+- [architecture/INITIAL_DESIGN.md](./architecture/INITIAL_DESIGN.md) — v0 Rust MVP 설계 (historical)
+- [REFERENCES.md](./REFERENCES.md) — 1차 8축 (superseded)
 - [references/README.md](./references/README.md) — 8-doc 통합 인덱스 + cross-review
-- [references/grok-build.md](./references/grok-build.md) — Grok Build (2026-08-14 2차 14섹션). 완성된 5-component 제품, overlay 권장 / 포크 비권장
-- [references/claude-code.md](./references/claude-code.md) — Harness 5 components, plugin 4-계층, 5 surfaces
-- [references/headroom.md](./references/headroom.md) — CCR, CacheAligner, ContentRouter
-- [references/PROVIDERS.md](./references/PROVIDERS.md) — rig-core 1안 / Vercel AI SDK 2안 / litellm proxy
-- [development_log.md](./development_log.md) — 본 컨셉 확립까지의 결정 이력 (D-01 ~ D-23)
+- [references/grok-build.md](./references/grok-build.md) — Grok Build 14섹션. D-135 의 실측 근거
+- [references/claude-code.md](./references/claude-code.md) — Harness 5 components (엔진 측 패턴)
+- [references/headroom.md](./references/headroom.md) — CCR (재구현 OOS)
+- [references/PROVIDERS.md](./references/PROVIDERS.md) — v0 provider 비교 (historical)
+- [development_log.md](./development_log.md) — 결정 이력
 - [PROJECT_PROFILE.md](./PROJECT_PROFILE.md) — 워크플로우 통합
-- [MiniMax.md](../MiniMax.md) — Mavis 진입점
+- [MiniMax.md](../MiniMax.md) — 개발 진입점
