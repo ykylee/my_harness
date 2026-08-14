@@ -862,8 +862,8 @@ auto_invoke:
 | task_id | 핵심 | 상태 |
 | --- | --- | --- |
 | **TASK-005-1** (v0 runtime) | 자체 Rust crates CLI/TUI | done (historical, D-135.6 참고만) |
-| **D-135 PR-1** | `plugins/myharness/` 스캐폴드 | planned |
-| **D-135 PR-2** | thin CLI 래퍼 + grok 가드 + 12 동사 | planned |
+| **D-135 PR-1** | `plugins/myharness/` 스캐폴드 | **done** (D-136 M1) |
+| **D-135 PR-2** | thin CLI 래퍼 + grok 가드 + 12 동사 | **done** (D-136 M1, `bin/myharness`) |
 | **D-135 PR-3** | MiniMax `[model.*]` smoke | planned |
 | **D-135 PR-4** | 3-도메인 skills + PreToolUse | planned |
 | **D-135 PR-5** | `task start\|end` 래퍼 | planned |

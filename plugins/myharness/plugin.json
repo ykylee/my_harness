@@ -1,0 +1,12 @@
+{
+  "name": "myharness",
+  "version": "0.1.0",
+  "description": "yklee 3-domain overlay on Grok Build (code / server / env)",
+  "author": { "name": "yklee" },
+  "license": "MIT",
+  "keywords": ["overlay", "code", "server", "env"],
+  "skills": "skills/",
+  "commands": "commands/",
+  "agents": "agents/",
+  "hooks": "hooks/hooks.json"
+}

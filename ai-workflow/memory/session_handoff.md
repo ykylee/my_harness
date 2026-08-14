@@ -4,7 +4,7 @@
 - Scope: current focus, task status, key changes, next actions, risks
 - Audience: yklee, Mavis orchestrator, .MiniMax 워커 에이전트
 - Status: active
-- Updated: 2026-08-14 (**D-135 overlay 확정 + 문서 재구성**. CONCEPT §0 갱신. 설계 `docs/architecture/DETAILED_DESIGN_OVERLAY.md`. 다음 = PR-1 plugin 스캐폴드. A1~A4 Plugin 인프라 = OOS)
+- Updated: 2026-08-14 (**D-136 M1 done**. 계획 OVERLAY_IMPLEMENTATION_PLAN.md. plugin + bin/myharness + smoke PASS. 다음 = M2)
 - Updated: 2026-08-14 (이전: D-134 grok-build 14섹션. overlay/포크 당시 미결정 → D-135 로 해소)
 - Related docs: [Project Profile](../../docs/PROJECT_PROFILE.md), [Work Backlog](./work_backlog.md), [State Cache](./state.json), [CONCEPT.md](../../docs/CONCEPT.md) (SSOT)
 

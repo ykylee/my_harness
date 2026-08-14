@@ -84,7 +84,20 @@
 
 ## 산출물 CLI 명령 (A, overlay — CONCEPT.md §5.2)
 
-엔진이 PATH 의 `grok` 이어야 한다. 래퍼는 `--plugin-dir` 를 붙인다.
+엔진은 PATH 의 `grok` ≥ 1.0.3. 래퍼는 `--plugin-dir plugins/myharness` 를 붙인다.
+
+```bash
+# 설치 (엔진)
+curl -fsSL https://x.ai/cli/install.sh | bash
+
+# 이 저장소
+./bin/myharness --help
+./bin/myharness --print-cmd env diagnose   # 번역만
+./scripts/overlay_smoke.sh                 # M1 검증
+# ./bin/myharness env diagnose             # 실제 grok -p (LLM)
+```
+
+계획: [`docs/architecture/OVERLAY_IMPLEMENTATION_PLAN.md`](./docs/architecture/OVERLAY_IMPLEMENTATION_PLAN.md) (M1 done, 다음 M2 MiniMax + skills + hooks).
 
 ```bash
 # 3-도메인 명령 (CONCEPT.md §5.2)

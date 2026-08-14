@@ -402,3 +402,10 @@ yklee 가 판단: 외부 워커 컨슈밍만으로는 **yklee 만이 진화 가�
 - **OOS**: 자체 Plugin 인프라 (A1~A4), grok 소스 포크, v0 crates 신규 기능
 - **다음**: PR-1 plugin 스캐폴드 → PR-2 thin CLI
 - **누적 결정 77 → 78** (D-135). 코드 0
+
+### 2026-08-14 — D-136 overlay 구현 계획 + M1
+
+- 로드맵/WBS: `docs/architecture/OVERLAY_IMPLEMENTATION_PLAN.md` (M0–M4)
+- M1: `plugins/myharness/` + `bin/myharness` + `scripts/overlay_smoke.sh` PASS
+- 다음: M2 MiniMax + skills + PreToolUse + task
+- 누적 결정 78 → **79**
