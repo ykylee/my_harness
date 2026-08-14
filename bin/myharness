@@ -333,7 +333,10 @@ fi
 
 ensure_engine
 
-base=("$GROK_BIN" --plugin-dir "$PLUGIN_DIR" -m "$MODEL")
+# --plugin-dir 는 `grok agent` 전용. -p / TUI 는 설치된 plugin 으로 로드.
+# -p 한 턴은 도구 승인 UI 가 없으므로 always-approve.
+base=("$GROK_BIN" -m "$MODEL")
+oneshot=("$GROK_BIN" -m "$MODEL" --always-approve)
 
 if [[ ${#args[@]} -eq 0 ]]; then
   if [[ "$MODE" == "single" ]]; then
@@ -354,13 +357,13 @@ if [[ ${#args[@]} -ge 2 ]]; then
     if [[ -n "$GOAL" || "$MODE" == "loop" ]]; then
       prompt="목표: ${GOAL:-반복 완료까지}. ${prompt}"
     fi
-    run_grok "${base[@]}" -p "$prompt"
+    run_grok "${oneshot[@]}" -p "$prompt"
   fi
 fi
 
 # 통과: grok 네이티브 인자
 if [[ "$MODE" == "single" && ${#args[@]} -gt 0 ]]; then
-  run_grok "${base[@]}" -p "${args[*]}"
+  run_grok "${oneshot[@]}" -p "${args[*]}"
 fi
 
 run_grok "${base[@]}" "${args[@]}"

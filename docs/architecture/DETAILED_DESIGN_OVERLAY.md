@@ -18,8 +18,8 @@ yklee
   └─ myharness <domain> <verb> [...]
         ├─ grok 존재/버전 가드
         ├─ 3-도메인 동사 → grok -p / --agent / stdio
-        ├─ --plugin-dir <repo-or-home plugin>
-        └─ grok (TUI · tools · session · permission · subagent · MCP)
+        ├─ grok plugin install --trust (hooks/skills)
+        └─ grok -p / TUI ( --plugin-dir 는 agent 전용 )
               └─ [model.minimax] chat_completions + base_url
 ```
 

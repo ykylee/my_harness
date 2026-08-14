@@ -114,4 +114,12 @@ case ":${PATH}:" in
     ;;
 esac
 
+if command -v grok >/dev/null 2>&1 && [[ "$HARNESS_HOME" == "${HOME}/.myharness" ]]; then
+  if grok plugin install --trust "$PLUGIN_DEST"; then
+    echo "install.sh: grok plugin install --trust 완료"
+  else
+    echo "install.sh: 경고 — grok plugin install 실패. 수동: grok plugin install --trust ${PLUGIN_DEST}"
+  fi
+fi
+
 echo "install.sh: 다음 → ${WRAP_DEST} setup-model   그리고  MINIMAX_API_KEY"

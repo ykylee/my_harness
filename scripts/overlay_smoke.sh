@@ -30,8 +30,8 @@ else
 fi
 
 cmd="$("$WRAP" --print-cmd env diagnose)"
-if [[ "$cmd" == *"--plugin-dir"* && "$cmd" == *"-p"* ]]; then
-  ok "env diagnose prints grok -p --plugin-dir"
+if [[ "$cmd" == *"-p"* && "$cmd" == *"-m"* && "$cmd" == *"--always-approve"* ]]; then
+  ok "env diagnose prints grok -p -m --always-approve"
 else
   bad "env diagnose cmd: $cmd"
 fi
