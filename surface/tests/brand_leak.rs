@@ -26,6 +26,8 @@ fn chrome_frame_has_our_wordmark_not_vendor() {
     }
     assert!(dumped.contains("myharness"), "{dumped}");
     assert!(dumped.contains("MiniMax-M3"), "{dumped}");
+    assert!(dumped.contains("session:ephemeral"), "{dumped}");
+    assert!(dumped.contains("perm:plan"), "{dumped}");
     assert!(dumped.contains("[tool]  bash"), "{dumped}");
     assert!(!leaks_vendor_chrome(&dumped), "{dumped}");
     assert!(!dumped.to_ascii_lowercase().contains("grok build"));

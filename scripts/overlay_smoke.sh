@@ -133,6 +133,93 @@ else
   bad "server deploy print-cmd"
 fi
 
+# --- PR-S2: same CLI contract on in-tree Rust binary (install stays bash) ---
+SURFACE_MANIFEST="${ROOT}/surface/Cargo.toml"
+if cargo build --manifest-path "$SURFACE_MANIFEST" --offline --quiet; then
+  SURFACE_BIN="${ROOT}/surface/target/debug/myharness"
+  if [[ -x "$SURFACE_BIN" ]]; then
+    if "$SURFACE_BIN" --help | grep -q 'code review'; then
+      ok "surface --help lists code review"
+    else
+      bad "surface --help missing code review"
+    fi
+    if "$SURFACE_BIN" --help | grep -q 'env diagnose'; then
+      ok "surface --help lists env diagnose"
+    else
+      bad "surface --help missing env diagnose"
+    fi
+    if "$SURFACE_BIN" --help | grep -q '엔진 TUI'; then
+      ok "surface --help mentions 엔진 TUI"
+    else
+      bad "surface --help missing 엔진 TUI"
+    fi
+    scmd="$("$SURFACE_BIN" --print-cmd env diagnose)"
+    if [[ "$scmd" == *"# no TTY, stderr piped"* && "$scmd" == *"-p"* && "$scmd" != *"--plugin-dir"* ]]; then
+      ok "surface --print-cmd env diagnose"
+    else
+      bad "surface print-cmd: $scmd"
+    fi
+    scmd="$("$SURFACE_BIN" --print-cmd --model MiniMax-M3 code review src/main.rs)"
+    if [[ "$scmd" == *"MiniMax-M3"* && "$scmd" == *"src/main.rs"* ]]; then
+      ok "surface code review carries model + target"
+    else
+      bad "surface code review cmd: $scmd"
+    fi
+    stmp="$(mktemp -d)"
+    ln -s "$SURFACE_BIN" "${stmp}/myharness"
+    if PATH="/usr/bin:/bin:${stmp}" MYHARNESS_GROK="" "${stmp}/myharness" env diagnose >/tmp/myharness-surface-nogrok.out 2>&1; then
+      bad "surface missing grok should exit non-zero"
+    else
+      if grep -F -q 'install.sh' /tmp/myharness-surface-nogrok.out; then
+        ok "surface missing grok → install hint"
+      else
+        bad "surface missing grok: $(cat /tmp/myharness-surface-nogrok.out)"
+      fi
+    fi
+    rm -rf "$stmp"
+    if "$SURFACE_BIN" setup-model --print-snippet | grep -F -q '[model.minimax]'; then
+      ok "surface setup-model --print-snippet"
+    else
+      bad "surface setup-model snippet"
+    fi
+    scfg="$(mktemp -d)"
+    if "$SURFACE_BIN" setup-model --dest "${scfg}/config.toml" && grep -F -q 'MINIMAX_API_KEY' "${scfg}/config.toml"; then
+      ok "surface setup-model --dest"
+    else
+      bad "surface setup-model --dest"
+    fi
+    rm -rf "$scfg"
+    shome="$(mktemp -d)"
+    if HOME="$shome" "$SURFACE_BIN" task start --id TASK-SMOKE --title "smoke" \
+      && grep -F -q 'in_progress' "${shome}/.myharness/handoff/tasks/TASK-SMOKE.md"; then
+      ok "surface task start"
+    else
+      bad "surface task start"
+    fi
+    if HOME="$shome" "$SURFACE_BIN" task end --id TASK-SMOKE --status done --summary "ok" \
+      && grep -F -q 'done' "${shome}/.myharness/handoff/tasks/TASK-SMOKE.md"; then
+      ok "surface task end"
+    else
+      bad "surface task end"
+    fi
+    rm -rf "$shome"
+    if "$SURFACE_BIN" --yes --print-cmd server deploy staging | grep -F -q -- '-p'; then
+      ok "surface server deploy --yes --print-cmd"
+    else
+      bad "surface server deploy print-cmd"
+    fi
+    if "$SURFACE_BIN" --yes --print-cmd server deploy staging | grep -F -q -- '--always-approve'; then
+      ok "surface oneshot keeps --always-approve"
+    else
+      bad "surface oneshot missing --always-approve"
+    fi
+  else
+    bad "surface binary missing after cargo build"
+  fi
+else
+  bad "cargo build surface (offline)"
+fi
+
 INSTALL="${ROOT}/scripts/install.sh"
 dry="$("$INSTALL" --prefix /tmp/x --home /tmp/y --dry-run)"
 if [[ "$dry" == *dry-run:* ]]; then

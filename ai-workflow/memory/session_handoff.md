@@ -4,12 +4,23 @@
 - Scope: current focus, task status, key changes, next actions, risks
 - Audience: yklee, Mavis orchestrator, .MiniMax 워커 에이전트
 - Status: active
-- Updated: 2026-08-14 (**D-138 M3 done**. install.sh. 다음 = live MiniMax 또는 M4 승인)
-- Updated: 2026-08-14 (이전: D-134 grok-build 14섹션. overlay/포크 당시 미결정 → D-135 로 해소)
+- Updated: 2026-08-14 (**D-140 S2+S3+S4a done**. 설치 PATH=bash. 다음 = S4b ACP 클라이언트)
+- Updated: 2026-08-14 (이전: D-138 M3. D-134 grok-build → D-135 overlay → D-140 Owned Surface)
 - Related docs: [Project Profile](../../docs/PROJECT_PROFILE.md), [Work Backlog](./work_backlog.md), [State Cache](./state.json), [CONCEPT.md](../../docs/CONCEPT.md) (SSOT)
+- 현재 기준선: D-140 S2+S3+S4a done. surface/ 12 동사 + ephemeral TUI + acp-probe(NDJSON). 설치 PATH 는 bash. 다음 S4b.
+- 현재 주 작업 축: D-140 Owned Surface (PR-S4b ACP 클라이언트)
+- 현재 `in_progress` 작업:
+  -
+- 현재 `blocked` 작업:
+  - TASK-002 도메인별 명령 가이드 (yklee 인프라 정보)
+- 최근 완료 작업 목록:
+  - TASK-D140-S2 12 동사 + task + setup-model
+  - TASK-D140-S3 인트리 ephemeral -p TUI
+  - TASK-D140-S4a grok agent stdio NDJSON 스파이크
 
 ## Current Focus
 
+- **D-140 S2+S3+S4a (2026-08-14)** — Owned Surface 구현. 설치 PATH 는 아직 `bin/myharness` bash. 인트리 `surface/` 가 12 동사·task·setup-model·ephemeral TUI·`engine acp-probe` 를 가짐. 실측: ACP 프레이밍 = **NDJSON** (Content-Length 기각). argv = `grok agent -m <model> --plugin-dir <dir> stdio`. `cargo test --manifest-path surface/Cargo.toml` 26 pass + clippy 0 + overlay_smoke PASS. **다음 = PR-S4b** (`agent-client-protocol` 0.12, `SURFACE=tui` → ACP). S5 permission 모달 전 S8 설치 전환 금지.
 - **v1 컨셉 Phase 종료 (2026-06-07)** — my_harness 의 SSOT (CONCEPT.md) 확립. 17 섹션 (12 + 5 신규: §5.10~§5.14). 4/5 결정 ✅ 완료, 1/5 (TASK-002) ⏸ 보류.
   - **TASK-005**: Rust 1안 (D-36) — ratatui + rig-core + rmcp + keyring + cargo-dist
   - **TASK-006**: ratatui + crossterm (D-36, TASK-005 종속)

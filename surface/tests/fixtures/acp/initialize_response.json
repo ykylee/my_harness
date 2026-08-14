@@ -1,0 +1,22 @@
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "result": {
+    "protocolVersion": 1,
+    "agentCapabilities": {
+      "loadSession": true,
+      "promptCapabilities": {
+        "image": false,
+        "audio": false,
+        "embeddedContext": true
+      },
+      "mcpCapabilities": { "http": true, "sse": true },
+      "sessionCapabilities": { "list": {}, "resume": {}, "close": {} }
+    },
+    "authMethods": [
+      { "id": "xai.api_key" },
+      { "id": "cached_token" },
+      { "id": "grok.com" }
+    ]
+  }
+}

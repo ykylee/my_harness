@@ -429,3 +429,12 @@ yklee 가 판단: 외부 워커 컨슈밍만으로는 **yklee 만이 진화 가�
 - CONCEPT §0 화면=surface, 엔진=숨긴 grok. 기본 grok TUI 문장 폐기
 - `surface/` 크롬 TUI + brand remap. `cargo test --manifest-path surface/Cargo.toml` PASS
 - 다음 PR-S2 12 동사
+
+### 2026-08-14 — D-140 S2+S3+S4a
+
+- S2: `surface/` clap 12 동사 + task + setup-model. `--print-cmd` `# no TTY, stderr piped`. oneshot 에 `--plugin-dir` 없음
+- S3: 인트리 TUI = ephemeral `grok -p --permission-mode plan` (YOLO 없음, 60s, `session:ephemeral`). PATH 변경 없음
+- S4a: `engine acp-probe` (help 숨김). 실측 framing=NDJSON, protocolVersion=1, session/new 성공. 픽스처 `surface/tests/fixtures/acp/`
+- 검증: surface 26 tests + clippy -D warnings + overlay_smoke PASS
+- 설치 PATH 유지: `~/.local/bin/myharness` = bash
+- 다음: PR-S4b ACP 클라이언트

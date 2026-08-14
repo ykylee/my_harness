@@ -387,19 +387,20 @@ grok agent stdio -m "$MODEL" --plugin-dir "$PLUGIN" \
 
 #### 6.5 ACP 1차 프로파일 (S4b 구현 계약)
 
-**미검증 표기.** 바이트는 S4a 가 `tests/fixtures/acp/` 에 고정하기 전까지 스케치다. S4a 가 틀리면 **이 절을 고친 다음** S4b 를 연다.
+**S4a 실측 (2026-08-14, grok 1.0.3).** 바이트는 `surface/tests/fixtures/acp/`. 라이브 덤프를 그대로 커밋하지 않음 (MCP env/args 에 시크릿).
 
-| 항목 | 1차 선택 | 이유 |
+| 항목 | S4a 확정 | 이유 |
 | --- | --- | --- |
-| crate | crates.io `agent-client-protocol` **0.12.x** (이 repo goose 노트 D-131 권장선) | 핸드롤 JSON-RPC 는 프레이밍 실수를 숨긴다. `xai-acp-lib` path-dep 은 D-134. |
-| 프레이밍 | **Content-Length** (ACP/LSP). S4a 가 NDJSON 이면 픽스처와 이 행만 바꾼다 | 틀린 프레이밍 = 무한 hang. degraded `-p` 로 덮지 말 것 (6.4). |
-| 프로토콜 버전 | SDK 가 주는 최신. S4a 가 grok 1.0.3 이 받는 값을 기록 | |
-| client caps | `fs: false` (엔진이 툴을 가짐), `terminal: false`. 우리가 구현하는 것: prompt + permission UI | 과한 cap 은 미구현 콜백을 부른다 |
-| 무시 | thought, usage, fs diffs, session/update 의 모르는 필드 | 전방 호환 |
+| crate | crates.io `agent-client-protocol` **0.12.x** (S4b). S4a 는 `serde_json` NDJSON 만 | 핸드롤은 스파이크. `xai-acp-lib` path-dep 은 D-134. |
+| 프레이밍 | **NDJSON** (한 줄 = 한 JSON-RPC). Content-Length 는 `failed to parse incoming message` | 설계 초안 LSP 는 기각. hang 폴백 `-p` 금지 (6.4). |
+| argv | `grok agent -m <model> --plugin-dir <dir> stdio` | `-m`/`--plugin-dir` 는 `agent` 위. `grok agent stdio -m` 은 unexpected argument. |
+| 프로토콜 버전 | `1` (initialize params + result) | grok 1.0.3 |
+| client caps | `fs: false`, `terminal: false` | 엔진이 툴을 가짐. prompt + permission UI 만 |
+| 무시 | thought, usage, fs diffs, `_x.ai/*` 알림, session/update 의 모르는 필드 | 전방 호환. MCP 알림은 시크릿을 실을 수 있음 → persist 금지 |
 
-메서드 (이름은 S4a 가 확인. 여기 이름은 작업 가설):
+메서드 (S4a handshake 에서 확인한 것 / 아직 툴 턴에서만 나오는 것):
 
-**initialize** (request → response)
+**initialize** (request → response) — **확인**
 
 ```json
 {"jsonrpc":"2.0","id":1,"method":"initialize","params":{
@@ -409,23 +410,26 @@ grok agent stdio -m "$MODEL" --plugin-dir "$PLUGIN" \
 }}
 ```
 
-**session/new**
+결과: `protocolVersion=1`, `agentCapabilities` (loadSession, promptCapabilities, mcpCapabilities, sessionCapabilities), `authMethods` (`xai.api_key` / `cached_token` / `grok.com`).
+
+**session/new** — **확인**. `permissionMode` 없이 성공.
 
 ```json
 {"jsonrpc":"2.0","id":2,"method":"session/new","params":{
   "cwd": "<abs>",
-  "mcpServers": [],
-  "permissionMode": "default"
+  "mcpServers": []
 }}
 ```
 
-응답에서 `sessionId` 를 저장.
+응답: `sessionId`, `models.currentModelId`. 저장.
 
-**session/prompt** (request). 본문 = `Turn.wrapped`.
+**session/update** (notification) — **확인**. `{sessionId, update, _meta}`. 처리: assistant text → `[mh]`, tool call → remap 후 `[tool]`, thought → drop. 모르는 필드는 ignore.
 
-**session/update** (notification, 가설). 처리: assistant text → `[mh]`, tool call → remap 후 `[tool]`, thought → drop. 모르는 필드는 ignore.
+**session/prompt** (request). 본문 = `Turn.wrapped`. handshake 미관측. S4b.
 
-**session/request_permission** (request, 가설 — grok-build.md 는 `run_stdio_agent` 만 명시). 우리 모달 → `allow` / `deny` / `allow_session`.
+**session/request_permission** (request). handshake 미관측. S5 모달 → `allow` / `deny` / `allow_session`.
+
+**authenticate** — `cached_token` 은 session/new 전제 아님 (확인). 1차 skip.
 
 **취소 / 종료**
 
@@ -445,7 +449,7 @@ grok agent stdio -m "$MODEL" --plugin-dir "$PLUGIN" \
 myharness engine acp-probe [--out path]
 ```
 
-`--help` 에 광고하지 않음. stdin/stdout/stderr pipe 로 initialize+session/new 까지 덤프. S4a 픽스처의 재현 수단.
+`--help` 에 광고하지 않음 (`hide = true`). stdin/stdout/stderr pipe 로 initialize+session/new 까지 레드액션 JSON. S4a 픽스처의 재현 수단. MCP `args`/`env`/키는 persist 금지.
 
 #### 6.6 가드 (현 `ensure_engine` 이전)
 

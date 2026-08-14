@@ -1,0 +1,10 @@
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "method": "initialize",
+  "params": {
+    "protocolVersion": 1,
+    "clientInfo": { "name": "myharness", "version": "0.1.0" },
+    "capabilities": { "fs": false, "terminal": false }
+  }
+}

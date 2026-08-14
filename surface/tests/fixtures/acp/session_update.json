@@ -1,0 +1,8 @@
+{
+  "jsonrpc": "2.0",
+  "method": "session/update",
+  "params": {
+    "sessionId": "00000000-0000-0000-0000-000000000000",
+    "update": { "sessionUpdate": "available_commands_update" }
+  }
+}

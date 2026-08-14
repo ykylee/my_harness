@@ -47,18 +47,67 @@ impl Default for App {
             domain: "code".into(),
             model_alias: MODEL_ALIAS.into(),
             messages: vec![Message::sys(
-                "3-도메인 하네스. /code /server /env /task /help  (S1 크롬 — 엔진 없음)",
+                "3-도메인 하네스. 턴마다 새 한 방. 제품 아님. /quit",
             )],
             input: String::new(),
-            session: "none".into(),
-            perm: "default".into(),
+            session: "ephemeral".into(),
+            perm: "plan".into(),
             engine: "idle".into(),
             running: true,
         }
     }
 }
 
+const HIST_MAX_LINES: usize = 6;
+const HIST_LINE_CHARS: usize = 400;
+const HIST_TOTAL_CHARS: usize = 2_000;
+
 impl App {
+    pub fn push(&mut self, role: Role, text: impl Into<String>) {
+        self.messages.push(Message {
+            role,
+            text: text.into(),
+        });
+    }
+
+    /// Recent [you]/[mh] only. N=6, ≤400/line, ≤2000 total (S3 budget).
+    pub fn wrap_turn(&self, current: &str) -> String {
+        let mut lines: Vec<String> = self
+            .messages
+            .iter()
+            .filter(|m| matches!(m.role, Role::You | Role::Mh))
+            .rev()
+            .take(HIST_MAX_LINES)
+            .collect::<Vec<_>>()
+            .into_iter()
+            .rev()
+            .map(|m| {
+                let tag = match m.role {
+                    Role::You => "[you]",
+                    Role::Mh => "[mh]",
+                    _ => unreachable!(),
+                };
+                let mut body = m.text.clone();
+                if body.chars().count() > HIST_LINE_CHARS {
+                    body = body.chars().take(HIST_LINE_CHARS).collect();
+                }
+                format!("{tag} {body}")
+            })
+            .collect();
+        let mut total = 0;
+        lines.retain(|l| {
+            if total + l.len() > HIST_TOTAL_CHARS {
+                return false;
+            }
+            total += l.len();
+            true
+        });
+        let hist = lines.join("\n");
+        format!(
+            "턴마다 새 한 방. 제품 아님. 한국어로 결론과 다음 행동만.\n{hist}\n이번: {current}"
+        )
+    }
+
     pub fn push_tool(&mut self, raw_name: &str, detail: &str) {
         self.messages.push(Message {
             role: Role::Tool,
@@ -125,5 +174,34 @@ impl App {
             self.perm, self.session, self.engine
         );
         frame.render_widget(Paragraph::new(status), chunks[3]);
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn wrap_skips_tool_and_err() {
+        let mut app = App::default();
+        app.push(Role::You, "hi");
+        app.push(Role::Tool, "secret-tool");
+        app.push(Role::Err, "boom");
+        app.push(Role::Mh, "ok");
+        let w = app.wrap_turn("next");
+        assert!(w.contains("[you] hi"));
+        assert!(w.contains("[mh] ok"));
+        assert!(!w.contains("secret-tool"));
+        assert!(!w.contains("boom"));
+        assert!(w.contains("이번: next"));
+    }
+
+    #[test]
+    fn wrap_caps_line_len() {
+        let mut app = App::default();
+        app.push(Role::You, "x".repeat(800));
+        let w = app.wrap_turn("n");
+        let you = w.lines().find(|l| l.starts_with("[you]")).unwrap();
+        assert!(you.chars().count() <= 6 + HIST_LINE_CHARS);
     }
 }

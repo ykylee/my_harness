@@ -4,7 +4,7 @@
 - 범위: 전체 태스크 목록, 우선순위, 진행 상태, 날짜별 기록 연결
 - 대상 독자: 개발자, AI 에이전트, 프로젝트 매니저
 - 상태: stable
-- 최종 수정일: 2026-08-14 (**D-138 M3 done**. `scripts/install.sh`. Rust clap deferred. 다음 M4 승인 또는 live MiniMax. 결정 카운트 81)
+- 최종 수정일: 2026-08-14 (**D-140 S2+S3+S4a done**. 설치 PATH=bash. 다음 S4b ACP. 결정 카운트 82)
 - 관련 문서: [세션 인계](./session_handoff.md), [프로젝트 프로필](../../docs/PROJECT_PROFILE.md), [CONCEPT.md](../../docs/CONCEPT.md)
 
 ## 1. 운영 원칙
@@ -58,7 +58,9 @@
 - [x] **TASK-005-1** (v1.0 MVP, Rust 빌드) — W3~W6.5 + W7 + W8 + W9 + W10 + W11 + W12 + W13 + W13.5 + W13.6 + W14 (Device Authorization Grant) + W14.4 (`--no-browser` 3 모드) + W14.5 (polling output + expired_in ms) + W14.6 (token ms→s 변환) + W15.a (OAuth 자동 resolve) + W15.b (OAuth 자동 refresh) 완료 (D-43, D-45~D-58) + dual-remote push. **8/8 waves + D-52 follow-up 6 작업 완료**, v1 MVP 완성. **388 tests pass, 0 fail, 2 ignored**. 38+ commit dual-push (Gitea + GitHub).
 
 ### Planned
-- [ ] **D-135 PR-1~PR-5** (overlay 구현) — plugin 스캐폴드 → thin CLI → MiniMax model → skills/hooks → task start/end
+- [ ] **D-140 PR-S4b** — ACP 클라이언트 (`agent-client-protocol` 0.12). `SURFACE=tui` → ACP. ephemeral 만 `-p`
+- [ ] **D-140 PR-S5~S8** — permission 모달 → slash → smoke fd → install.sh 가 Rust 바이너리 (S5 게이트)
+- [x] **D-135 PR-1~PR-5** (overlay 구현) — M1–M3 done (plugin + bash + MiniMax + install). 표면은 D-140 로 이관
 - [x] **TASK-005-2** 자체 Plugin loader — **OOS** (D-135.3, grok plugin.json 대체). auto memory 는 D-98/D-99 (v0 참고)
 - [ ] **TASK-005-3** (v2.0) — TUI/IDE/Web hand-off + Routines + OAuth + MCP-based discover
 - [ ] **TASK-005-4** (v2.5) — Multi-agent parallel + confidence scoring

@@ -1,0 +1,8 @@
+{
+  "jsonrpc": "2.0",
+  "id": 2,
+  "result": {
+    "sessionId": "00000000-0000-0000-0000-000000000000",
+    "models": { "currentModelId": "minimax" }
+  }
+}
