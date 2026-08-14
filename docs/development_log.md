@@ -416,3 +416,9 @@ yklee 가 판단: 외부 워커 컨슈밍만으로는 **yklee 만이 진화 가�
 - overlay_smoke 확장 PASS. live MiniMax 는 키 opt-in
 - 다음 M3 install.sh
 - 누적 결정 79 → **80**
+
+### 2026-08-14 — D-138 overlay M3
+
+- `scripts/install.sh` + README 설치. Rust clap 보류
+- smoke PASS. 다음 M4 (승인) 또는 live MiniMax
+- 누적 결정 80 → **81**

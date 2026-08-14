@@ -4,7 +4,7 @@
 - Scope: current focus, task status, key changes, next actions, risks
 - Audience: yklee, Mavis orchestrator, .MiniMax 워커 에이전트
 - Status: active
-- Updated: 2026-08-14 (**D-137 M2 done**. setup-model + skills + PreToolUse + task. 다음 = M3 install)
+- Updated: 2026-08-14 (**D-138 M3 done**. install.sh. 다음 = live MiniMax 또는 M4 승인)
 - Updated: 2026-08-14 (이전: D-134 grok-build 14섹션. overlay/포크 당시 미결정 → D-135 로 해소)
 - Related docs: [Project Profile](../../docs/PROJECT_PROFILE.md), [Work Backlog](./work_backlog.md), [State Cache](./state.json), [CONCEPT.md](../../docs/CONCEPT.md) (SSOT)
 

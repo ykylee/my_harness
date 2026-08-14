@@ -121,6 +121,39 @@ else
   bad "server deploy print-cmd"
 fi
 
+INSTALL="${ROOT}/scripts/install.sh"
+if "$INSTALL" --prefix /tmp/x --home /tmp/y --dry-run | grep -F -q 'dry-run:'; then
+  ok "install.sh --dry-run"
+else
+  bad "install.sh dry-run"
+fi
+
+stage="$(mktemp -d)"
+if "$INSTALL" --prefix "${stage}/local" --home "${stage}/home/.myharness"; then
+  if [[ -x "${stage}/local/bin/myharness" && -f "${stage}/home/.myharness/plugins/myharness/plugin.json" ]]; then
+    ok "install.sh copies wrapper + plugin"
+  else
+    bad "install.sh missing dest files"
+  fi
+  grok_dir="$(dirname "$(command -v grok)")"
+  if HOME="${stage}/home" PATH="${stage}/local/bin:${grok_dir}:/usr/bin:/bin" \
+    "${stage}/local/bin/myharness" --print-cmd env diagnose | grep -F -q -- '-p'; then
+    ok "installed wrapper finds plugin via --home"
+  else
+    bad "installed wrapper --print-cmd"
+  fi
+  if "$INSTALL" --prefix "${stage}/local" --home "${stage}/home/.myharness" --uninstall \
+    && [[ ! -e "${stage}/local/bin/myharness" ]] \
+    && [[ ! -e "${stage}/home/.myharness/plugins/myharness" ]]; then
+    ok "install.sh --uninstall"
+  else
+    bad "install.sh uninstall"
+  fi
+else
+  bad "install.sh failed"
+fi
+rm -rf "$stage"
+
 if [[ "$fail" -ne 0 ]]; then
   echo "overlay smoke FAILED"
   exit 1

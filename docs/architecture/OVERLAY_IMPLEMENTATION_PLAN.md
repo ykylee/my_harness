@@ -26,7 +26,7 @@ M0 문서 ✅ → M1 실행 가능 → M2 도메인 가치 → M3 경화 → M4 
 | **M0** | 문서 잠금 | 경로·설계·본 계획 | CONCEPT §0 + 설계 + 본 문서. 코드 0 | **done** (D-135) |
 | **M1** | 실행 가능 | `myharness` 가 grok 를 켠다 | `grok plugin validate` PASS. grok 없으면 exit 2. 12 동사 번역. `-p` 한 턴 | **done** (D-136) |
 | **M2** | 도메인 가치 | MiniMax + 3-도메인 skill/hook + task | snippet + setup-model + hook deny + task 파일. live MiniMax 호출은 키 있을 때 | **done** (D-137, live LLM 은 opt-in) |
-| **M3** | 경화 | 설치 경로 + 버전 가드 문서 + 선택적 Rust clap | `~/.local/bin/myharness` 설치. smoke 스크립트 CI 가능 | 이후 |
+| **M3** | 경화 | 설치 경로 + 사용 문서 | `scripts/install.sh` + smoke. Rust clap 은 보류 | **done** (D-138, M3.2 deferred) |
 | **M4** | v0 정리 | crates archive | yklee 승인 후 `archive/v0-runtime/` 또는 태그 | 보류 |
 
 OOS (하지 않음): 자체 Plugin loader, grok 소스 포크, TUI 재구현, rig-core 신규, CCR/ONNX, marketplace 서버.
@@ -64,9 +64,9 @@ OOS (하지 않음): 자체 Plugin loader, grok 소스 포크, TUI 재구현, ri
 
 | ID | WBS | 산출 |
 | --- | --- | --- |
-| M3.1 | 3.1 | `install.sh` → `~/.local/bin/myharness` + plugin 사본 |
-| M3.2 | 3.2 | 래퍼를 Rust clap 으로 이전 (셸 동작 고정 후) |
-| M3.3 | 3.3 | README 사용법 (grok 설치 URL, MiniMax 키) |
+| M3.1 | 3.1 | `install.sh` → `~/.local/bin/myharness` + plugin 사본 | **done** (`--prefix` / `--home` / `--uninstall`) |
+| M3.2 | 3.2 | 래퍼를 Rust clap 으로 이전 (셸 동작 고정 후) | **deferred** — 셸 래퍼가 M1–M3 계약. clap 은 동작이 더 굳은 뒤 |
+| M3.3 | 3.3 | README 사용법 (grok 설치 URL, MiniMax 키) | **done** |
 
 ### M4 — v0 정리 (yklee 승인)
 

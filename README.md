@@ -82,30 +82,30 @@
 3. Mavis 가 `MiniMax.md` → `state.json` → `session_handoff.md` → `work_backlog.md` → `docs/PROJECT_PROFILE.md` 순서로 읽고 현재 상태를 복원한다.
 4. 첫 실제 작업은 `ai-workflow/memory/backlog/2026-06-05.md` 에 TASK 추가하고 `state.json` 을 재생성한다.
 
-## 산출물 CLI 명령 (A, overlay — CONCEPT.md §5.2)
-
-엔진은 PATH 의 `grok` ≥ 1.0.3. 래퍼는 `--plugin-dir plugins/myharness` 를 붙인다.
+## 설치 (overlay, D-138 / M3)
 
 ```bash
-# 설치 (엔진)
-curl -fsSL https://x.ai/cli/install.sh | bash
-
-# 이 저장소
-./bin/myharness --help
-./bin/myharness --print-cmd env diagnose   # 번역만
-./scripts/overlay_smoke.sh                 # M1 검증
-# ./bin/myharness env diagnose             # 실제 grok -p (LLM)
+# 1) 엔진
+curl -fsSL https://x.ai/cli/install.sh | bash   # grok ≥ 1.0.3
+# 2) 래퍼 + plugin
+./scripts/install.sh                            # ~/.local/bin/myharness
+export PATH="$HOME/.local/bin:$PATH"
+# 3) MiniMax
+./bin/myharness setup-model                     # 또는 설치 후 myharness setup-model
+export MINIMAX_API_KEY=...
 ```
 
-계획: [`docs/architecture/OVERLAY_IMPLEMENTATION_PLAN.md`](./docs/architecture/OVERLAY_IMPLEMENTATION_PLAN.md) (M1+M2 done, 다음 M3 install).
+제거: `./scripts/install.sh --uninstall` (handoff 는 남김).  
+검증: `./scripts/overlay_smoke.sh`
+
+계획: [`docs/architecture/OVERLAY_IMPLEMENTATION_PLAN.md`](./docs/architecture/OVERLAY_IMPLEMENTATION_PLAN.md) (M0–M3. 다음 M4 는 yklee 승인).
 
 ```bash
-./bin/myharness setup-model --print-snippet
-./bin/myharness setup-model          # ~/.grok/config.toml 에 MiniMax 블록
-export MINIMAX_API_KEY=...
-./bin/myharness env diagnose         # 실제 한 턴
-./bin/myharness task start --id TASK-1 --title "..."
-./bin/myharness task end --id TASK-1 --status done --summary "..."
+myharness --help
+myharness --print-cmd env diagnose
+myharness env diagnose
+myharness task start --id TASK-1 --title "..."
+myharness task end --id TASK-1 --status done --summary "..."
 ```
 
 ```bash

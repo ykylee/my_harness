@@ -190,11 +190,11 @@ myharness env diagnose                 # 환경 진단
 **2층**:
 
 1. **엔진** — 공식 `curl -fsSL https://x.ai/cli/install.sh | bash` → `~/.grok/bin/grok`. 업데이트는 `grok update`.
-2. **래퍼** — 이 저장소의 `myharness` (1차 셸, 이후 단일 binary). plugin 트리를 `~/.myharness/plugins/myharness/` 에 둔다.
+2. **래퍼** — `scripts/install.sh` → `~/.local/bin/myharness` + `~/.myharness/plugins/myharness/` (D-138). 개발 중에는 `./bin/myharness`. Rust clap 이전은 M3.2 보류.
 
 래퍼는 `grok` 가 PATH 에 있고 버전이 `≥ 1.0.3` 인지 확인한다. 없으면 exit 2 + 설치 URL.
 
-자체 5 install paths / cargo-dist 제품 배포는 **overlay 1차 OOS**. v0 경로의 잔여 계획.
+자체 5 install paths / cargo-dist 제품 배포는 **OOS**.
 
 ### 5.4 보안 (claude-code 13.8 + 13.4 + 13.13)
 
@@ -867,6 +867,7 @@ auto_invoke:
 | **D-135 PR-3** | MiniMax `[model.*]` smoke | **done** (D-137, `setup-model`. live API 는 키 opt-in) |
 | **D-135 PR-4** | 3-도메인 skills + PreToolUse | **done** (D-137) |
 | **D-135 PR-5** | `task start\|end` 래퍼 | **done** (D-137) |
+| **D-138 M3** | `scripts/install.sh` + README 설치 | **done** (Rust clap M3.2 deferred) |
 | **TASK-005-2** 자체 Plugin loader | — | **OOS** (grok plugin.json 이 대체) |
 | **TASK-005-3+** 5 surfaces / Computer Use | 엔진(grok ACP) 범위. 우리 재구현 안 함 | deferred |
 
