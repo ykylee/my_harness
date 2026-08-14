@@ -864,9 +864,9 @@ auto_invoke:
 | **TASK-005-1** (v0 runtime) | 자체 Rust crates CLI/TUI | done (historical, D-135.6 참고만) |
 | **D-135 PR-1** | `plugins/myharness/` 스캐폴드 | **done** (D-136 M1) |
 | **D-135 PR-2** | thin CLI 래퍼 + grok 가드 + 12 동사 | **done** (D-136 M1, `bin/myharness`) |
-| **D-135 PR-3** | MiniMax `[model.*]` smoke | planned |
-| **D-135 PR-4** | 3-도메인 skills + PreToolUse | planned |
-| **D-135 PR-5** | `task start\|end` 래퍼 | planned |
+| **D-135 PR-3** | MiniMax `[model.*]` smoke | **done** (D-137, `setup-model`. live API 는 키 opt-in) |
+| **D-135 PR-4** | 3-도메인 skills + PreToolUse | **done** (D-137) |
+| **D-135 PR-5** | `task start\|end` 래퍼 | **done** (D-137) |
 | **TASK-005-2** 자체 Plugin loader | — | **OOS** (grok plugin.json 이 대체) |
 | **TASK-005-3+** 5 surfaces / Computer Use | 엔진(grok ACP) 범위. 우리 재구현 안 함 | deferred |
 

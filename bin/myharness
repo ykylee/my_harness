@@ -24,7 +24,9 @@ Usage:
   myharness env install <pkgs>
   myharness env shell <cmd>
   myharness env diagnose
-  myharness task start|end ...
+  myharness task start --id <ID> --title "<title>"
+  myharness task end --id <ID> --status done|blocked [--summary s] [--risks r] [--follow-up f]
+  myharness setup-model [--print-snippet] [--force]
   myharness --mode=single <args>    # grok -p
   myharness --mode=loop --goal "..." [args]
 
@@ -32,6 +34,7 @@ Flags:
   --help, -h        this help
   --print-cmd       print the grok command and exit (no exec)
   --model <id>      override model (default: minimax / MYHARNESS_MODEL)
+  --yes             skip confirm (server deploy)
 
 Requires grok >= 1.0.3 on PATH.
 EOF
@@ -63,8 +66,17 @@ find_plugin_dir() {
     echo "${MYHARNESS_PLUGIN_DIR}"
     return
   fi
-  local here repo home
-  here="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+  local src here repo home link
+  src="${BASH_SOURCE[0]}"
+  if [[ -L "$src" ]]; then
+    link="$(readlink "$src")"
+    if [[ "$link" == /* ]]; then
+      src="$link"
+    else
+      src="$(cd "$(dirname "$src")" && pwd)/$link"
+    fi
+  fi
+  here="$(cd "$(dirname "$src")" && pwd)"
   repo="$(cd "${here}/.." && pwd)"
   if [[ -f "${repo}/plugins/myharness/plugin.json" ]]; then
     echo "${repo}/plugins/myharness"
@@ -117,11 +129,140 @@ run_grok() {
   exec "$@"
 }
 
+setup_model() {
+  local snippet force=0 print=0 dest="${HOME}/.grok/config.toml"
+  local root
+  root="${PLUGIN_DIR:-$(find_plugin_dir)}"
+  snippet="${root}/examples/minimax.toml"
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+      --print-snippet) print=1; shift ;;
+      --force) force=1; shift ;;
+      --dest)
+        [[ $# -ge 2 ]] || die "--dest 에 값이 필요합니다"
+        dest="$2"
+        shift 2
+        ;;
+      *) die "setup-model 알 수 없는 인자: $1" ;;
+    esac
+  done
+  [[ -f "$snippet" ]] || die "snippet 없음: $snippet"
+  if [[ "$print" -eq 1 ]]; then
+    cat "$snippet"
+    exit 0
+  fi
+  mkdir -p "$(dirname "$dest")"
+  if [[ -f "$dest" ]] && grep -q '^\[model\.minimax\]' "$dest" && [[ "$force" -ne 1 ]]; then
+    echo "myharness: [model.minimax] 이미 있음 → $dest (덮으려면 --force)"
+    exit 0
+  fi
+  {
+    echo ""
+    echo "# --- myharness setup-model $(date -Iseconds 2>/dev/null || date) ---"
+    cat "$snippet"
+  } >>"$dest"
+  echo "myharness: MiniMax/Ollama 블록을 추가했습니다 → $dest"
+  echo "myharness: export MINIMAX_API_KEY=... 후 ./bin/myharness env diagnose"
+}
+
+task_file() {
+  echo "${HOME}/.myharness/handoff/tasks/${1}.md"
+}
+
+task_cmd() {
+  local action="${1:-}"
+  shift || true
+  local id="" title="" status="done" summary="" risks="" follow=""
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+      --id) id="$2"; shift 2 ;;
+      --title) title="$2"; shift 2 ;;
+      --status) status="$2"; shift 2 ;;
+      --summary) summary="$2"; shift 2 ;;
+      --risks) risks="$2"; shift 2 ;;
+      --follow-up) follow="$2"; shift 2 ;;
+      *) die "task 알 수 없는 인자: $1" ;;
+    esac
+  done
+  [[ -n "$id" ]] || die "task ${action}: --id 가 필요합니다"
+  case "$status" in
+    planned | in_progress | blocked | done) ;;
+    *) die "task status 는 planned|in_progress|blocked|done" ;;
+  esac
+  mkdir -p "${HOME}/.myharness/handoff/tasks"
+  local f now
+  f="$(task_file "$id")"
+  now="$(date -Iseconds 2>/dev/null || date)"
+  case "$action" in
+    start)
+      [[ -n "$title" ]] || title="$id"
+      cat >"$f" <<EOF
+# ${id}
+
+- status: in_progress
+- title: ${title}
+- started_at: ${now}
+- summary:
+- risks:
+- follow_up:
+EOF
+      echo "myharness: task start → $f"
+      ;;
+    end)
+      [[ -f "$f" ]] || cat >"$f" <<EOF
+# ${id}
+
+- status: ${status}
+- title: ${id}
+- started_at: ${now}
+EOF
+      # 필드 갱신 (macOS sed)
+      local tmp
+      tmp="$(mktemp)"
+      awk -v st="$status" -v sm="$summary" -v rk="$risks" -v fu="$follow" -v now="$now" '
+        BEGIN { done_status=0; done_sum=0; done_rk=0; done_fu=0; done_end=0 }
+        /^- status:/ { print "- status: " st; done_status=1; next }
+        /^- summary:/ { print "- summary: " sm; done_sum=1; next }
+        /^- risks:/ { print "- risks: " rk; done_rk=1; next }
+        /^- follow_up:/ { print "- follow_up: " fu; done_fu=1; next }
+        /^- ended_at:/ { print "- ended_at: " now; done_end=1; next }
+        { print }
+        END {
+          if (!done_status) print "- status: " st
+          if (!done_sum) print "- summary: " sm
+          if (!done_rk) print "- risks: " rk
+          if (!done_fu) print "- follow_up: " fu
+          if (!done_end) print "- ended_at: " now
+        }
+      ' "$f" >"$tmp"
+      mv "$tmp" "$f"
+      echo "myharness: task end (${status}) → $f"
+      ;;
+    *)
+      die "task start|end 만 지원"
+      ;;
+  esac
+}
+
+confirm_deploy() {
+  if [[ "$YES" -eq 1 ]]; then
+    return 0
+  fi
+  if [[ -t 0 ]]; then
+    local ans=""
+    read -r -p "server deploy 를 진행할까요? [y/N] " ans || true
+    [[ "$ans" == "y" || "$ans" == "Y" ]] || die "배포 취소"
+    return 0
+  fi
+  die "server deploy 는 비대화형에서 --yes 가 필요합니다"
+}
+
 PRINT_CMD=0
 MODE=""
 GOAL=""
 MODEL="$DEFAULT_MODEL"
 PLUGIN_DIR=""
+YES=0
 
 args=()
 while [[ $# -gt 0 ]]; do
@@ -158,6 +299,10 @@ while [[ $# -gt 0 ]]; do
       PLUGIN_DIR="$2"
       shift 2
       ;;
+    --yes)
+      YES=1
+      shift
+      ;;
     --)
       shift
       args+=("$@")
@@ -170,12 +315,23 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
-ensure_engine
-
 if [[ -z "$PLUGIN_DIR" ]]; then
   PLUGIN_DIR="$(find_plugin_dir)" || die "plugin 을 찾지 못했습니다. MYHARNESS_PLUGIN_DIR 또는 plugins/myharness 를 확인하세요"
 fi
 [[ -f "${PLUGIN_DIR}/plugin.json" ]] || die "plugin.json 없음: ${PLUGIN_DIR}"
+
+if [[ ${#args[@]} -gt 0 && "${args[0]}" == "setup-model" ]]; then
+  setup_model "${args[@]:1}"
+  exit 0
+fi
+
+if [[ ${#args[@]} -gt 0 && "${args[0]}" == "task" ]]; then
+  [[ ${#args[@]} -ge 2 ]] || die "task start|end"
+  task_cmd "${args[@]:1}"
+  exit 0
+fi
+
+ensure_engine
 
 base=("$GROK_BIN" --plugin-dir "$PLUGIN_DIR" -m "$MODEL")
 
@@ -186,21 +342,15 @@ if [[ ${#args[@]} -eq 0 ]]; then
   run_grok "${base[@]}"
 fi
 
-if [[ "${args[0]}" == "task" ]]; then
-  mkdir -p "${HOME}/.myharness/handoff"
-  {
-    echo "time=$(date -Iseconds 2>/dev/null || date)"
-    echo "args=${args[*]}"
-  } >>"${HOME}/.myharness/handoff/tasks.log"
-  echo "myharness: task 기록 → ~/.myharness/handoff/tasks.log (M2.4 에서 포맷 확정)"
-  exit 0
-fi
-
 if [[ ${#args[@]} -ge 2 ]]; then
   domain="${args[0]}"
   verb="${args[1]}"
   rest=("${args[@]:2}")
   if prompt="$(prompt_for "$domain" "$verb" "${rest[@]+"${rest[@]}"}")"; then
+    if [[ "${domain} ${verb}" == "server deploy" ]]; then
+      confirm_deploy
+      export MYHARNESS_ALLOW_DEPLOY=1
+    fi
     if [[ -n "$GOAL" || "$MODE" == "loop" ]]; then
       prompt="목표: ${GOAL:-반복 완료까지}. ${prompt}"
     fi

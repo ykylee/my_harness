@@ -97,7 +97,16 @@ curl -fsSL https://x.ai/cli/install.sh | bash
 # ./bin/myharness env diagnose             # 실제 grok -p (LLM)
 ```
 
-계획: [`docs/architecture/OVERLAY_IMPLEMENTATION_PLAN.md`](./docs/architecture/OVERLAY_IMPLEMENTATION_PLAN.md) (M1 done, 다음 M2 MiniMax + skills + hooks).
+계획: [`docs/architecture/OVERLAY_IMPLEMENTATION_PLAN.md`](./docs/architecture/OVERLAY_IMPLEMENTATION_PLAN.md) (M1+M2 done, 다음 M3 install).
+
+```bash
+./bin/myharness setup-model --print-snippet
+./bin/myharness setup-model          # ~/.grok/config.toml 에 MiniMax 블록
+export MINIMAX_API_KEY=...
+./bin/myharness env diagnose         # 실제 한 턴
+./bin/myharness task start --id TASK-1 --title "..."
+./bin/myharness task end --id TASK-1 --status done --summary "..."
+```
 
 ```bash
 # 3-도메인 명령 (CONCEPT.md §5.2)

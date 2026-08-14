@@ -25,7 +25,7 @@ M0 문서 ✅ → M1 실행 가능 → M2 도메인 가치 → M3 경화 → M4 
 | --- | --- | --- | --- | --- |
 | **M0** | 문서 잠금 | 경로·설계·본 계획 | CONCEPT §0 + 설계 + 본 문서. 코드 0 | **done** (D-135) |
 | **M1** | 실행 가능 | `myharness` 가 grok 를 켠다 | `grok plugin validate` PASS. grok 없으면 exit 2. 12 동사 번역. `-p` 한 턴 | **done** (D-136) |
-| **M2** | 도메인 가치 | MiniMax + 3-도메인 skill/hook + task | `MINIMAX_API_KEY` 로 `env diagnose` 실제 응답. deploy 가 훅/확인 없이 안 감 | 다음 |
+| **M2** | 도메인 가치 | MiniMax + 3-도메인 skill/hook + task | snippet + setup-model + hook deny + task 파일. live MiniMax 호출은 키 있을 때 | **done** (D-137, live LLM 은 opt-in) |
 | **M3** | 경화 | 설치 경로 + 버전 가드 문서 + 선택적 Rust clap | `~/.local/bin/myharness` 설치. smoke 스크립트 CI 가능 | 이후 |
 | **M4** | v0 정리 | crates archive | yklee 승인 후 `archive/v0-runtime/` 또는 태그 | 보류 |
 
@@ -55,10 +55,10 @@ OOS (하지 않음): 자체 Plugin loader, grok 소스 포크, TUI 재구현, ri
 
 | ID | WBS | 산출 | 완료 기준 |
 | --- | --- | --- | --- |
-| M2.1 | 2.1 | MiniMax `[model.*]` snippet + `myharness setup-model` | `~/.grok/config.toml` 에 블록. `-m minimax` |
-| M2.2 | 2.2 | 3-도메인 skills (code-review, server-health, env-bootstrap) + 최소 agents | skill 이 plugin details 에 보임 |
-| M2.3 | 2.3 | PreToolUse: `rm -rf /`, `server deploy` deny/confirm | 훅 스크립트 + hooks.json |
-| M2.4 | 2.4 | `myharness task start\|end` | `~/.myharness/handoff/` 또는 repo `ai-workflow/` write |
+| M2.1 | 2.1 | MiniMax `[model.*]` snippet + `myharness setup-model` | **done** (`examples/minimax.toml`, `--print-snippet` / `--dest`) |
+| M2.2 | 2.2 | 3-도메인 skills (code-review, server-health, env-bootstrap) + 최소 agents | **done** |
+| M2.3 | 2.3 | PreToolUse: `rm -rf /`, `server deploy` deny/confirm | **done** (훅 + `--yes`) |
+| M2.4 | 2.4 | `myharness task start\|end` | **done** (`~/.myharness/handoff/tasks/<id>.md`) |
 
 ### M3 — 경화
 

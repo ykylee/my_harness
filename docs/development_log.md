@@ -409,3 +409,10 @@ yklee 가 판단: 외부 워커 컨슈밍만으로는 **yklee 만이 진화 가�
 - M1: `plugins/myharness/` + `bin/myharness` + `scripts/overlay_smoke.sh` PASS
 - 다음: M2 MiniMax + skills + PreToolUse + task
 - 누적 결정 78 → **79**
+
+### 2026-08-14 — D-137 overlay M2
+
+- setup-model + 3-도메인 skills/hooks + task start/end
+- overlay_smoke 확장 PASS. live MiniMax 는 키 opt-in
+- 다음 M3 install.sh
+- 누적 결정 79 → **80**

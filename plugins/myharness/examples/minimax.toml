@@ -1,0 +1,21 @@
+# Append to ~/.grok/config.toml via `myharness setup-model`.
+# API key 는 파일에 쓰지 않는다. MINIMAX_API_KEY env 만 사용.
+
+[models]
+default = "minimax"
+
+[model.minimax]
+model = "MiniMax-M3"
+name = "MiniMax-M3"
+description = "MiniMax OpenAI-compatible (myharness overlay)"
+base_url = "https://api.minimax.io/v1"
+env_key = "MINIMAX_API_KEY"
+api_backend = "chat_completions"
+context_window = 200000
+
+[model.ollama]
+model = "qwen2.5-coder:32b"
+name = "Ollama local"
+base_url = "http://127.0.0.1:11434/v1"
+api_backend = "chat_completions"
+context_window = 32768

@@ -24,9 +24,9 @@
     "v1_mvp_build": "TASK-005-1 v1 MVP 8/8 waves 완료 (D-49~D-52) + Device Authorization Grant (D-53) + --no-browser 3 모드 (D-54) + polling output/expired_in 단위 (D-55) + token 단위 변환 (D-56) + OAuth 자동 resolve (D-57) + OAuth 자동 refresh (D-58, W15.b) + W16 auth add-local subcommand (D-59) + W16 follow-up LocalLlm 라우팅 분기. **v1 MVP 종료 선언 (2026-06-09 22:48)**. 40+ commit dual push. 388+ tests pass, 0 fail, 2 ignored. + D-104 oh-my-pi Hashline Read v2 (2026-07-01) + D-105 Edit v2 line_anchored mode (2026-07-01). main = 5e39f5e."
   },
   "session": {
-    "current_baseline": "**D-136 (2026-08-14) overlay 구현 계획 + M1 done**. 계획 docs/architecture/OVERLAY_IMPLEMENTATION_PLAN.md (M0–M4). M1: plugins/myharness + bin/myharness + scripts/overlay_smoke.sh PASS. 누적 78 → **79**. 다음 = M2 MiniMax + skills + PreToolUse + task.",
-    "current_axis": "**D-136 overlay 구현**. M1 done. 다음 M2.1 MiniMax [model.*] → M2.2 skills → M2.3 PreToolUse → M2.4 task 포맷.",
-    "current_focus": "**M1 실행 가능 완료**. 다음 1순위 = M2 MiniMax 모델 스니펫 + 3-도메인 skills + deploy 가드.",
+    "current_baseline": "**D-137 (2026-08-14) overlay M2 done**. setup-model + 3-도메인 skills + PreToolUse + task start/end. smoke PASS. 누적 79 → **80**. 다음 = M3 install.sh. live MiniMax 는 MINIMAX_API_KEY opt-in.",
+    "current_axis": "**D-137 overlay 구현**. M0–M2 done. 다음 M3 install / 선택적 Rust clap.",
+    "current_focus": "**M2 도메인 가치 완료**. 다음 1순위 = M3 install.sh 또는 live MiniMax smoke.",
     "in_progress_items": [
       "TASK-005-1 v1 MVP 종료 선언 (D-59 follow-up, 2026-06-09 22:48) — W3~W16 완료 + dual-push + 브랜치 정리 + main 머지. 388+ tests pass. v1 빌드 phase 완전 종료.",
       "TASK-005-2 v1.5 종료 선언 (D-70, 2026-06-10) — v1.5 phase 완전 종료. 8 결정 (D-60~D-65 + D-69 + D-70). 437 tests pass / 0 fail / 2 ignored + clippy 0 warning. main = 79f38b8",
@@ -105,9 +105,9 @@
       "Gitea PAT (D-44) — ~/.git-credentials (chmod 600). 회전 권고",
       "GitHub auth via gh CLI (ykylee)"
     ],
-    "last_decision_id": "D-136",
+    "last_decision_id": "D-137",
     "last_session_date": "2026-08-14",
-    "decision_count": 79
+    "decision_count": 80
   },
   "decisions": {
     "decided": [
@@ -617,7 +617,8 @@
       "D-133 (2026-08-14) TASK-004 재방문 — claude-code v2 (66 commit, D-34/D-40 §11.2 정합 검증)",
       "D-134 (2026-08-14) grok-build 8번째 reference + 14섹션",
       "D-135 (2026-08-14) 제품 경로 = grok overlay. CONCEPT §0 갱신. DETAILED_DESIGN_OVERLAY.md",
-      "D-136 (2026-08-14) overlay 구현 계획 + M1 plugin/래퍼/smoke"
+      "D-136 (2026-08-14) overlay 구현 계획 + M1 plugin/래퍼/smoke",
+      "D-137 (2026-08-14) overlay M2 MiniMax/skills/hooks/task"
     ],
     "deferred": [
       {

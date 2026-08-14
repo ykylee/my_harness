@@ -4,7 +4,7 @@
 - 범위: 전체 태스크 목록, 우선순위, 진행 상태, 날짜별 기록 연결
 - 대상 독자: 개발자, AI 에이전트, 프로젝트 매니저
 - 상태: stable
-- 최종 수정일: 2026-08-14 (**D-136 M1 done**. 계획 `OVERLAY_IMPLEMENTATION_PLAN.md`. plugin + `bin/myharness` + smoke PASS. 다음 = M2 MiniMax/skills/hooks. 결정 카운트 79)
+- 최종 수정일: 2026-08-14 (**D-137 M2 done**. setup-model + skills + PreToolUse + task. smoke PASS. 다음 M3 install. 결정 카운트 80)
 - 관련 문서: [세션 인계](./session_handoff.md), [프로젝트 프로필](../../docs/PROJECT_PROFILE.md), [CONCEPT.md](../../docs/CONCEPT.md)
 
 ## 1. 운영 원칙
@@ -225,6 +225,7 @@
 | **D-134** | **grok-build 8번째 reference + 14섹션** (2026-08-14) — 실측 `~/repos/grok-build`, grok 1.0.3. 5 components 1:1. overlay 정공법. 포크 비권장 | §0, §12 |
 | **D-135** | **제품 경로 = grok overlay 확정** (2026-08-14) — 엔진 `grok` ≥ 1.0.3 + 래퍼 `myharness` + `plugin.json`. CONCEPT §0 standalone 폐기. 자체 Plugin 인프라 OOS. 설계 `docs/architecture/DETAILED_DESIGN_OVERLAY.md`. 코드 0. 다음 PR-1 plugin 스캐폴드 | §0, §5.1, §5.7, §5.8, §11.4 |
 | **D-136** | **overlay 구현 계획 + M1** (2026-08-14) — `OVERLAY_IMPLEMENTATION_PLAN.md` (M0–M4 + WBS). M1: `plugins/myharness` + `bin/myharness` + `scripts/overlay_smoke.sh` PASS. 다음 M2 | §6, DETAILED_DESIGN_OVERLAY §12 |
+| **D-137** | **overlay M2** (2026-08-14) — MiniMax snippet/`setup-model`, 3-도메인 skills, PreToolUse 가드, task start/end. smoke PASS. live LLM opt-in | §6 |
 
 ## 5. 관련 문서 (SSOT)
 
