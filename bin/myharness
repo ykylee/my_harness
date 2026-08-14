@@ -8,10 +8,10 @@ DEFAULT_MODEL="${MYHARNESS_MODEL:-minimax}"
 
 usage() {
   cat <<'EOF'
-myharness — grok overlay (3-도메인 래퍼)
+myharness — 3-도메인 하네스
 
 Usage:
-  myharness                         # grok TUI + this plugin
+  myharness                         # myharness 프롬프트 (TTY)
   myharness code review <target>
   myharness code implement "<feature>"
   myharness code test <path>
@@ -27,16 +27,17 @@ Usage:
   myharness task start --id <ID> --title "<title>"
   myharness task end --id <ID> --status done|blocked [--summary s] [--risks r] [--follow-up f]
   myharness setup-model [--print-snippet] [--force]
-  myharness --mode=single <args>    # grok -p
+  myharness engine                  # 엔진 TUI (브랜딩 노출). 기본 경로 아님
+  myharness --mode=single <text>
   myharness --mode=loop --goal "..." [args]
 
 Flags:
   --help, -h        this help
-  --print-cmd       print the grok command and exit (no exec)
-  --model <id>      override model (default: minimax / MYHARNESS_MODEL)
-  --yes             skip confirm (server deploy)
+  --print-cmd       엔진 명령을 출력만 (디버그)
+  --model <id>      모델 (default: minimax)
+  --yes             server deploy 확인 생략
 
-Requires grok >= 1.0.3 on PATH.
+엔진은 화면 뒤에 둔다. 인자 없이 실행해도 엔진 TUI 를 띄우지 않는다.
 EOF
 }
 
@@ -120,13 +121,70 @@ prompt_for() {
   esac
 }
 
-run_grok() {
+set_title() {
+  printf '\033]0;myharness\007' 2>/dev/null || true
+}
+
+strip_engine_chrome() {
+  if command -v python3 >/dev/null 2>&1; then
+    python3 -c '
+import re, sys
+t = sys.stdin.read()
+t = re.sub(r"<think>.*?</think>", "", t, flags=re.S | re.I)
+t = re.sub(r"(?im)^.*\bgrok build\b.*\n?", "", t)
+print(t.strip())
+'
+    return
+  fi
+  awk 'BEGIN{p=1} /<think>/{p=0} /<\/think>/{p=1; next} p'
+}
+
+run_print() {
+  printf '%q ' "$@"
+  echo
+}
+
+run_oneshot() {
+  local prompt="$1"
   if [[ "$PRINT_CMD" -eq 1 ]]; then
-    printf '%q ' "$@"
-    echo
+    run_print "${oneshot[@]}" --output-format plain -p "$prompt"
     exit 0
   fi
-  exec "$@"
+  set_title
+  "${oneshot[@]}" --output-format plain -p "$prompt" | strip_engine_chrome
+}
+
+run_engine_tui() {
+  if [[ "$PRINT_CMD" -eq 1 ]]; then
+    run_print "${base[@]}"
+    exit 0
+  fi
+  echo "myharness: 엔진 TUI 는 벤더 브랜딩이 보입니다. 기본 경로는 인자 없는 myharness 입니다." >&2
+  exec "${base[@]}"
+}
+
+banner() {
+  echo "myharness"
+  echo "code | server | env | task | .help | .quit"
+}
+
+repl() {
+  local line
+  set_title
+  banner
+  while IFS= read -r -e -p "myharness> " line || [[ -n "$line" ]]; do
+    [[ -z "${line// /}" ]] && continue
+    case "$line" in
+      .quit | .exit | quit | exit) break ;;
+      .help | help) usage ;;
+      *)
+        # shellcheck disable=SC2086
+        set +e
+        "$0" --model "$MODEL" $line
+        set -e
+        ;;
+    esac
+  done
 }
 
 setup_model() {
@@ -333,8 +391,6 @@ fi
 
 ensure_engine
 
-# --plugin-dir 는 `grok agent` 전용. -p / TUI 는 설치된 plugin 으로 로드.
-# -p 한 턴은 도구 승인 UI 가 없으므로 always-approve.
 base=("$GROK_BIN" -m "$MODEL")
 oneshot=("$GROK_BIN" -m "$MODEL" --always-approve)
 
@@ -342,7 +398,16 @@ if [[ ${#args[@]} -eq 0 ]]; then
   if [[ "$MODE" == "single" ]]; then
     die "--mode=single 은 프롬프트가 필요합니다"
   fi
-  run_grok "${base[@]}"
+  if [[ -t 0 ]]; then
+    repl
+    exit 0
+  fi
+  usage
+  exit 0
+fi
+
+if [[ "${args[0]}" == "engine" ]]; then
+  run_engine_tui
 fi
 
 if [[ ${#args[@]} -ge 2 ]]; then
@@ -357,13 +422,16 @@ if [[ ${#args[@]} -ge 2 ]]; then
     if [[ -n "$GOAL" || "$MODE" == "loop" ]]; then
       prompt="목표: ${GOAL:-반복 완료까지}. ${prompt}"
     fi
-    run_grok "${oneshot[@]}" -p "$prompt"
+    run_oneshot "$prompt"
+    exit 0
   fi
 fi
 
-# 통과: grok 네이티브 인자
 if [[ "$MODE" == "single" && ${#args[@]} -gt 0 ]]; then
-  run_grok "${oneshot[@]}" -p "${args[*]}"
+  run_oneshot "${args[*]}"
+  exit 0
 fi
 
-run_grok "${base[@]}" "${args[@]}"
+# 자유 텍스트도 엔진 TUI 로 넘기지 않는다.
+run_oneshot "${args[*]}"
+exit 0

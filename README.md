@@ -101,11 +101,9 @@ export MINIMAX_API_KEY=...
 계획: [`docs/architecture/OVERLAY_IMPLEMENTATION_PLAN.md`](./docs/architecture/OVERLAY_IMPLEMENTATION_PLAN.md) (M0–M3. 다음 M4 는 yklee 승인).
 
 ```bash
-myharness --help
-myharness --print-cmd env diagnose
+myharness                  # myharness> 프롬프트. 엔진 TUI 아님
 myharness env diagnose
-myharness task start --id TASK-1 --title "..."
-myharness task end --id TASK-1 --status done --summary "..."
+myharness engine           # 벤더 TUI (브랜딩 노출, 기본 아님)
 ```
 
 ```bash

@@ -29,6 +29,18 @@ else
   bad "--help missing env diagnose"
 fi
 
+if "$WRAP" --help | grep -q '엔진 TUI'; then
+  ok "--help hides engine TUI behind engine subcommand"
+else
+  bad "--help should mention engine TUI as opt-in"
+fi
+
+if ! "$WRAP" --help | grep -q 'grok TUI + this plugin'; then
+  ok "--help no longer defaults to grok TUI"
+else
+  bad "--help still advertises grok TUI as default"
+fi
+
 cmd="$("$WRAP" --print-cmd env diagnose)"
 if [[ "$cmd" == *"-p"* && "$cmd" == *"-m"* && "$cmd" == *"--always-approve"* ]]; then
   ok "env diagnose prints grok -p -m --always-approve"
@@ -122,10 +134,11 @@ else
 fi
 
 INSTALL="${ROOT}/scripts/install.sh"
-if "$INSTALL" --prefix /tmp/x --home /tmp/y --dry-run | grep -F -q 'dry-run:'; then
+dry="$("$INSTALL" --prefix /tmp/x --home /tmp/y --dry-run)"
+if [[ "$dry" == *dry-run:* ]]; then
   ok "install.sh --dry-run"
 else
-  bad "install.sh dry-run"
+  bad "install.sh dry-run: $dry"
 fi
 
 stage="$(mktemp -d)"

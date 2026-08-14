@@ -53,7 +53,9 @@ myharness (thin CLI)
     │  which grok && grok --version
     │  resolve plugin dir + model + cwd
     ├─ interactive / no extra args
-    │     exec grok [--plugin-dir ...] [-m minimax] [PROMPT]
+    │     myharness> REPL (엔진 TUI 아님)
+    ├─ myharness engine
+    │     exec grok TUI (벤더 브랜딩, opt-in)
     ├─ myharness <domain> <verb> [args]
     │     exec grok -p "<translated prompt>" --plugin-dir ... -m ...
     ├─ myharness agent stdio
