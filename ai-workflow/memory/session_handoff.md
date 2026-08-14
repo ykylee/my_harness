@@ -5,6 +5,7 @@
 - Audience: yklee, Mavis orchestrator, .MiniMax 워커 에이전트
 - Status: active
 - Updated: 2026-08-14 (**D-134 grok-build 8번째 reference + 2차 14섹션 심층** — 세션 종료, overlay/포크 결정 보류. 다음 세션 이어감)
+- Updated: 2026-08-14 (2차 세션 — TASK-005-2 v2.0 Plugin 4-계층 Sub-task 2 진입 옵션 5개 제시, yklee 결정 없이 종료. main = `4eec8e8`, 결정 카운트 77, git clean. 다음 세션 = A1~A4 선택 또는 D-134 overlay/포크)
 - Related docs: [Project Profile](../../docs/PROJECT_PROFILE.md), [Work Backlog](./work_backlog.md), [State Cache](./state.json), [CONCEPT.md](../../docs/CONCEPT.md) (SSOT)
 
 ## Current Focus
